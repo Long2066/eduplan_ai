@@ -15,3 +15,6 @@ pnpm-debug.log*
 *.tsbuildinfo
 .agents
 .codex
+
+.vercel
+.env*

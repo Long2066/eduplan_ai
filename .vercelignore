@@ -1,0 +1,17 @@
+.agents
+.codex
+.git
+.next
+.vercel
+node_modules
+release
+admin-app/.next
+admin-app/node_modules
+electron
+docs
+scripts
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.local.example
