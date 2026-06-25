@@ -1,0 +1,578 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────────────────── VARIABLES ───────────────────────── */
+:root {
+  --background: #f8fafc;
+  --foreground: #111827;
+  --a4-preview-zoom: 0.68;
+}
+
+/* ───────────────────────── RESET ───────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(37, 99, 235, 0.07), transparent),
+    radial-gradient(ellipse 60% 50% at 90% 100%, rgba(16, 185, 129, 0.05), transparent),
+    linear-gradient(160deg, #f8fafc 0%, #eef4ff 40%, #f0fdf4 70%, #f8fafc 100%);
+  color: var(--foreground);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* ───────────────────────── BILLBOARD / LED HEADER ───────────────────────── */
+.billboard-sign {
+  position: relative;
+  overflow: hidden;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  background:
+    linear-gradient(105deg, rgba(15, 23, 42, 0.97), rgba(30, 58, 138, 0.92), rgba(15, 23, 42, 0.97)),
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.3), transparent 18rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 20px rgba(15, 23, 42, 0.15);
+}
+
+.billboard-sign::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.billboard-sign::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.85), transparent 12%, transparent 88%, rgba(15, 23, 42, 0.85));
+  pointer-events: none;
+}
+
+.billboard-track {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  z-index: 1;
+  display: inline-flex;
+  width: max-content;
+  min-height: 44px;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  animation: billboard-marquee var(--billboard-duration, 18s) linear infinite;
+}
+
+.billboard-led-text {
+  flex: 0 0 auto;
+  padding-right: 0;
+  color: #ecfeff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(125, 211, 252, 0.7),
+    0 0 18px rgba(59, 130, 246, 0.5);
+}
+
+@media (min-width: 1280px) {
+  .billboard-sign {
+    min-height: 44px;
+    border-radius: 0.75rem;
+  }
+
+  .billboard-track {
+    min-height: 44px;
+  }
+
+  .billboard-led-text {
+    font-size: 0.82rem;
+  }
+}
+
+@keyframes billboard-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(calc(-100% - 100vw), 0, 0);
+  }
+}
+
+/* ───────────────────────── A4 PREVIEW SHELL ───────────────────────── */
+.a4-preview-shell {
+  min-height: 0;
+  max-width: 100%;
+  overflow: auto;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(241, 245, 249, 0.6)),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.06), transparent 20rem);
+  padding: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 32px rgba(15, 23, 42, 0.08);
+}
+
+.a4-document {
+  display: grid;
+  justify-content: center;
+  gap: 16px;
+  width: max-content;
+  min-width: max-content;
+  margin: 0 auto;
+}
+
+.a4-preview-shell .a4-document {
+  min-width: 0;
+  zoom: var(--a4-preview-zoom);
+}
+
+/* ───────────────────────── DESKTOP LAYOUT LOCK ───────────────────────── */
+@media (min-width: 1280px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .fixed-preview-pane {
+    min-height: 0;
+  }
+
+  .fixed-preview-pane > div:last-child {
+    min-height: 0;
+  }
+
+  .fixed-preview-pane .a4-preview-shell {
+    height: 100%;
+    overflow: auto;
+  }
+
+  .fixed-preview-pane > div:last-child > section {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --a4-preview-zoom: 0.74;
+  }
+}
+
+/* ───────────────────────── A4 PAGE STYLES (giáo án — giữ nguyên) ───────────────────────── */
+.a4-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: white;
+  color: #000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 14pt;
+  line-height: 1.25;
+  padding: 18mm 16mm;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.06),
+    0 12px 40px rgba(15, 23, 42, 0.1);
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.pdf-export-page {
+  background-image: none !important;
+}
+
+.period-lesson {
+  page-break-after: always;
+  break-after: page;
+}
+
+.period-lesson:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+.a4-page p {
+  margin: 0 0 4pt;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.lesson-heading {
+  text-align: left;
+}
+
+.lesson-heading p,
+.admin-grid p {
+  text-align: left;
+}
+
+.lesson-heading h1 {
+  margin: 12pt 0 8pt;
+  color: #1f4e79;
+  font-size: 18pt;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.lesson-heading h3 {
+  margin: 0 0 4pt;
+  color: #0070c0;
+  font-size: 17pt;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.lesson-heading h3 span {
+  color: #c00000;
+}
+
+.date-line {
+  margin-bottom: 10pt !important;
+  font-style: italic;
+  padding-right: 24mm;
+  text-align: right !important;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 2pt;
+}
+
+.a4-section {
+  margin-top: 8pt;
+}
+
+.a4-section h2 {
+  margin: 0 0 4pt;
+  color: #1f4e79;
+  font-size: 15pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.sub-title,
+.activity-title {
+  font-weight: 700;
+}
+
+.period-block {
+  margin-top: 8pt;
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+.period-title {
+  margin: 0 0 5pt !important;
+  color: #c00000;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.blue-italic {
+  color: #0070c0;
+  font-style: italic;
+}
+
+.a4-list {
+  margin: 0 0 4pt;
+  padding-left: 0;
+  list-style: none;
+}
+
+.a4-list li {
+  margin: 0 0 2pt;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.lesson-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 14pt;
+}
+
+.lesson-table th,
+.lesson-table td {
+  border-left: 1px solid #000;
+  border-right: 1px solid #000;
+  border-top: 0;
+  border-bottom: 0;
+  padding: 6pt;
+  vertical-align: top;
+}
+
+.lesson-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.lesson-table th {
+  background: #d9eaf7;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+  font-weight: 700;
+  text-align: center;
+}
+
+.lesson-table td {
+  width: 50%;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.lesson-table .activity-heading-cell {
+  width: auto;
+  background: #fff;
+}
+
+.paired-action-row td {
+  vertical-align: top;
+}
+
+.lesson-table .activity-end-row td {
+  border-bottom: 1px solid #000;
+}
+
+.learning-product {
+  margin-top: 4pt !important;
+  color: #1f4e79;
+}
+
+.adjustment-lines p {
+  line-height: 1.45;
+}
+
+.avoid-break {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* ───────────────────────── SKELETON LOADING ───────────────────────── */
+.skeleton-line {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 45%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ───────────────────────── AUTH PAGE ───────────────────────── */
+.auth-page,
+.auth-page * {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.auth-hero {
+  background:
+    radial-gradient(ellipse 80% 50% at 30% 20%, rgba(59, 130, 246, 0.2), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(16, 185, 129, 0.12), transparent),
+    linear-gradient(145deg, #1e3a8a 0%, #1e40af 30%, #2563eb 60%, #1d4ed8 100%);
+}
+
+.auth-hero-dots {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ───────────────────────── UI UTILITY CLASSES ───────────────────────── */
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #334155;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  .btn-secondary:active {
+    transform: translateY(0);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.2s ease;
+  }
+
+  .btn-ghost:hover {
+    background: #f1f5f9;
+    color: #334155;
+  }
+
+  .input-field {
+    min-height: 2.75rem;
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+
+  .input-field::placeholder {
+    color: #94a3b8;
+  }
+
+  .input-field:hover {
+    border-color: #cbd5e1;
+  }
+
+  .input-field:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  }
+
+  .toast-banner {
+    animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dropdown-enter {
+    animation: slideDown 0.25s ease-out, fadeIn 0.2s ease-out;
+  }
+}
+
+/* ───────────────────────── PRINT ───────────────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: white;
+  }
+
+  .a4-preview-shell {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: white;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .a4-page {
+    width: 210mm;
+    min-height: 297mm;
+    box-shadow: none;
+  }
+}
