@@ -1,0 +1,8 @@
+{
+  "name": "eduplan-ai-desktop",
+  "version": "0.1.0",
+  "description": "EduPlan AI desktop shell",
+  "author": "EduPlan AI",
+  "private": true,
+  "main": "main.cjs"
+}
