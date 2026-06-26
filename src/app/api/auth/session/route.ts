@@ -14,6 +14,13 @@ export async function POST(request: Request) {
 
     const auth = getFirebaseAdminAuth();
     const decoded = await auth.verifyIdToken(idToken);
+    const userRecord = await auth.getUser(decoded.uid);
+    if (userRecord.disabled) {
+      return NextResponse.json(
+        { error: "Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn." },
+        { status: 403 },
+      );
+    }
     await ensureUserProfile(decoded);
     const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: SESSION_EXPIRES_IN });
 

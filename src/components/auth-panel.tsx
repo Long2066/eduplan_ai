@@ -34,6 +34,9 @@ async function createSession() {
 
 function friendlyAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "");
+  if (/auth\/user-disabled|tài khoản.*khóa|account.*disabled/i.test(message)) {
+    return "Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn.";
+  }
   if (/auth\/configuration-not-found/i.test(message)) {
     return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Email/Password và Google.";
   }

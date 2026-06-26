@@ -720,9 +720,23 @@ export default function AdminPage() {
                         <div className="muted">{user.email}</div>
                       </td>
                       <td>
-                        <span className={`status-pill ${user.disabled ? "danger-pill" : user.emailVerified ? "" : "new"}`}>
-                          {user.disabled ? "Đang khóa" : user.emailVerified ? "Đã xác minh" : "Chưa xác minh"}
-                        </span>
+                        <div className="status-cell">
+                          <span className={`status-pill ${user.disabled ? "danger-pill" : user.emailVerified ? "" : "new"}`}>
+                            {user.disabled ? "Đang khóa" : user.emailVerified ? "Đã xác minh" : "Chưa xác minh"}
+                          </span>
+                          {!user.emailVerified ? (
+                            <button
+                              className="mini-link-button"
+                              onClick={() => {
+                                const next = { ...user, emailVerified: true };
+                                setUsers(users.map((item) => item.uid === user.uid ? next : item));
+                                void saveUser(next);
+                              }}
+                            >
+                              Xác minh
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                       <td>
                         <select className="select" value={user.role} onChange={(event) => {

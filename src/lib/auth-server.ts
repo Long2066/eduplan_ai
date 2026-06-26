@@ -14,6 +14,7 @@ export type AuthUser = {
   displayName: string;
   photoURL: string;
   emailVerified: boolean;
+  disabled: boolean;
   role: "user" | "admin";
   plan: "free" | string;
   freeLimit: number;
@@ -50,6 +51,7 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
     displayName: userRecord.displayName || decoded.name || "",
     photoURL: userRecord.photoURL || decoded.picture || "",
     emailVerified: Boolean(userRecord.emailVerified),
+    disabled: Boolean(userRecord.disabled),
     role: "user",
     plan: "free",
     freeLimit: DEFAULT_FREE_LIMIT,
@@ -69,6 +71,7 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
       displayName: baseProfile.displayName || snapshot.get("displayName") || "",
       photoURL: baseProfile.photoURL || snapshot.get("photoURL") || "",
       emailVerified: baseProfile.emailVerified,
+      disabled: baseProfile.disabled,
       updatedAt: now,
     },
     { merge: true },
@@ -84,6 +87,23 @@ export async function currentUser(): Promise<AuthUser | null> {
   const profile = await ensureUserProfile(decoded);
   const freeLimit = Number(profile.freeLimit ?? DEFAULT_FREE_LIMIT);
   const usedGenerations = Number(profile.usedGenerations ?? 0);
+  const disabled = Boolean(profile.disabled);
+
+  if (disabled) {
+    return {
+      uid: decoded.uid,
+      email: String(profile.email || decoded.email || ""),
+      displayName: String(profile.displayName || decoded.name || ""),
+      photoURL: String(profile.photoURL || decoded.picture || ""),
+      emailVerified: Boolean(profile.emailVerified),
+      disabled,
+      role: profile.role === "admin" ? "admin" : "user",
+      plan: String(profile.plan || "free"),
+      freeLimit,
+      usedGenerations,
+      remainingGenerations: 0,
+    };
+  }
 
   return {
     uid: decoded.uid,
@@ -91,6 +111,7 @@ export async function currentUser(): Promise<AuthUser | null> {
     displayName: String(profile.displayName || decoded.name || ""),
     photoURL: String(profile.photoURL || decoded.picture || ""),
     emailVerified: Boolean(profile.emailVerified),
+    disabled,
     role: profile.role === "admin" ? "admin" : "user",
     plan: String(profile.plan || "free"),
     freeLimit,
@@ -104,6 +125,11 @@ export async function requireUser() {
   if (!user) {
     const error = new Error("Bạn cần đăng nhập để sử dụng tính năng này.");
     error.name = "UNAUTHENTICATED";
+    throw error;
+  }
+  if (user.disabled) {
+    const error = new Error("Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn.");
+    error.name = "ACCOUNT_DISABLED";
     throw error;
   }
   return user;

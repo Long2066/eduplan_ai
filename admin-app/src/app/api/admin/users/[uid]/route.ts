@@ -19,6 +19,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       freeLimit?: number;
       usedGenerations?: number;
       disabled?: boolean;
+      emailVerified?: boolean;
     };
     const update: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
@@ -28,14 +29,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (Number.isFinite(Number(body.freeLimit))) update.freeLimit = Math.max(0, Number(body.freeLimit));
     if (Number.isFinite(Number(body.usedGenerations))) update.usedGenerations = Math.max(0, Number(body.usedGenerations));
     if (typeof body.disabled === "boolean") update.disabled = body.disabled;
+    if (typeof body.emailVerified === "boolean") update.emailVerified = body.emailVerified;
 
     await getFirebaseDb().collection("users").doc(uid).set(update, { merge: true });
-    if (typeof body.displayName === "string" || typeof body.disabled === "boolean") {
+    if (typeof body.displayName === "string" || typeof body.disabled === "boolean" || typeof body.emailVerified === "boolean") {
       await getFirebaseAdminAuth().updateUser(uid, {
         displayName: typeof body.displayName === "string" ? body.displayName.trim() : undefined,
         disabled: typeof body.disabled === "boolean" ? body.disabled : undefined,
+        emailVerified: typeof body.emailVerified === "boolean" ? body.emailVerified : undefined,
       });
     }
+    if (body.disabled === true) await getFirebaseAdminAuth().revokeRefreshTokens(uid);
     await writeAuditLog(admin, "UPDATE_USER", { targetUid: uid, fields: Object.keys(update) });
     return NextResponse.json({ ok: true });
   } catch (error) {

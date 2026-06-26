@@ -11,6 +11,7 @@ export type AppUser = {
   displayName: string;
   photoURL: string;
   emailVerified: boolean;
+  disabled: boolean;
   role: "user" | "admin";
   plan: string;
   freeLimit: number;

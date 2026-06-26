@@ -418,6 +418,22 @@ export default function Home() {
     return <AuthPanel onSessionReady={loadCurrentUser} />;
   }
 
+  /* ── Account disabled ── */
+  if (user.disabled) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="animate-scale-in w-full max-w-xl rounded-3xl border border-red-100 bg-white p-8 text-center shadow-soft sm:p-10">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-600">EduPlan AI</p>
+          <h1 className="mt-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">Tài khoản đã bị khóa</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+            Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật <strong className="text-slate-800">0342 733 640</strong> nếu bạn cho là bị nhầm lẫn.
+          </p>
+          <button className="btn-secondary mt-7" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }}>Đăng xuất</button>
+        </div>
+      </main>
+    );
+  }
+
   /* ── Email not verified ── */
   if (!user.emailVerified) {
     return (
