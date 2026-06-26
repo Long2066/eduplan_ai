@@ -408,14 +408,214 @@ textarea {
 
 .auth-hero {
   background:
-    radial-gradient(ellipse 80% 50% at 30% 20%, rgba(59, 130, 246, 0.2), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(16, 185, 129, 0.12), transparent),
-    linear-gradient(145deg, #1e3a8a 0%, #1e40af 30%, #2563eb 60%, #1d4ed8 100%);
+    radial-gradient(ellipse 85% 55% at 20% 0%, rgba(96, 165, 250, 0.28), transparent 60%),
+    radial-gradient(ellipse 60% 45% at 80% 86%, rgba(14, 165, 233, 0.28), transparent 64%),
+    linear-gradient(145deg, #0f3dbf 0%, #0757e8 58%, #0a6cf8 100%);
 }
 
 .auth-hero-dots {
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+  background-size: 17px 17px;
+  mask-image: linear-gradient(120deg, transparent 0%, #000 40%, #000 100%);
+}
+
+.auth-shell {
+  border-radius: 1.4rem;
+}
+
+.auth-hero-wave {
+  background:
+    radial-gradient(ellipse 75% 55% at 88% 16%, transparent 58%, rgba(255, 255, 255, 0.18) 59%, transparent 60%),
+    radial-gradient(ellipse 70% 52% at 90% 22%, transparent 58%, rgba(255, 255, 255, 0.12) 59%, transparent 60%),
+    radial-gradient(ellipse 68% 52% at 92% 28%, transparent 58%, rgba(255, 255, 255, 0.08) 59%, transparent 60%);
+  opacity: 0.85;
+}
+
+.auth-feature-chip {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  gap: 0.8rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.16);
+  padding: 0.7rem 0.9rem;
+  color: #eff6ff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 14px 32px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.auth-feature-chip svg {
+  flex: 0 0 auto;
+  color: #dbeafe;
+}
+
+.lesson-mockup {
+  position: relative;
+  min-height: 238px;
+  transform: translate(16px, 12px) scale(0.9);
+  transform-origin: bottom center;
+}
+
+.lesson-paper {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 54%;
+  width: min(228px, 100%);
+  aspect-ratio: 1 / 1.2;
+  transform: translateX(-50%) rotate(6deg);
+  border-radius: 0.65rem;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  padding: 1.45rem 1.55rem;
+  color: #1e40af;
+  box-shadow:
+    0 18px 46px rgba(15, 23, 42, 0.22),
+    0 0 0 12px rgba(255, 255, 255, 0.16);
+}
+
+.lesson-paper::before {
+  content: "";
+  position: absolute;
+  inset: -0.8rem;
+  z-index: -1;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.lesson-mini-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.lesson-mini-subtitle {
+  margin: 0.25rem 0 1rem;
+  text-align: center;
+  font-size: 0.55rem;
+  font-weight: 900;
+  color: #1e3a8a;
+}
+
+.lesson-mini-checks {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.lesson-mini-checks span {
+  position: relative;
+  height: 0.32rem;
+  width: 48%;
+  border-radius: 999px;
+  background: #dbeafe;
+  margin-left: 1.1rem;
+}
+
+.lesson-mini-checks span::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: -0.05rem;
+  width: 0.55rem;
+  height: 0.3rem;
+  border-left: 2px solid #22c55e;
+  border-bottom: 2px solid #22c55e;
+  transform: rotate(-45deg);
+}
+
+.lesson-mini-lines {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.36rem;
+}
+
+.lesson-mini-lines i {
+  display: block;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.lesson-mini-lines i:nth-child(1) {
+  width: 76%;
+}
+
+.lesson-mini-lines i:nth-child(2) {
+  width: 58%;
+}
+
+.lesson-mini-lines i:nth-child(3) {
+  width: 84%;
+}
+
+.lesson-mini-lines i:nth-child(4) {
+  width: 64%;
+}
+
+.lesson-mini-table {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.lesson-mini-table span {
+  height: 2.8rem;
+  border-radius: 0.35rem;
+  background:
+    linear-gradient(#dbeafe 0 0) top/100% 0.6rem no-repeat,
+    linear-gradient(#f1f5f9 0 0) center 1.15rem/72% 0.28rem no-repeat,
+    linear-gradient(#f1f5f9 0 0) center 1.65rem/60% 0.28rem no-repeat,
+    #ffffff;
+  border: 1px solid #dbeafe;
+}
+
+.lesson-glass-base {
+  position: absolute;
+  bottom: 0.9rem;
+  left: 54%;
+  width: 78%;
+  height: 3.3rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.38), rgba(59, 130, 246, 0.04) 70%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.auth-input-field {
+  min-height: 3.7rem;
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1.5px solid #d8e0ec;
+  background: #fff;
+  padding: 0.75rem 1rem 0.75rem 3.85rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #0f172a;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.auth-input-field::placeholder {
+  color: #94a3b8;
+}
+
+.auth-input-field:hover {
+  border-color: #c7d2e4;
+}
+
+.auth-input-field:focus {
+  border-color: #3b82f6;
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.12),
+    0 10px 26px rgba(15, 23, 42, 0.06);
 }
 
 /* ───────────────────────── UI UTILITY CLASSES ───────────────────────── */

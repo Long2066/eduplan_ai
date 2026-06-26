@@ -11,6 +11,7 @@ const firebaseClientConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 const firebaseDatabaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || "(default)";
+const authActionContinueUrl = process.env.NEXT_PUBLIC_FIREBASE_AUTH_ACTION_CONTINUE_URL;
 
 export function hasFirebaseClientConfig() {
   return Object.values(firebaseClientConfig).every(Boolean);
@@ -34,9 +35,9 @@ export function getFirebaseClientDb() {
 }
 
 export function getEmailActionSettings(): ActionCodeSettings | undefined {
-  if (typeof window === "undefined") return undefined;
+  if (typeof window === "undefined" || !authActionContinueUrl) return undefined;
   return {
-    url: `${window.location.origin}/`,
+    url: authActionContinueUrl,
     handleCodeInApp: false,
   };
 }

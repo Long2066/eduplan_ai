@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
@@ -42,6 +42,12 @@ function friendlyAuthError(error: unknown) {
   }
   if (/auth\/unauthorized-domain/i.test(message)) {
     return "Domain localhost chưa được phép đăng nhập. Vào Authentication > Settings > Authorized domains và thêm localhost.";
+  }
+  if (/auth\/unauthorized-continue-uri/i.test(message)) {
+    return "Đường dẫn xác thực email chưa được Firebase cho phép. Hãy thêm domain của app vào Firebase Authentication > Settings > Authorized domains, hoặc bỏ cấu hình NEXT_PUBLIC_FIREBASE_AUTH_ACTION_CONTINUE_URL.";
+  }
+  if (/auth\/popup-blocked/i.test(message)) {
+    return "Cửa sổ đăng nhập Google đang bị chặn. Với bản exe, hãy dùng bản mới đã hỗ trợ popup Google trong ứng dụng.";
   }
   if (/auth\/popup-closed-by-user/i.test(message)) {
     return "Cửa sổ đăng nhập Google đã bị đóng trước khi hoàn tất.";
@@ -104,11 +110,140 @@ function PolicyModal({ title, content, onClose }: { title: string; content: stri
   );
 }
 
+function BookLogoIcon() {
+  return (
+    <svg aria-hidden="true" className="h-10 w-10" viewBox="0 0 48 48" fill="none">
+      <path d="M9 15.5c5.6.6 10 2.4 13.3 5.3v18.7C18.6 36.9 14.2 35.4 9 35V15.5Z" fill="white" opacity="0.96" />
+      <path d="M39 15.5c-5.6.6-10 2.4-13.3 5.3v18.7c3.7-2.6 8.1-4.1 13.3-4.5V15.5Z" fill="white" opacity="0.96" />
+      <path d="M24 18.6V40" stroke="white" strokeWidth="2.8" strokeLinecap="round" opacity="0.9" />
+      <path d="M24 7.5l1.7 3.5 3.8.6-2.7 2.7.6 3.8-3.4-1.8-3.4 1.8.6-3.8-2.7-2.7 3.8-.6L24 7.5Z" fill="white" />
+      <path d="M13.8 8.8l.9 1.9 2.1.3-1.5 1.5.4 2.1-1.9-1-1.9 1 .4-2.1-1.5-1.5 2.1-.3.9-1.9ZM34.2 8.8l.9 1.9 2.1.3-1.5 1.5.4 2.1-1.9-1-1.9 1 .4-2.1-1.5-1.5 2.1-.3.9-1.9Z" fill="white" opacity="0.9" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none">
+      <path d="m5 10 3 3 7-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M4.5 7.5h15v10h-15v-10Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="m5 8 7 5 7-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M7 10V8a5 5 0 0 1 10 0v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M6 10h12v9H6v-9Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12 14v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" className="h-6 w-6" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.6 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h5.9a5 5 0 0 1-2.2 3.3v2.8h3.6c2.1-2 3.3-4.8 3.3-8.2Z" />
+      <path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.6l-3.6-2.8c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5H2.2V17A11 11 0 0 0 12 23Z" />
+      <path fill="#FBBC05" d="M5.9 14.2a6.6 6.6 0 0 1 0-4.3V7H2.2a11 11 0 0 0 0 10l3.7-2.8Z" />
+      <path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A10.8 10.8 0 0 0 12 1 11 11 0 0 0 2.2 7l3.7 2.9c.9-2.6 3.3-4.5 6.1-4.5Z" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3.5 19 6v5.4c0 4.2-2.8 7.9-7 9.1-4.2-1.2-7-4.9-7-9.1V6l7-2.5Z" stroke="currentColor" strokeWidth="2" />
+      <path d="m8.8 12 2.2 2.2 4.4-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DocumentIcon() {
+  return (
+    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
+      <path d="M6 3.5h8l4 4V20H6V3.5Z" fill="currentColor" opacity="0.18" />
+      <path d="M14 3.5V8h4M6 3.5h8l4 4V20H6V3.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9 12h6M9 15h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BotIcon() {
+  return (
+    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
+      <path d="M8 9h8a4 4 0 0 1 4 4v4H4v-4a4 4 0 0 1 4-4Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 9V5M9 5h6M9 14h.01M15 14h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M8.5 18.5h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LessonMockup() {
+  return (
+    <div className="lesson-mockup" aria-hidden="true">
+      <div className="lesson-paper">
+        <p className="lesson-mini-title">GIÁO ÁN</p>
+        <p className="lesson-mini-subtitle">THEO CÔNG VĂN 2345</p>
+        <div className="lesson-mini-checks">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="lesson-mini-lines">
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        <div className="lesson-mini-table">
+          <span />
+          <span />
+        </div>
+      </div>
+      <div className="lesson-glass-base" />
+    </div>
+  );
+}
+
+function AuthInputIcon({ children }: { children: ReactNode }) {
+  return <span className="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 text-slate-500">{children}</span>;
+}
+
 export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [acceptedPolicy, setAcceptedPolicy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -196,7 +331,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const title = mode === "register" ? "Tạo tài khoản" : mode === "reset" ? "Quên mật khẩu" : "Đăng nhập";
 
   return (
-    <main className="auth-page flex min-h-screen items-center justify-center px-4 py-8">
+    <main className="auth-page flex min-h-screen items-center justify-center px-4 py-7 sm:px-6 lg:px-8">
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}
@@ -205,67 +340,84 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
         />
       ) : null}
 
-      <div className="animate-fade-in flex w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-float md:min-h-[600px]">
-        {/* ── LEFT: Hero branding panel (desktop only) ── */}
-        <div className="auth-hero relative hidden w-[44%] flex-shrink-0 flex-col justify-between p-10 md:flex lg:p-12">
-          {/* Dot pattern overlay */}
+      <div className="auth-shell animate-fade-in flex w-full max-w-7xl overflow-hidden bg-white shadow-float md:min-h-[660px]">
+        <div className="auth-hero relative hidden w-[48%] flex-shrink-0 overflow-hidden px-10 py-9 text-white md:flex md:flex-col lg:px-14">
           <div className="auth-hero-dots pointer-events-none absolute inset-0" />
+          <div className="auth-hero-wave pointer-events-none absolute inset-0" />
+          <div className="auth-hero-glow pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
 
-          {/* Top content */}
-          <div className="relative z-10">
-            <h1 className="text-4xl font-black tracking-tight text-white lg:text-5xl">
+          <div className="relative z-10 flex items-center gap-3">
+            <BookLogoIcon />
+            <span className="text-2xl font-black tracking-tight">EduPlan AI</span>
+          </div>
+
+          <div className="relative z-10 mt-12 max-w-lg">
+            <h1 className="text-5xl font-black leading-tight tracking-normal text-white lg:text-6xl">
               EduPlan AI
             </h1>
-            <p className="mt-4 max-w-xs text-base font-medium leading-relaxed text-white/80 lg:text-lg">
+            <p className="mt-4 max-w-md text-xl font-bold leading-snug text-white/95">
               Soạn giáo án chuẩn Công văn 2345 trong vài phút
             </p>
           </div>
 
-          {/* Feature bullets */}
-          <ul className="relative z-10 space-y-4 text-sm leading-relaxed text-white/90">
-            <li className="flex items-start gap-2.5">
-              <span className="mt-0.5 text-white/50">•</span>
-              <span>Upload ảnh SGK, AI tự soạn giáo án đầy đủ</span>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-0.5 text-white/50">•</span>
-              <span>Preview A4 đẹp, xuất Word và PDF ngay</span>
-            </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-0.5 text-white/50">•</span>
-              <span>Tinh chỉnh thông minh, phù hợp mọi bối cảnh</span>
-            </li>
+          <ul className="relative z-10 mt-8 max-w-[520px] space-y-4 text-base font-medium leading-relaxed text-white/95">
+            {[
+              "Tải ảnh SGK, AI tự soạn giáo án đầy đủ",
+              "Xem trước khổ A4, xuất Word/PDF nhanh chóng",
+              "Tùy chỉnh linh hoạt, phù hợp từng lớp học",
+            ].map((item) => (
+              <li key={item} className="flex items-center gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-brand-700 shadow-lg shadow-brand-950/20">
+                  <CheckIcon />
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
           </ul>
 
-          {/* Bottom subtle text */}
-          <p className="relative z-10 text-xs font-medium text-white/40">
-            © 2025 EduPlan AI — Hỗ trợ giáo viên Việt Nam
+          <div className="relative z-10 mt-auto grid grid-cols-[190px_minmax(0,1fr)] items-end gap-5 pt-8">
+            <div className="space-y-3">
+              <div className="auth-feature-chip">
+                <ShieldIcon />
+                <span>Chuẩn CV 2345</span>
+              </div>
+              <div className="auth-feature-chip">
+                <DocumentIcon />
+                <span>Xuất Word/PDF</span>
+              </div>
+              <div className="auth-feature-chip">
+                <BotIcon />
+                <span>AI hỗ trợ giáo viên</span>
+              </div>
+            </div>
+            <LessonMockup />
+          </div>
+
+          <p className="relative z-10 mt-6 text-xs font-medium text-white/70">
+            © 2025 EduPlan AI - Hỗ trợ giáo viên Việt Nam
           </p>
         </div>
 
-        {/* ── RIGHT: Form panel ── */}
-        <div className="flex w-full flex-1 flex-col justify-center px-6 py-10 sm:px-10 md:px-12 lg:px-16">
-          {/* Mobile-only brand badge */}
-          <div className="mb-6 md:hidden">
-            <span className="rounded-full bg-brand-50 px-3.5 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-brand-700">
-              EduPlan AI
+        <div className="flex w-full flex-1 flex-col justify-center px-6 py-9 sm:px-10 md:px-12 lg:px-16 xl:px-20">
+          <div className="mb-7 flex items-center gap-3 md:hidden">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/20">
+              <BookLogoIcon />
             </span>
+            <span className="text-xl font-black text-slate-950">EduPlan AI</span>
           </div>
 
-          {/* Tab switcher (pill toggle) — only for login/register */}
           {mode !== "reset" ? (
-            <div className="mb-8">
-              <div className="relative inline-flex rounded-full bg-surface-100 p-1">
-                {/* Sliding highlight */}
+            <div className="mb-10">
+              <div className="relative inline-flex rounded-full bg-surface-100 p-1.5 shadow-inner">
                 <div
-                  className="absolute inset-y-1 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
+                  className="absolute inset-y-1.5 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
                   style={{
                     width: "50%",
-                    left: mode === "login" ? "4px" : "calc(50% - 0px)",
+                    left: mode === "login" ? "6px" : "calc(50% - 0px)",
                   }}
                 />
                 <button
-                  className={`relative z-10 rounded-full px-6 py-2 text-sm font-bold transition-colors duration-200 ${
+                  className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
                     mode === "login" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
                   }`}
                   onClick={() => setMode("login")}
@@ -273,7 +425,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                   Đăng nhập
                 </button>
                 <button
-                  className={`relative z-10 rounded-full px-6 py-2 text-sm font-bold transition-colors duration-200 ${
+                  className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
                     mode === "register" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
                   }`}
                   onClick={() => setMode("register")}
@@ -284,64 +436,79 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             </div>
           ) : null}
 
-          {/* Title and subtitle */}
-          <div className="mb-7">
-            <h2 className="text-2xl font-black text-slate-950 sm:text-3xl">
+          <div className="mb-8">
+            <h2 className="text-4xl font-black leading-tight text-slate-950">
               {title}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+            <p className="mt-3 text-base leading-relaxed text-slate-500">
               {mode === "reset"
                 ? "Nhập email để nhận link đặt lại mật khẩu."
                 : "Đăng nhập để vào giao diện tạo giáo án và lưu lịch sử làm việc."}
             </p>
           </div>
 
-          {/* Form fields */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             {mode === "register" ? (
               <label className="block">
-                <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                   Họ tên
                 </span>
-                <input
-                  className="input-field"
-                  placeholder="Nguyễn Văn A"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                />
+                <span className="relative block">
+                  <AuthInputIcon><UserIcon /></AuthInputIcon>
+                  <input
+                    className="auth-input-field"
+                    placeholder="Nguyễn Văn A"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                  />
+                </span>
               </label>
             ) : null}
 
             <label className="block">
-              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+              <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                 Email
               </span>
-              <input
-                className="input-field"
-                type="email"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
+              <span className="relative block">
+                <AuthInputIcon><MailIcon /></AuthInputIcon>
+                <input
+                  className="auth-input-field"
+                  type="email"
+                  placeholder="email@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </span>
             </label>
 
             {mode !== "reset" ? (
               <label className="block">
-                <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
                   Mật khẩu
                 </span>
-                <input
-                  className="input-field"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
+                <span className="relative block">
+                  <AuthInputIcon><LockIcon /></AuthInputIcon>
+                  <input
+                    className="auth-input-field pr-12"
+                    type={passwordVisible ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
+                    onClick={() => setPasswordVisible((current) => !current)}
+                    aria-label={passwordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    <EyeIcon />
+                  </button>
+                </span>
               </label>
             ) : null}
 
             {mode === "register" ? (
-              <label className="flex items-start gap-3 rounded-xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
@@ -357,7 +524,6 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
               </label>
             ) : null}
 
-            {/* Messages */}
             {error ? (
               <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
                 {error}
@@ -369,29 +535,27 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
               </div>
             ) : null}
 
-            {/* Submit button */}
             <button
-              className="btn-primary w-full py-3 text-sm font-black"
+              className="btn-primary w-full py-4 text-lg font-black"
               disabled={isSubmitting}
               onClick={handleEmailAuth}
             >
               {isSubmitting ? "Đang xử lý..." : title}
             </button>
 
-            {/* Google button */}
             {mode !== "reset" ? (
               <button
-                className="btn-secondary w-full py-3 text-sm font-black"
+                className="btn-secondary w-full py-3.5 text-lg font-black"
                 disabled={isSubmitting}
                 onClick={handleGoogleLogin}
               >
+                <GoogleIcon />
                 Tiếp tục với Google
               </button>
             ) : null}
           </div>
 
-          {/* Mode switcher links */}
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-base">
             {mode !== "login" ? (
               <button
                 className="font-bold text-brand-700 transition-colors hover:text-brand-800"
@@ -418,8 +582,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             ) : null}
           </div>
 
-          {/* Footer policy text */}
-          <div className="mt-6 border-t border-slate-100 pt-5 text-center text-xs leading-5 text-slate-400">
+          <div className="mt-8 border-t border-slate-100 pt-6 text-center text-sm leading-6 text-slate-400">
             Khi sử dụng EduPlan AI, bạn đồng ý tuân thủ{" "}
             <button className="font-bold text-brand-600 transition-colors hover:text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>
               Điều khoản sử dụng
