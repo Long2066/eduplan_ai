@@ -68,11 +68,26 @@ type AuditLog = {
   createdAt: string;
 };
 
+type FeedbackItem = {
+  id: string;
+  category: "bug" | "improvement" | "feature" | "other" | string;
+  status: "new" | "reviewed";
+  message: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  pageUrl: string;
+  userAgent: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const tabs = [
   { id: "dashboard", label: "Tổng quan" },
   { id: "led", label: "Bảng LED" },
   { id: "users", label: "Người dùng" },
   { id: "lessons", label: "Giáo án" },
+  { id: "feedback", label: "Góp ý" },
   { id: "policies", label: "Chính sách" },
   { id: "audit", label: "Audit log" },
 ] as const;
@@ -97,6 +112,19 @@ function shortDate(value: string) {
   return new Date(value).toLocaleString("vi-VN");
 }
 
+function previewText(value: string, maxLength = 120) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength).trim()}...`;
+}
+
+const feedbackCategoryLabels: Record<string, string> = {
+  all: "Tất cả",
+  bug: "Báo lỗi",
+  improvement: "Góp ý cải thiện",
+  feature: "Yêu cầu tính năng",
+  other: "Khác",
+};
+
 export default function AdminPage() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -110,6 +138,12 @@ export default function AdminPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [userQuery, setUserQuery] = useState("");
   const [lessons, setLessons] = useState<LessonItem[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [feedbackCategory, setFeedbackCategory] = useState("all");
+  const [feedbackStatus, setFeedbackStatus] = useState("all");
+  const [feedbackFrom, setFeedbackFrom] = useState("");
+  const [feedbackTo, setFeedbackTo] = useState("");
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
   const [policies, setPolicies] = useState<Policies>({ terms: "", privacy: "", version: "1.0" });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [passwordTarget, setPasswordTarget] = useState<ManagedUser | null>(null);
@@ -144,6 +178,17 @@ export default function AdminPage() {
     setLessons(result.lessons);
   }
 
+  async function loadFeedback() {
+    const params = new URLSearchParams();
+    if (feedbackCategory !== "all") params.set("category", feedbackCategory);
+    if (feedbackStatus !== "all") params.set("status", feedbackStatus);
+    if (feedbackFrom) params.set("from", feedbackFrom);
+    if (feedbackTo) params.set("to", feedbackTo);
+    const query = params.toString();
+    const result = await api<{ feedback: FeedbackItem[] }>(`/api/admin/feedback${query ? `?${query}` : ""}`);
+    setFeedback(result.feedback);
+  }
+
   async function loadPolicies() {
     const result = await api<{ policies: Policies }>("/api/admin/policies");
     setPolicies(result.policies);
@@ -161,6 +206,7 @@ export default function AdminPage() {
       if (nextTab === "led") await loadLed();
       if (nextTab === "users") await loadUsers();
       if (nextTab === "lessons") await loadLessons();
+      if (nextTab === "feedback") await loadFeedback();
       if (nextTab === "policies") await loadPolicies();
       if (nextTab === "audit") await loadAudit();
     } catch (loadError) {
@@ -284,6 +330,41 @@ export default function AdminPage() {
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Không thể lưu chính sách.");
     }
+  }
+
+  async function updateFeedbackStatus(item: FeedbackItem, status: "new" | "reviewed") {
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/feedback/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setMessage("Đã cập nhật trạng thái góp ý.");
+      if (selectedFeedback?.id === item.id) setSelectedFeedback({ ...item, status });
+      await loadFeedback();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể cập nhật góp ý.");
+    }
+  }
+
+  async function deleteFeedback(item: FeedbackItem) {
+    const confirmed = window.confirm(`Xóa góp ý của ${item.userEmail || item.userName || "người dùng"}? Thao tác này không tự khôi phục.`);
+    if (!confirmed) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/feedback/${item.id}`, { method: "DELETE" });
+      setSelectedFeedback(null);
+      setMessage("Đã xóa góp ý.");
+      await loadFeedback();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể xóa góp ý.");
+    }
+  }
+
+  function exportFeedback() {
+    window.location.href = "/api/admin/feedback/export";
   }
 
   if (!authLoaded) {
@@ -451,6 +532,90 @@ export default function AdminPage() {
           ])} />
         ) : null}
 
+        {tab === "feedback" ? (
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="feedback-toolbar">
+              <label>
+                <span className="label">Loại</span>
+                <select className="select" value={feedbackCategory} onChange={(event) => setFeedbackCategory(event.target.value)}>
+                  {Object.entries(feedbackCategoryLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="label">Trạng thái</span>
+                <select className="select" value={feedbackStatus} onChange={(event) => setFeedbackStatus(event.target.value)}>
+                  <option value="all">Tất cả</option>
+                  <option value="new">Mới</option>
+                  <option value="reviewed">Đã xem</option>
+                </select>
+              </label>
+              <label>
+                <span className="label">Từ ngày</span>
+                <input className="input" type="date" value={feedbackFrom} onChange={(event) => setFeedbackFrom(event.target.value)} />
+              </label>
+              <label>
+                <span className="label">Đến ngày</span>
+                <input className="input" type="date" value={feedbackTo} onChange={(event) => setFeedbackTo(event.target.value)} />
+              </label>
+              <div className="feedback-actions">
+                <button className="button secondary" onClick={loadFeedback}>Lọc</button>
+                <button className="button" onClick={exportFeedback}>Tải Excel</button>
+              </div>
+            </div>
+
+            <div className="table-wrap feedback-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Thời gian</th>
+                    <th>Người gửi</th>
+                    <th>Loại</th>
+                    <th>Trạng thái</th>
+                    <th>Nội dung</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feedback.length ? feedback.map((item) => (
+                    <tr key={item.id}>
+                      <td>{shortDate(item.createdAt)}</td>
+                      <td>
+                        <strong>{item.userName || "Không tên"}</strong>
+                        <div className="muted">{item.userEmail || item.userId}</div>
+                      </td>
+                      <td>{feedbackCategoryLabels[item.category] || item.category}</td>
+                      <td>
+                        <span className={`status-pill ${item.status === "new" ? "new" : ""}`}>
+                          {item.status === "new" ? "Mới" : "Đã xem"}
+                        </span>
+                      </td>
+                      <td className="feedback-preview">{previewText(item.message)}</td>
+                      <td>
+                        <div className="row-actions">
+                          <button className="button secondary" onClick={() => setSelectedFeedback(item)}>Xem</button>
+                          <button
+                            className="button secondary"
+                            onClick={() => updateFeedbackStatus(item, item.status === "new" ? "reviewed" : "new")}
+                          >
+                            {item.status === "new" ? "Đã xem" : "Đánh dấu mới"}
+                          </button>
+                          <button className="button danger" onClick={() => deleteFeedback(item)}>Xóa</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="empty-row">Chưa có góp ý nào theo bộ lọc hiện tại.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
         {tab === "policies" ? (
           <div className="card" style={{ marginTop: 14 }}>
             <label className="label">Phiên bản</label>
@@ -489,6 +654,60 @@ export default function AdminPage() {
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
               <button className="button secondary" onClick={() => setPasswordTarget(null)}>Hủy</button>
               <button className="button danger" onClick={changePassword}>Lưu mật khẩu mới</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedFeedback ? (
+        <div className="modal-backdrop">
+          <div className="modal feedback-modal">
+            <div className="modal-title-row">
+              <div>
+                <p className="eyebrow">Hòm thư góp ý</p>
+                <h2>Chi tiết phản hồi</h2>
+              </div>
+              <span className={`status-pill ${selectedFeedback.status === "new" ? "new" : ""}`}>
+                {selectedFeedback.status === "new" ? "Mới" : "Đã xem"}
+              </span>
+            </div>
+            <div className="feedback-detail-grid">
+              <div>
+                <span className="label">Người gửi</span>
+                <strong>{selectedFeedback.userName || "Không tên"}</strong>
+                <div className="muted">{selectedFeedback.userEmail || selectedFeedback.userId}</div>
+              </div>
+              <div>
+                <span className="label">Loại</span>
+                <strong>{feedbackCategoryLabels[selectedFeedback.category] || selectedFeedback.category}</strong>
+              </div>
+              <div>
+                <span className="label">Thời gian</span>
+                <strong>{shortDate(selectedFeedback.createdAt)}</strong>
+              </div>
+            </div>
+            <div className="feedback-message-box">{selectedFeedback.message}</div>
+            {selectedFeedback.pageUrl ? (
+              <div style={{ marginTop: 12 }}>
+                <span className="label">Trang gửi</span>
+                <a className="feedback-link" href={selectedFeedback.pageUrl} target="_blank" rel="noreferrer">{selectedFeedback.pageUrl}</a>
+              </div>
+            ) : null}
+            {selectedFeedback.userAgent ? (
+              <div style={{ marginTop: 12 }}>
+                <span className="label">Thiết bị</span>
+                <p className="muted feedback-user-agent">{selectedFeedback.userAgent}</p>
+              </div>
+            ) : null}
+            <div className="modal-actions">
+              <button className="button secondary" onClick={() => setSelectedFeedback(null)}>Đóng</button>
+              <button
+                className="button secondary"
+                onClick={() => updateFeedbackStatus(selectedFeedback, selectedFeedback.status === "new" ? "reviewed" : "new")}
+              >
+                {selectedFeedback.status === "new" ? "Đánh dấu đã xem" : "Đánh dấu mới"}
+              </button>
+              <button className="button danger" onClick={() => deleteFeedback(selectedFeedback)}>Xóa</button>
             </div>
           </div>
         </div>

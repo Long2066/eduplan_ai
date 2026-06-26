@@ -54,3 +54,20 @@ export function serializeAudit(doc: QueryDocumentSnapshot<DocumentData>) {
     createdAt: toIso(data.createdAt),
   };
 }
+
+export function serializeFeedback(doc: QueryDocumentSnapshot<DocumentData>) {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    category: String(data.category || "other"),
+    status: data.status === "reviewed" ? "reviewed" : "new",
+    message: String(data.message || ""),
+    userId: String(data.userId || ""),
+    userEmail: String(data.userEmail || ""),
+    userName: String(data.userName || ""),
+    pageUrl: String(data.pageUrl || ""),
+    userAgent: String(data.userAgent || ""),
+    createdAt: toIso(data.createdAt),
+    updatedAt: toIso(data.updatedAt),
+  };
+}
