@@ -3,7 +3,9 @@ import { incrementGenerationUsage, lessonExpiresAt, requireUser } from "@/lib/au
 import { getFirebaseDb } from "@/lib/firebase-admin";
 import { activityMinutes, pairedActivityActions, phaseKey, requiredActivityPhases } from "@/lib/lesson-format";
 import { getPedagogyProfile, gradeBandFor } from "@/lib/pedagogy-profiles";
-import type { LessonInput, LessonOutcomes, LessonPlan, PedagogyAudit, UploadedAsset } from "@/types/lesson";
+import type { LessonInput, LessonOutcomes, LessonPlan, PedagogyAudit, PeriodPlan, UploadedAsset } from "@/types/lesson";
+
+export const maxDuration = 300;
 
 type GenerateResponse = {
   lesson?: LessonPlan;
@@ -225,6 +227,61 @@ type OpenAiJsonRequest = {
   model: string;
   temperature: number;
   messages: OpenAiMessage[];
+};
+
+type MathActivityBlueprint = {
+  phase?: string;
+  title?: string;
+  objective?: string;
+  durationMinutes?: number;
+  mathFocus?: string;
+  handoffToNext?: string;
+};
+
+type MathPeriodBlueprint = {
+  periodNumber?: number;
+  focus?: string;
+  objectives?: string[];
+  prerequisite?: string;
+  targetKnowledge?: string;
+  continuityIn?: string;
+  continuityOut?: string;
+  activities?: MathActivityBlueprint[];
+};
+
+type MathLessonBlueprint = {
+  lessonTitle?: string;
+  lessonOverview?: string;
+  mathCore?: {
+    problemType?: string;
+    knowledgeFocus?: string[];
+    representations?: string[];
+    commonMisconceptions?: string[];
+    checkStrategies?: string[];
+    continuityRules?: string[];
+  };
+  outcomes?: Partial<LessonOutcomes>;
+  materials?: {
+    teacher?: string[];
+    students?: string[];
+  };
+  assessment?: {
+    criteria?: string[];
+    evidence?: string[];
+    comments?: string[];
+  };
+  contextFit?: {
+    notes?: string[];
+  };
+  periods?: MathPeriodBlueprint[];
+};
+
+type MathPeriodChunk = PeriodPlan & {
+  handoff?: {
+    learned?: string;
+    unresolvedRisks?: string[];
+    nextBridge?: string;
+  };
 };
 
 function extractResponsesText(data: unknown) {
@@ -566,6 +623,533 @@ Schema JSON cần trả:
   "contextFit": { "notes": string[] },
   "meta": { "style": string, "modelUsed": string, "createdAt": string }
 }`;
+}
+
+function isMathSubject(input: LessonInput) {
+  return /^(toán|toan)$/i.test((input.subject || "").trim());
+}
+
+function promptOcrContext(ocrText: string, maxLength = 15000) {
+  const text = (ocrText || "").trim();
+  if (text.length <= maxLength) return text;
+  const headLength = Math.floor(maxLength * 0.68);
+  const tailLength = maxLength - headLength;
+  return `${text.slice(0, headLength)}
+
+...[Đã rút gọn phần giữa của nội dung ảnh SGK để giảm timeout; giữ phần đầu và phần cuối để đối chiếu mạch bài]...
+
+${text.slice(-tailLength)}`;
+}
+
+function asStringList(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
+}
+
+function mathPhaseDuration(phase: string, input: LessonInput): number {
+  const duration = Number(input.duration || 35);
+  const key = phaseKey(phase);
+  if (key === "Khởi động") return Math.max(3, Math.min(5, Math.round(duration * 0.12)));
+  if (key === "Khám phá") return Math.max(13, Math.min(17, Math.round(duration * 0.45)));
+  if (key === "Luyện tập") return Math.max(8, Math.min(11, Math.round(duration * 0.28)));
+  if (key === "Vận dụng") return Math.max(3, duration - mathPhaseDuration("Khởi động", input) - mathPhaseDuration("Khám phá", input) - mathPhaseDuration("Luyện tập", input));
+  return 5;
+}
+
+function findActivityBlueprint(period: MathPeriodBlueprint, phase: string, index: number) {
+  const activities = Array.isArray(period.activities) ? period.activities : [];
+  return activities.find((activity) => phaseKey(`${activity.phase} ${activity.title}`) === phase) || activities[index] || {};
+}
+
+function normalizeMathBlueprint(input: LessonInput, rawBlueprint: MathLessonBlueprint): MathLessonBlueprint {
+  const expectedPeriods = Math.max(1, Number(input.periods || 1));
+  const rawPeriods = Array.isArray(rawBlueprint.periods) ? rawBlueprint.periods : [];
+  const lessonTitle = rawBlueprint.lessonTitle?.trim() || input.lessonTitle || "Bài học Toán";
+  const periods = Array.from({ length: expectedPeriods }, (_, index) => {
+    const periodNumber = index + 1;
+    const rawPeriod = rawPeriods.find((period) => Number(period.periodNumber) === periodNumber) || rawPeriods[index] || {};
+    const focus = rawPeriod.focus?.trim() || (expectedPeriods > 1 ? `Tiết ${periodNumber}: trọng tâm ${lessonTitle}` : `Trọng tâm ${lessonTitle}`);
+    return {
+      periodNumber,
+      focus,
+      objectives: asStringList(rawPeriod.objectives).length ? asStringList(rawPeriod.objectives) : [`Hình thành và luyện tập trọng tâm Toán của ${focus}.`],
+      prerequisite: rawPeriod.prerequisite || "Kiến thức nền được ôn qua hoạt động khởi động.",
+      targetKnowledge: rawPeriod.targetKnowledge || focus,
+      continuityIn: rawPeriod.continuityIn || (periodNumber === 1 ? "Bắt đầu từ trải nghiệm, tranh/ảnh trong SGK và kiến thức nền đã học." : `Nối tiếp kết quả học tập của tiết ${periodNumber - 1}.`),
+      continuityOut: rawPeriod.continuityOut || (periodNumber < expectedPeriods ? `Chuẩn bị cho trọng tâm tiết ${periodNumber + 1}.` : "Chốt bài và vận dụng vào tình huống gần gũi."),
+      activities: requiredActivityPhases.map((phase, activityIndex) => {
+        const activity = findActivityBlueprint(rawPeriod, phase, activityIndex);
+        return {
+          phase,
+          title: activity.title || phase,
+          objective: activity.objective || `Tổ chức hoạt động ${phase.toLowerCase()} bám trọng tâm ${focus}.`,
+          durationMinutes: Number(activity.durationMinutes || mathPhaseDuration(phase, input)),
+          mathFocus: activity.mathFocus || rawPeriod.targetKnowledge || focus,
+          handoffToNext: activity.handoffToNext || (activityIndex < requiredActivityPhases.length - 1 ? `Chuyển từ ${phase} sang ${requiredActivityPhases[activityIndex + 1]}.` : rawPeriod.continuityOut || "Chốt tiết học."),
+        };
+      }),
+    };
+  });
+
+  return {
+    lessonTitle,
+    lessonOverview: rawBlueprint.lessonOverview || `Giáo án Toán ${lessonTitle} được sinh theo blueprint để giữ mạch logic giữa các tiết/hoạt động.`,
+    mathCore: {
+      problemType: rawBlueprint.mathCore?.problemType || "Dạng toán xác định từ ảnh SGK.",
+      knowledgeFocus: asStringList(rawBlueprint.mathCore?.knowledgeFocus).length ? asStringList(rawBlueprint.mathCore?.knowledgeFocus) : ["Xác định dữ kiện, quan hệ toán học, phép tính/quy trình và kiểm tra kết quả."],
+      representations: asStringList(rawBlueprint.mathCore?.representations).length ? asStringList(rawBlueprint.mathCore?.representations) : ["Sơ đồ/tóm tắt trực quan phù hợp bài học", "Bảng hoặc hình vẽ khi cần"],
+      commonMisconceptions: asStringList(rawBlueprint.mathCore?.commonMisconceptions).length ? asStringList(rawBlueprint.mathCore?.commonMisconceptions) : ["Nhầm dữ kiện, quan hệ giữa các đại lượng, phép tính hoặc đơn vị."],
+      checkStrategies: asStringList(rawBlueprint.mathCore?.checkStrategies).length ? asStringList(rawBlueprint.mathCore?.checkStrategies) : ["Đối chiếu kết quả với dữ kiện ban đầu", "Kiểm tra đơn vị và ý nghĩa thực tế của đáp số"],
+      continuityRules: asStringList(rawBlueprint.mathCore?.continuityRules).length ? asStringList(rawBlueprint.mathCore?.continuityRules) : ["Mỗi hoạt động phải nối tiếp sản phẩm học tập của hoạt động trước.", "Không lặp lại cùng một cách khởi động giữa các tiết."],
+    },
+    outcomes: rawBlueprint.outcomes || {},
+    materials: {
+      teacher: asStringList(rawBlueprint.materials?.teacher).length ? asStringList(rawBlueprint.materials?.teacher) : ["Ảnh SGK/tranh bài toán", "Bảng phụ hoặc phiếu tóm tắt", "Thẻ số/thẻ dữ kiện"],
+      students: asStringList(rawBlueprint.materials?.students).length ? asStringList(rawBlueprint.materials?.students) : ["SGK", "Vở Toán", "Bảng con hoặc phiếu học tập"],
+    },
+    assessment: {
+      criteria: asStringList(rawBlueprint.assessment?.criteria).length ? asStringList(rawBlueprint.assessment?.criteria) : ["Xác định đúng dữ kiện, yêu cầu và quan hệ toán học.", "Trình bày được cách làm, phép tính và kiểm tra kết quả."],
+      evidence: asStringList(rawBlueprint.assessment?.evidence).length ? asStringList(rawBlueprint.assessment?.evidence) : ["Phiếu học tập/bài làm của học sinh", "Câu trả lời giải thích cách làm và bước kiểm tra"],
+      comments: asStringList(rawBlueprint.assessment?.comments).length ? asStringList(rawBlueprint.assessment?.comments) : ["Nhận xét quá trình phân tích đề, lựa chọn phép tính và kiểm tra kết quả."],
+    },
+    contextFit: {
+      notes: asStringList(rawBlueprint.contextFit?.notes),
+    },
+    periods,
+  };
+}
+
+function buildMathBlueprintPrompt(input: LessonInput, ocrText: string) {
+  const style = input.style || "Dạy thật trên lớp";
+  const facilities = input.facilities === "auto" ? "AI tự chọn theo bối cảnh" : input.facilities.join(", ");
+  return `Bạn là chuyên gia thiết kế bài học môn Toán tiểu học. Hãy tạo "bản đồ bài học" trước khi soạn giáo án chi tiết.
+
+Mục tiêu của bước này:
+- Chỉ phân tích và khóa logic bài Toán; chưa viết giáo án đầy đủ.
+- Bản đồ này sẽ được dùng cho các request sau để sinh từng tiết/từng hoạt động, nên phải đủ rõ để giữ mạch liền nhau.
+- Phải giảm rủi ro timeout: output ngắn, có cấu trúc, không lan man.
+
+Khung định hướng:
+${curriculumGuidance}
+
+Logic sư phạm môn Toán:
+${pedagogyProfileGuidance(input)}
+
+Quy tắc cá nhân hóa:
+${elementaryLocalityGuidance(input, ocrText)}
+
+${learningContextGuidance(input)}
+
+Thông tin form:
+- Môn học: ${input.subject}
+- Lớp: ${input.grade}
+- Tên bài user nhập: ${input.lessonTitle || "Để trống - tự nhận diện từ ảnh SGK"}
+- Bộ sách: ${bookContext(input)}
+- Tập sách: ${input.bookVolume && input.bookVolume !== "auto" ? input.bookVolume : "Không xác định"}
+- Số tiết: ${input.periods}
+- Thời lượng: ${input.duration} phút/tiết
+- Quê hương/địa phương của học sinh: ${localityContext(input)}
+- Đối tượng học sinh: ${input.studentProfile}
+- Môi trường học: ${input.teachingEnvironment}
+- Cơ sở vật chất: ${facilities}
+- Phong cách giáo án: ${style}
+- Yêu cầu đặc biệt: ${input.specialRequest || "Không có"}
+- Cho phép AI tự suy luận phần thiếu: ${input.allowAiInference ? "Có" : "Không"}
+
+Nội dung trích xuất từ ảnh SGK user upload:
+${promptOcrContext(ocrText)}
+
+Yêu cầu blueprint:
+- Nhận diện đầy đủ số bài và tên bài nếu ảnh SGK có thể hiện.
+- Chỉ trả JSON hợp lệ, không Markdown.
+- Không dùng từ "OCR"; dùng "ảnh SGK", "tranh trong SGK" hoặc "trang sách".
+- periodPlans phải đủ đúng ${input.periods} tiết; mỗi tiết có 4 pha theo thứ tự: Khởi động, Khám phá, Luyện tập, Vận dụng.
+- Mỗi tiết có trọng tâm riêng, không lặp nguyên mục tiêu.
+- Mỗi pha cần có handoffToNext để request sau nối mạch.
+- mathCore phải nêu rõ dạng toán, kiến thức trọng tâm, biểu diễn/tóm tắt, lỗi sai thường gặp và cách kiểm tra ngược.
+
+Schema JSON cần trả:
+{
+  "lessonTitle": string,
+  "lessonOverview": string,
+  "mathCore": {
+    "problemType": string,
+    "knowledgeFocus": string[],
+    "representations": string[],
+    "commonMisconceptions": string[],
+    "checkStrategies": string[],
+    "continuityRules": string[]
+  },
+  "outcomes": { "generalCompetencies": string[], "specificCompetencies": string[], "qualities": string[], "knowledgeAndSkills": string[] },
+  "materials": { "teacher": string[], "students": string[] },
+  "assessment": { "criteria": string[], "evidence": string[], "comments": string[] },
+  "contextFit": { "notes": string[] },
+  "periods": [{
+    "periodNumber": number,
+    "focus": string,
+    "objectives": string[],
+    "prerequisite": string,
+    "targetKnowledge": string,
+    "continuityIn": string,
+    "continuityOut": string,
+    "activities": [{ "phase": string, "title": string, "objective": string, "durationMinutes": number, "mathFocus": string, "handoffToNext": string }]
+  }]
+}`;
+}
+
+function mathPeriodBlueprintFor(blueprint: MathLessonBlueprint, periodNumber: number) {
+  return blueprint.periods?.find((period) => Number(period.periodNumber) === periodNumber) || blueprint.periods?.[periodNumber - 1];
+}
+
+function buildMathPeriodPrompt(
+  input: LessonInput,
+  ocrText: string,
+  blueprint: MathLessonBlueprint,
+  period: MathPeriodBlueprint,
+  previousHandoff: MathPeriodChunk["handoff"] | null,
+) {
+  const style = input.style || "Dạy thật trên lớp";
+  const creativeMode = style === "Sáng tạo, sinh động";
+  return `Bạn là chuyên gia soạn giáo án Toán tiểu học. Hãy sinh riêng một tiết theo blueprint đã khóa.
+
+Quy tắc quan trọng:
+- Chỉ trả JSON hợp lệ cho một PeriodPlan, không Markdown, không giải thích.
+- Không tự nghĩ lại mục tiêu bài từ đầu; phải bám blueprint.
+- Phải giữ mạch từ previousHandoff/continuityIn sang continuityOut.
+- Không dùng từ "OCR"; dùng "ảnh SGK", "tranh trong SGK" hoặc "trang sách".
+- Mỗi tiết có đúng 4 hoạt động theo thứ tự: Khởi động, Khám phá, Luyện tập, Vận dụng.
+- teacherActions và studentActions phải đi theo từng cặp tương ứng; mọi teacherActions bắt đầu bằng "GV ...", mọi studentActions bắt đầu bằng "HS ...".
+- Kiểm soát độ dài theo 35 phút: Khởi động 2-3 cặp, Khám phá 4-6 cặp, Luyện tập 3-4 cặp, Vận dụng 2-3 cặp.
+- Với Toán, mỗi tiết phải có: biểu diễn/tóm tắt trực quan, phân tích dữ kiện/yêu cầu/quan hệ, lý do chọn phép tính hoặc quy trình, lỗi sai thường gặp, kiểm tra/đối chiếu kết quả và đơn vị nếu có.
+- Khởi động không được lộ đáp án bài chính; chỉ ôn kiến thức nền hoặc tạo tình huống dẫn vào.
+- Khám phá phải đi từ tình huống/tranh/bài toán đến mô hình hóa, thao tác/biểu diễn, câu hỏi gợi mở, dự kiến đúng/sai và lời chốt.
+- Luyện tập phải có nhiệm vụ/bài tập cụ thể, đáp án/cách làm dự kiến và cách hỗ trợ học sinh yếu.
+- Vận dụng 3-5 phút chỉ yêu cầu nêu cách làm, đặt đề nhanh, giải một bước trọng tâm hoặc giao hoàn thiện ở nhà.
+${creativeMode ? "- Có ít nhất một điểm nhấn sáng tạo vừa sức, nhưng không làm loãng logic toán." : "- Ưu tiên thực tế, dễ dạy, không thêm hoạt động cầu kỳ nếu không cần."}
+
+Khung CTGDPT 2018:
+${curriculumGuidance}
+
+Luật Khởi động:
+${startupGuidance}
+
+Tiêu chuẩn chất lượng:
+${qualityGuidance(input)}
+
+Logic sư phạm Toán:
+${pedagogyProfileGuidance(input)}
+
+Blueprint toàn bài đã khóa:
+${JSON.stringify(blueprint)}
+
+Tiết cần sinh:
+${JSON.stringify(period)}
+
+Kết quả bàn giao từ tiết/hoạt động trước:
+${previousHandoff ? JSON.stringify(previousHandoff) : period.continuityIn || "Đây là tiết mở đầu, cần dẫn từ trải nghiệm và kiến thức nền của học sinh."}
+
+Nội dung ảnh SGK để đối chiếu khi cần:
+${promptOcrContext(ocrText, 10000)}
+
+Schema JSON cần trả:
+{
+  "periodNumber": number,
+  "focus": string,
+  "outcomes": { "generalCompetencies": string[], "specificCompetencies": string[], "qualities": string[], "knowledgeAndSkills": string[] },
+  "activities": [{ "phase": string, "title": string, "objective": string, "durationMinutes": number, "teacherActions": string[], "studentActions": string[], "learningProducts": string[] }],
+  "handoff": { "learned": string, "unresolvedRisks": string[], "nextBridge": string }
+}`;
+}
+
+function activityFromMathBlueprint(activity: MathActivityBlueprint, index: number): LessonPlan["activities"][number] {
+  const phase = phaseKey(`${activity.phase} ${activity.title}`) || requiredActivityPhases[index] || `Hoạt động ${index + 1}`;
+  return {
+    phase,
+    title: activity.title || phase,
+    objective: activity.objective || `Giúp học sinh hoàn thành hoạt động ${phase.toLowerCase()}.`,
+    durationMinutes: activity.durationMinutes || 5,
+    teacherActions: [
+      `GV tổ chức hoạt động ${phase.toLowerCase()} bám trọng tâm Toán, yêu cầu học sinh quan sát dữ kiện và nêu cách nghĩ ban đầu.`,
+      "GV gợi hỏi để học sinh xác định dữ kiện, yêu cầu, quan hệ toán học và cách kiểm tra kết quả.",
+    ],
+    studentActions: [
+      "HS quan sát, nêu dữ kiện, trao đổi cách hiểu và chia sẻ dự đoán ban đầu.",
+      "HS trả lời câu hỏi, hoàn thành nhiệm vụ ngắn và đối chiếu kết quả với yêu cầu bài toán.",
+    ],
+    learningProducts: [`Sản phẩm học tập của hoạt động ${phase.toLowerCase()}: câu trả lời, tóm tắt hoặc bài làm ngắn của học sinh.`],
+  };
+}
+
+function normalizeMathPeriodChunk(
+  input: LessonInput,
+  blueprint: MathLessonBlueprint,
+  periodBlueprint: MathPeriodBlueprint,
+  rawChunk: MathPeriodChunk,
+): MathPeriodChunk {
+  const periodNumber = Number(rawChunk.periodNumber || periodBlueprint.periodNumber || 1);
+  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Toán";
+  const rawActivities = Array.isArray(rawChunk.activities) ? rawChunk.activities : [];
+  const activities = requiredActivityPhases.map((phase, index) => {
+    const source = rawActivities.find((activity) => phaseKey(`${activity.phase} ${activity.title}`) === phase) || rawActivities[index] || activityFromMathBlueprint(findActivityBlueprint(periodBlueprint, phase, index), index);
+    return normalizeActivity(
+      {
+        ...source,
+        phase,
+        title: source.title || findActivityBlueprint(periodBlueprint, phase, index).title || phase,
+        objective: source.objective || findActivityBlueprint(periodBlueprint, phase, index).objective || `Tổ chức hoạt động ${phase.toLowerCase()} cho tiết ${periodNumber}.`,
+        durationMinutes: source.durationMinutes || findActivityBlueprint(periodBlueprint, phase, index).durationMinutes || mathPhaseDuration(phase, input),
+      },
+      index,
+    );
+  });
+
+  return {
+    periodNumber,
+    focus: rawChunk.focus || periodBlueprint.focus || `Tiết ${periodNumber}: ${title}`,
+    outcomes: normalizeOutcomes(rawChunk.outcomes || blueprint.outcomes, `${title} - tiết ${periodNumber}`),
+    activities,
+    handoff: rawChunk.handoff || {
+      learned: periodBlueprint.continuityOut || `Học sinh hoàn thành trọng tâm tiết ${periodNumber}.`,
+      unresolvedRisks: blueprint.mathCore?.commonMisconceptions || [],
+      nextBridge: periodBlueprint.continuityOut || "Chuyển sang hoạt động/tiết tiếp theo.",
+    },
+  };
+}
+
+function mathPeriodIssues(period: MathPeriodChunk) {
+  const issues: string[] = [];
+  const activities = period.activities || [];
+  const text = JSON.stringify(period);
+  if (!periodHasRequiredPhases(activities)) issues.push("Thiếu đủ 4 pha Khởi động, Khám phá, Luyện tập, Vận dụng.");
+  if (!period.outcomes || !hasDetailedOutcomeGroup(period.outcomes)) issues.push("Yêu cầu cần đạt của tiết còn sơ sài hoặc thiếu nhóm năng lực/phẩm chất.");
+  activities.forEach((activity, index) => {
+    const label = `${activity.phase || "Hoạt động"} ${activity.title || index + 1}`;
+    if (!hasEqualActionPairs(activity)) issues.push(`${label}: cặp GV/HS chưa cân bằng.`);
+    if (hasWeaklyPairedActions(activity)) issues.push(`${label}: hành động GV/HS chưa ăn khớp.`);
+    if (hasTooManyActionPairs(activity, index)) issues.push(`${label}: quá nhiều bước so với thời lượng.`);
+    if (!activity.learningProducts?.length) issues.push(`${label}: thiếu sản phẩm học tập.`);
+  });
+  if (!/sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ|trục số|phần bằng nhau/i.test(text)) {
+    issues.push("Tiết Toán thiếu biểu diễn/tóm tắt trực quan.");
+  }
+  if (!/dữ kiện|yêu cầu|quan hệ|lớn hơn|bé hơn|tổng|hiệu|tỉ số|phép tính|vì sao/i.test(text)) {
+    issues.push("Tiết Toán thiếu phân tích dữ kiện, yêu cầu, quan hệ hoặc lý do chọn phép tính.");
+  }
+  if (!/lỗi sai|sai thường gặp|nhầm|kiểm tra|đối chiếu|thử lại|kiểm tra ngược|đơn vị/i.test(text)) {
+    issues.push("Tiết Toán thiếu lỗi sai thường gặp hoặc bước kiểm tra kết quả/đơn vị.");
+  }
+  return issues;
+}
+
+function buildMathPeriodRepairPrompt(input: LessonInput, blueprint: MathLessonBlueprint, period: MathPeriodChunk, issues: string[]) {
+  return `PeriodPlan môn Toán sau chưa đạt. Hãy sửa riêng tiết này, không viết lại toàn bộ bài.
+
+Chỉ trả JSON hợp lệ theo schema PeriodPlan + handoff. Không Markdown.
+
+Blueprint toàn bài:
+${JSON.stringify(blueprint)}
+
+Các lỗi cần sửa:
+${issues.map((issue) => `- ${issue}`).join("\n")}
+
+Yêu cầu sửa:
+- Giữ periodNumber và focus.
+- Có đúng 4 hoạt động: Khởi động, Khám phá, Luyện tập, Vận dụng.
+- teacherActions/studentActions đi theo từng cặp, bắt đầu bằng "GV ..." và "HS ...".
+- Thêm rõ biểu diễn/tóm tắt, dữ kiện-yêu cầu-quan hệ, phép tính/quy trình, lỗi sai thường gặp và kiểm tra kết quả.
+- Rút số bước nếu quá dài: Khởi động 2-3 cặp, Khám phá 4-6 cặp, Luyện tập 3-4 cặp, Vận dụng 2-3 cặp.
+- Không dùng từ "OCR".
+- Cá nhân hóa theo bối cảnh: ${JSON.stringify({ grade: input.grade, environment: input.teachingEnvironment, facilities: input.facilities, locality: localityContext(input), style: input.style })}
+
+PeriodPlan cần sửa:
+${JSON.stringify(period)}
+
+Schema JSON:
+{
+  "periodNumber": number,
+  "focus": string,
+  "outcomes": { "generalCompetencies": string[], "specificCompetencies": string[], "qualities": string[], "knowledgeAndSkills": string[] },
+  "activities": [{ "phase": string, "title": string, "objective": string, "durationMinutes": number, "teacherActions": string[], "studentActions": string[], "learningProducts": string[] }],
+  "handoff": { "learned": string, "unresolvedRisks": string[], "nextBridge": string }
+}`;
+}
+
+async function generateMathBlueprintWithModel(input: LessonInput, ocrText: string, apiKey: string, model: string) {
+  console.info("[EduPlan AI] Math chunked blueprint started", { model, periods: input.periods, ocrTextLength: ocrText.length });
+  const content = await fetchOpenAiJsonContent(apiKey, {
+    model,
+    temperature: 0.35,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Bạn chỉ trả JSON hợp lệ. Nhiệm vụ là tạo blueprint môn Toán tiểu học để các bước sau sinh từng tiết/hoạt động liền mạch, không viết giáo án đầy đủ ở bước này.",
+      },
+      { role: "user", content: buildMathBlueprintPrompt(input, ocrText) },
+    ],
+  });
+  return normalizeMathBlueprint(input, extractJsonValue<MathLessonBlueprint>(content));
+}
+
+async function generateMathPeriodWithModel(
+  input: LessonInput,
+  ocrText: string,
+  apiKey: string,
+  model: string,
+  blueprint: MathLessonBlueprint,
+  period: MathPeriodBlueprint,
+  previousHandoff: MathPeriodChunk["handoff"] | null,
+) {
+  const periodNumber = Number(period.periodNumber || 1);
+  console.info("[EduPlan AI] Math chunked period started", { model, periodNumber, focus: period.focus });
+  const content = await fetchOpenAiJsonContent(apiKey, {
+    model,
+    temperature: 0.5,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Bạn chỉ trả JSON hợp lệ cho một tiết Toán. Viết đủ dùng dạy thật, nhưng kiểm soát độ dài để tránh timeout.",
+      },
+      { role: "user", content: buildMathPeriodPrompt(input, ocrText, blueprint, period, previousHandoff) },
+    ],
+  });
+  return normalizeMathPeriodChunk(input, blueprint, period, extractJsonValue<MathPeriodChunk>(content));
+}
+
+async function repairMathPeriodWithModel(
+  input: LessonInput,
+  apiKey: string,
+  model: string,
+  blueprint: MathLessonBlueprint,
+  period: MathPeriodChunk,
+  issues: string[],
+) {
+  console.info("[EduPlan AI] Math chunked period repair started", { model, periodNumber: period.periodNumber, issueCount: issues.length });
+  const content = await fetchOpenAiJsonContent(apiKey, {
+    model,
+    temperature: 0.42,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Bạn chỉ trả JSON hợp lệ. Nhiệm vụ là sửa một PeriodPlan môn Toán, giữ mạch blueprint và không viết lại toàn bộ bài.",
+      },
+      { role: "user", content: buildMathPeriodRepairPrompt(input, blueprint, period, issues) },
+    ],
+  });
+  const periodBlueprint = mathPeriodBlueprintFor(blueprint, Number(period.periodNumber || 1)) || { periodNumber: period.periodNumber, focus: period.focus };
+  return normalizeMathPeriodChunk(input, blueprint, periodBlueprint, extractJsonValue<MathPeriodChunk>(content));
+}
+
+function buildMathLessonFromChunks(input: LessonInput, blueprint: MathLessonBlueprint, chunks: MathPeriodChunk[], model: string): LessonPlan {
+  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Toán";
+  const orderedChunks = chunks
+    .slice()
+    .sort((left, right) => Number(left.periodNumber || 0) - Number(right.periodNumber || 0))
+    .map((chunk, index) => ({
+      ...chunk,
+      periodNumber: Number(chunk.periodNumber || index + 1),
+      outcomes: normalizeOutcomes(chunk.outcomes || blueprint.outcomes, `${title} - tiết ${Number(chunk.periodNumber || index + 1)}`),
+      activities: (chunk.activities || []).map(normalizeActivity),
+    }));
+  const continuityNotes = orderedChunks
+    .map((chunk) => chunk.handoff?.nextBridge || chunk.handoff?.learned || "")
+    .filter(Boolean)
+    .map((note, index) => `Tiết ${orderedChunks[index]?.periodNumber || index + 1}: ${note}`);
+
+  return normalizeLesson(
+    input,
+    {
+      generalInfo: {
+        subject: "Toán",
+        grade: input.grade,
+        lessonTitle: title,
+        book: bookContext(input),
+        periods: Number(input.periods || orderedChunks.length || 1),
+        duration: Number(input.duration || 35),
+      },
+      outcomes: normalizeOutcomes(blueprint.outcomes, title),
+      materials: {
+        teacher: blueprint.materials?.teacher?.length ? blueprint.materials.teacher : ["Ảnh SGK/tranh bài toán", "Bảng phụ hoặc phiếu tóm tắt", "Thẻ số/thẻ dữ kiện"],
+        students: blueprint.materials?.students?.length ? blueprint.materials.students : ["SGK", "Vở Toán", "Bảng con hoặc phiếu học tập"],
+      },
+      activities: orderedChunks.flatMap((chunk) => chunk.activities || []),
+      periodPlans: orderedChunks,
+      assessment: {
+        criteria: blueprint.assessment?.criteria || [],
+        evidence: blueprint.assessment?.evidence || [],
+        comments: blueprint.assessment?.comments || [],
+      },
+      adjustments: {
+        suitablePoints: ["........................................................................................................................................"],
+        pointsToAdjust: ["........................................................................................................................................"],
+        nextLessonDirection: ["........................................................................................................................................"],
+      },
+      contextFit: {
+        notes: [...(blueprint.contextFit?.notes || []), ...continuityNotes],
+      },
+      meta: {
+        style: input.style,
+        modelUsed: model,
+        createdAt: new Date().toISOString(),
+      },
+    },
+    model,
+  );
+}
+
+async function generateMathLessonChunkedWithModel(input: LessonInput, ocrText: string, apiKey: string, model: string) {
+  const blueprint = await generateMathBlueprintWithModel(input, ocrText, apiKey, model);
+  const chunks: MathPeriodChunk[] = [];
+  let previousHandoff: MathPeriodChunk["handoff"] | null = null;
+  let repairApplied = false;
+
+  for (const period of blueprint.periods || []) {
+    let chunk = await generateMathPeriodWithModel(input, ocrText, apiKey, model, blueprint, period, previousHandoff);
+    const issues = mathPeriodIssues(chunk);
+    if (issues.length) {
+      try {
+        chunk = await repairMathPeriodWithModel(input, apiKey, model, blueprint, chunk, issues);
+        repairApplied = true;
+      } catch (repairError) {
+        console.warn("[EduPlan AI] Math chunked period repair skipped", {
+          model,
+          periodNumber: chunk.periodNumber,
+          message: repairError instanceof Error ? repairError.message : "Unknown repair error",
+        });
+      }
+    }
+    chunks.push(chunk);
+    previousHandoff = chunk.handoff || {
+      learned: chunk.focus,
+      unresolvedRisks: blueprint.mathCore?.commonMisconceptions || [],
+      nextBridge: mathPeriodBlueprintFor(blueprint, Number(chunk.periodNumber || 1))?.continuityOut || "Chuyển sang tiết/hoạt động tiếp theo.",
+    };
+  }
+
+  let lesson = buildMathLessonFromChunks(input, blueprint, chunks, model);
+  const finalPeriodIssues = (lesson.periodPlans || []).flatMap((period) => mathPeriodIssues({ ...period, handoff: undefined }));
+  if (finalPeriodIssues.length && !repairApplied) {
+    console.warn("[EduPlan AI] Math chunked lesson has remaining period issues", { model, issueCount: finalPeriodIssues.length });
+  }
+
+  if (hasStructuralIssues(lesson, input) || isMissingPeriods(lesson, input.periods)) {
+    throw new Error("Giáo án Toán chunked chưa đủ cấu trúc sau khi ghép. Vui lòng bấm tạo lại hoặc giảm số tiết/ảnh.");
+  }
+
+  const pedagogyAudit = buildPedagogyAudit(lesson, input, repairApplied);
+  console.info("[EduPlan AI] Math chunked generation completed", {
+    model,
+    periods: lesson.periodPlans?.length || 1,
+    activityCount: lesson.activities.length,
+    qualityIssues: hasQualityIssues(lesson, input),
+    pedagogyAudit: {
+      status: pedagogyAudit.status,
+      repairApplied: pedagogyAudit.repairApplied,
+      issueCount: pedagogyAudit.issues.length,
+    },
+  });
+  return { lesson, pedagogyAudit };
 }
 
 function periodsForValidation(lesson: LessonPlan) {
@@ -1028,14 +1612,18 @@ LessonPlan cần sửa:
 ${JSON.stringify(lesson)}`;
 }
 
-function extractJson(text: string) {
+function extractJsonValue<T>(text: string) {
   try {
-    return JSON.parse(text) as LessonPlan;
+    return JSON.parse(text) as T;
   } catch {
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("OpenAI không trả về JSON hợp lệ.");
-    return JSON.parse(match[0]) as LessonPlan;
+    return JSON.parse(match[0]) as T;
   }
+}
+
+function extractJson(text: string) {
+  return extractJsonValue<LessonPlan>(text);
 }
 
 function sanitizeLessonText<T>(value: T): T {
@@ -1175,6 +1763,11 @@ function normalizeLesson(input: LessonInput, lesson: LessonPlan, model: string):
 }
 
 async function generateLessonWithModel(input: LessonInput, ocrText: string, apiKey: string, model: string) {
+  if (isMathSubject(input)) {
+    console.info("[EduPlan AI] Math subject detected; using chunked generation", { model, periods: input.periods });
+    return generateMathLessonChunkedWithModel(input, ocrText, apiKey, model);
+  }
+
   console.info("[EduPlan AI] OpenAI generation started", { model, ocrTextLength: ocrText.length });
   const content = await fetchOpenAiJsonContent(apiKey, {
     model,
