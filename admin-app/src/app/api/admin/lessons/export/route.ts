@@ -1,30 +1,9 @@
 import { NextResponse } from "next/server";
 import { adminError, requireAdmin } from "@/lib/admin-auth";
 import { getFirebaseDb } from "@/lib/firebase-admin";
-import { serializeFeedback } from "@/lib/serializers";
+import { serializeLesson } from "@/lib/serializers";
 
 export const runtime = "nodejs";
-
-const categoryLabels: Record<string, string> = {
-  bug: "Báo lỗi",
-  improvement: "Góp ý cải thiện",
-  feature: "Yêu cầu tính năng",
-  other: "Khác",
-};
-
-const statusLabels: Record<string, string> = {
-  new: "Mới",
-  in_progress: "Đang xử lý",
-  resolved: "Đã xử lý",
-  ignored: "Bỏ qua",
-  reviewed: "Đã xem",
-};
-
-const priorityLabels: Record<string, string> = {
-  low: "Thấp",
-  medium: "Vừa",
-  high: "Quan trọng",
-};
 
 function xmlCell(value: unknown) {
   const text = String(value ?? "")
@@ -44,24 +23,21 @@ export async function GET() {
   try {
     await requireAdmin();
     const snapshot = await getFirebaseDb()
-      .collection("feedback")
-      .orderBy("createdAt", "desc")
+      .collection("lessons")
       .limit(2000)
       .get();
-    const feedback = snapshot.docs.map(serializeFeedback);
-    const headers = ["STT", "Thời gian", "Họ tên", "Email", "Loại góp ý", "Trạng thái", "Mức độ", "Ghi chú admin", "Nội dung", "URL trang gửi", "User Agent"];
-    const rows = feedback.map((item, index) => [
+    const lessons = snapshot.docs.map(serializeLesson).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const headers = ["STT", "Tên giáo án", "User ID", "Môn", "Lớp", "Số tiết", "Ngày tạo", "Cập nhật", "Hết hạn"];
+    const rows = lessons.map((lesson, index) => [
       index + 1,
-      formatDate(item.createdAt),
-      item.userName,
-      item.userEmail,
-      categoryLabels[item.category] || item.category,
-      statusLabels[item.status] || item.status,
-      priorityLabels[item.priority] || item.priority,
-      item.adminNote,
-      item.message,
-      item.pageUrl,
-      item.userAgent,
+      lesson.title,
+      lesson.ownerId,
+      lesson.subject,
+      lesson.grade,
+      lesson.periods,
+      formatDate(lesson.createdAt),
+      formatDate(lesson.updatedAt),
+      formatDate(lesson.expiresAt),
     ]);
 
     const workbook = `<?xml version="1.0"?>
@@ -70,7 +46,7 @@ export async function GET() {
  xmlns:o="urn:schemas-microsoft-com:office:office"
  xmlns:x="urn:schemas-microsoft-com:office:excel"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Worksheet ss:Name="Gop y">
+ <Worksheet ss:Name="Giao an">
   <Table>
    <Row>${headers.map(xmlCell).join("")}</Row>
    ${rows.map((row) => `<Row>${row.map(xmlCell).join("")}</Row>`).join("")}
@@ -81,11 +57,11 @@ export async function GET() {
     return new NextResponse(workbook, {
       headers: {
         "Content-Type": "application/vnd.ms-excel; charset=utf-8",
-        "Content-Disposition": `attachment; filename="eduplan-feedback-${new Date().toISOString().slice(0, 10)}.xls"`,
+        "Content-Disposition": `attachment; filename="eduplan-lessons-${new Date().toISOString().slice(0, 10)}.xls"`,
       },
     });
   } catch (error) {
-    const { message, status } = adminError(error, "Không thể xuất Excel góp ý.");
+    const { message, status } = adminError(error, "Không thể xuất Excel giáo án.");
     return NextResponse.json({ error: message }, { status });
   }
 }

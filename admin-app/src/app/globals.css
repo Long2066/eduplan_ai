@@ -49,6 +49,10 @@ button {
 }
 
 .nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   width: 100%;
   border: 0;
   border-radius: 12px;
@@ -57,6 +61,26 @@ button {
   padding: 11px 12px;
   text-align: left;
   font-weight: 800;
+}
+
+.admin-nav {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+}
+
+.nav-badge {
+  min-width: 24px;
+  border-radius: 999px;
+  background: #f97316;
+  color: white;
+  padding: 2px 7px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.nav-badge.subtle {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .nav-button.active,
@@ -129,6 +153,13 @@ button {
   padding: 14px 18px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .grid {
   display: grid;
   gap: 14px;
@@ -146,6 +177,133 @@ button {
   font-size: 32px;
   font-weight: 900;
   line-height: 1;
+}
+
+.dashboard-grid {
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  margin-top: 14px;
+}
+
+.section-title h2 {
+  margin: 0 0 4px;
+}
+
+.section-title p {
+  margin: 0;
+}
+
+.chart-card {
+  min-height: 320px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.legend-dot {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.legend-dot::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.dot-1::before {
+  background: #16a34a;
+}
+
+.dot-2::before {
+  background: #f97316;
+}
+
+.dot-3::before {
+  background: #9333ea;
+}
+
+.bar-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(46px, 1fr));
+  gap: 12px;
+  height: 210px;
+  margin-top: 18px;
+}
+
+.chart-day {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bar-stack {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 3px;
+  min-height: 0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 10px 6px;
+}
+
+.bar {
+  width: 8px;
+  min-height: 4px;
+  border-radius: 999px 999px 4px 4px;
+  background: #2563eb;
+}
+
+.bar-1 {
+  background: #16a34a;
+}
+
+.bar-2 {
+  background: #f97316;
+}
+
+.bar-3 {
+  background: #9333ea;
+}
+
+.chart-day small {
+  color: #64748b;
+  text-align: center;
+}
+
+.issue-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.issue-item,
+.empty-state {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.issue-item {
+  display: grid;
+  gap: 4px;
+}
+
+.issue-item span,
+.empty-state {
+  color: #64748b;
+  font-size: 13px;
 }
 
 .label {
@@ -183,6 +341,11 @@ button {
   font-weight: 900;
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .button.secondary {
   border: 1px solid #cbd5e1;
   background: white;
@@ -193,9 +356,68 @@ button {
   background: #dc2626;
 }
 
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 220px) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.lesson-toolbar {
+  grid-template-columns: minmax(220px, 1.4fr) minmax(120px, 0.8fr) minmax(100px, 0.7fr) minmax(140px, 0.8fr) minmax(140px, 0.8fr) auto auto;
+}
+
+.form-card {
+  max-width: 920px;
+}
+
+.settings-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-toggles {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.switch-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.quota-row {
+  display: grid;
+  grid-template-columns: 34px minmax(80px, 120px) 34px;
+  gap: 6px;
+  align-items: center;
+}
+
+.mini-button {
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  color: #0f172a;
+  font-weight: 900;
+}
+
+.compact-number {
+  padding: 7px 8px;
+}
+
 .feedback-toolbar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+  grid-template-columns: repeat(5, minmax(130px, 1fr)) auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
@@ -239,6 +461,24 @@ button {
   border-color: #fed7aa;
   background: #fff7ed;
   color: #c2410c;
+}
+
+.status-pill.success-pill {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.status-pill.danger-pill {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status-pill.muted-pill {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
 }
 
 .empty-row {
@@ -298,6 +538,8 @@ th {
 }
 
 .modal {
+  max-height: calc(100vh - 32px);
+  overflow: auto;
   width: min(520px, 100%);
   border-radius: 20px;
   background: white;
@@ -307,6 +549,10 @@ th {
 
 .feedback-modal {
   width: min(760px, 100%);
+}
+
+.lesson-modal {
+  width: min(900px, 100%);
 }
 
 .modal-title-row {
@@ -348,6 +594,71 @@ th {
   margin-top: 18px;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.loading-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: white;
+  padding: 12px;
+}
+
+.loading-card span {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0, #f8fafc, #e2e8f0);
+}
+
+.loading-card span:nth-child(2) {
+  width: 76%;
+}
+
+.loading-card span:nth-child(3) {
+  width: 54%;
+}
+
+.lesson-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.preview-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.preview-block h3 {
+  margin: 0 0 8px;
+}
+
+.preview-block ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.preview-block li {
+  margin: 6px 0;
+  color: #334155;
+}
+
+.tall-textarea {
+  min-height: 220px;
+}
+
 @media (max-width: 980px) {
   .admin-shell {
     grid-template-columns: 1fr;
@@ -359,6 +670,14 @@ th {
   }
 
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid,
+  .toolbar-grid,
+  .lesson-toolbar,
+  .settings-grid,
+  .lesson-preview-grid {
     grid-template-columns: 1fr;
   }
 

@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") || "";
     const status = searchParams.get("status") || "";
+    const priority = searchParams.get("priority") || "";
     const from = searchParams.get("from") || "";
     const to = searchParams.get("to") || "";
 
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     let feedback = snapshot.docs.map(serializeFeedback);
     if (category && category !== "all") feedback = feedback.filter((item) => item.category === category);
     if (status && status !== "all") feedback = feedback.filter((item) => item.status === status);
+    if (priority && priority !== "all") feedback = feedback.filter((item) => item.priority === priority);
     if (from) {
       const fromTime = new Date(`${from}T00:00:00`).getTime();
       feedback = feedback.filter((item) => new Date(item.createdAt).getTime() >= fromTime);

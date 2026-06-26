@@ -27,6 +27,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (body.role === "user" || body.role === "admin") update.role = body.role;
     if (Number.isFinite(Number(body.freeLimit))) update.freeLimit = Math.max(0, Number(body.freeLimit));
     if (Number.isFinite(Number(body.usedGenerations))) update.usedGenerations = Math.max(0, Number(body.usedGenerations));
+    if (typeof body.disabled === "boolean") update.disabled = body.disabled;
 
     await getFirebaseDb().collection("users").doc(uid).set(update, { merge: true });
     if (typeof body.displayName === "string" || typeof body.disabled === "boolean") {

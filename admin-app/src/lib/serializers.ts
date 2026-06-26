@@ -20,6 +20,8 @@ export function serializeUser(doc: QueryDocumentSnapshot<DocumentData>) {
     role: data.role === "admin" ? "admin" : "user",
     plan: String(data.plan || "free"),
     emailVerified: Boolean(data.emailVerified),
+    disabled: Boolean(data.disabled),
+    mustChangePassword: Boolean(data.mustChangePassword),
     freeLimit,
     usedGenerations,
     remainingGenerations: Math.max(0, freeLimit - usedGenerations),
@@ -37,6 +39,7 @@ export function serializeLesson(doc: QueryDocumentSnapshot<DocumentData>) {
     subject: String(data.subject || ""),
     grade: String(data.grade || ""),
     periods: Number(data.periods || 1),
+    lesson: data.lesson || null,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
     expiresAt: toIso(data.expiresAt),
@@ -60,7 +63,11 @@ export function serializeFeedback(doc: QueryDocumentSnapshot<DocumentData>) {
   return {
     id: doc.id,
     category: String(data.category || "other"),
-    status: data.status === "reviewed" ? "reviewed" : "new",
+    status: ["new", "in_progress", "resolved", "ignored", "reviewed"].includes(String(data.status))
+      ? String(data.status)
+      : "new",
+    priority: ["low", "medium", "high"].includes(String(data.priority)) ? String(data.priority) : "medium",
+    adminNote: String(data.adminNote || ""),
     message: String(data.message || ""),
     userId: String(data.userId || ""),
     userEmail: String(data.userEmail || ""),
