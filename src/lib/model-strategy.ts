@@ -36,8 +36,8 @@ function openRouterStage(stage: AiStage, model: string, temperature: number, fal
 export function getPlanModelStrategy(planValue: unknown): PlanModelStrategy {
   const plan = normalizeSubscriptionPlan(planValue);
   if (plan === "free") {
-    const blueprintModel = process.env.FREE_BLUEPRINT_MODEL || "google/gemma-4-26b-a4b-it:free";
-    const detailModel = process.env.FREE_DETAIL_MODEL || "google/gemma-4-26b-a4b-it:free";
+    const blueprintModel = process.env.FREE_BLUEPRINT_MODEL || "minimax/minimax-m3";
+    const detailModel = process.env.FREE_DETAIL_MODEL || "minimax/minimax-m3";
     const refineModel = process.env.FREE_REFINE_MODEL || detailModel;
     const fallbackModel = process.env.FREE_FALLBACK_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
     return {
