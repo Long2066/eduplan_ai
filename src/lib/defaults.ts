@@ -25,6 +25,7 @@ export const defaultLessonInput: LessonInput = {
   style: "Dạy thật trên lớp",
   specialRequest: "",
   allowAiInference: true,
+  enableDigitalCompetency: false,
   uploadedAssets: [],
 };
 

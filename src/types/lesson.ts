@@ -17,6 +17,7 @@ export type LessonInput = {
   style: LessonStyle;
   specialRequest: string;
   allowAiInference: boolean;
+  enableDigitalCompetency: boolean;
   uploadedAssets: UploadedAsset[];
 };
 
@@ -45,6 +46,7 @@ export type LessonOutcomes = {
   specificCompetencies: string[];
   qualities: string[];
   knowledgeAndSkills: string[];
+  digitalCompetencies?: string[];
 };
 
 export type PeriodPlan = {
@@ -87,6 +89,8 @@ export type LessonPlan = {
     style: string;
     modelUsed: string;
     createdAt: string;
+    plan?: "free" | "plus" | "pro";
+    lessonId?: string;
   };
 };
 
@@ -101,3 +105,59 @@ export type PedagogyAudit = {
 };
 
 export type FormErrors = Partial<Record<keyof LessonInput, string>>;
+
+export type MathActivityBlueprint = {
+  phase?: string;
+  title?: string;
+  objective?: string;
+  durationMinutes?: number;
+  mathFocus?: string;
+  handoffToNext?: string;
+};
+
+export type MathPeriodBlueprint = {
+  periodNumber?: number;
+  focus?: string;
+  objectives?: string[];
+  prerequisite?: string;
+  targetKnowledge?: string;
+  continuityIn?: string;
+  continuityOut?: string;
+  activities?: MathActivityBlueprint[];
+};
+
+export type MathLessonBlueprint = {
+  lessonTitle?: string;
+  lessonOverview?: string;
+  mathCore?: {
+    problemType?: string;
+    knowledgeFocus?: string[];
+    representations?: string[];
+    commonMisconceptions?: string[];
+    checkStrategies?: string[];
+    continuityRules?: string[];
+  };
+  outcomes?: Partial<LessonOutcomes>;
+  materials?: {
+    teacher?: string[];
+    students?: string[];
+  };
+  assessment?: {
+    criteria?: string[];
+    evidence?: string[];
+    comments?: string[];
+  };
+  contextFit?: {
+    notes?: string[];
+  };
+  periods?: MathPeriodBlueprint[];
+};
+
+export type MathPeriodChunk = PeriodPlan & {
+  handoff?: {
+    learned?: string;
+    unresolvedRisks?: string[];
+    nextBridge?: string;
+  };
+};
+

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { activityMinutes, pairedActivityActions } from "@/lib/lesson-format";
-import { incrementGenerationUsage, requireUser } from "@/lib/auth-server";
+import { requireUser } from "@/lib/auth-server";
+import { getPlanModelStrategy } from "@/lib/model-strategy";
+import { commitUsage, releaseUsage, reserveUsage, subscriptionErrorResponse, type UsageReservation } from "@/lib/subscription-policy";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
 
 type RefineAction = "better" | "shorten" | "expand" | "digital" | "demo";
@@ -103,64 +105,46 @@ function normalizeLesson(lesson: LessonPlan, refined: LessonPlan, model: string)
 }
 
 export async function POST(request: Request) {
+  let reservation: UsageReservation | null = null;
   try {
     const user = await requireUser();
-    if (!user.emailVerified) {
-      return NextResponse.json({ error: "Bạn cần xác minh email trước khi tinh chỉnh giáo án." }, { status: 403 });
-    }
-    if (user.remainingGenerations <= 0) {
-      return NextResponse.json({ error: "Bạn đã hết lượt tạo/tinh chỉnh giáo án miễn phí." }, { status: 403 });
-    }
+    if (!user.emailVerified) return NextResponse.json({ error: "Bạn cần xác minh email trước khi tinh chỉnh giáo án." }, { status: 403 });
 
     const { lesson, action } = (await request.json()) as RefineRequest;
-    if (!lesson || !action) {
-      return NextResponse.json({ error: "Thiếu giáo án hoặc thao tác tinh chỉnh." }, { status: 400 });
+    if (!lesson || !action || !actionInstruction[action]) return NextResponse.json({ error: "Thiếu giáo án hoặc thao tác tinh chỉnh." }, { status: 400 });
+
+    reservation = await reserveUsage(user.uid, "refine", request.headers.get("idempotency-key") || undefined);
+    const strategy = getPlanModelStrategy(reservation.plan).refine;
+    const apiKey = strategy.provider === "openrouter" ? process.env.OPENROUTER_API_KEY : process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error(strategy.provider === "openrouter" ? "Thiếu OPENROUTER_API_KEY trong file .env." : "Thiếu OPENAI_API_KEY trong file .env.");
+    const endpoint = strategy.provider === "openrouter" ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+    const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` };
+    if (strategy.provider === "openrouter") {
+      if (process.env.OPENROUTER_APP_URL) headers["HTTP-Referer"] = process.env.OPENROUTER_APP_URL;
+      headers["X-Title"] = process.env.OPENROUTER_APP_NAME || "EduPlan AI";
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("Thiếu OPENAI_API_KEY trong file .env.");
-
-    const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-    console.info("[EduPlan AI] OpenAI refine started", { model, action });
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        response_format: { type: "json_object" },
-        temperature: 0.6,
-        messages: [
-          { role: "system", content: "Bạn chỉ trả JSON hợp lệ, đúng schema LessonPlan, không Markdown. Ưu tiên giáo án chi tiết, sinh động, dạy thật được." },
-          {
-            role: "user",
-            content: `Hãy tinh chỉnh LessonPlan dưới đây.\n\nYêu cầu: ${actionInstruction[action]}\n\n${qualityInstruction}\n\nBắt buộc giữ nguyên JSON schema, đủ các phần, activities vẫn có teacherActions và studentActions. Với bài nhiều tiết, periodPlans nên có outcomes riêng cho từng tiết.\n\nLessonPlan hiện tại:\n${JSON.stringify(lesson)}`,
-          },
-        ],
-      }),
+      headers,
+      body: JSON.stringify({ model: strategy.model, response_format: { type: "json_object" }, temperature: strategy.temperature, messages: [
+        { role: "system", content: "Bạn chỉ trả JSON hợp lệ, đúng schema LessonPlan, không Markdown. Ưu tiên giáo án chi tiết, sinh động, dạy thật được." },
+        { role: "user", content: `Hãy tinh chỉnh LessonPlan dưới đây.\n\nYêu cầu: ${actionInstruction[action]}\n\n${qualityInstruction}\n\nBắt buộc giữ nguyên JSON schema, đủ các phần, activities vẫn có teacherActions và studentActions. Với bài nhiều tiết, periodPlans nên có outcomes riêng cho từng tiết.\n\nLessonPlan hiện tại:\n${JSON.stringify(lesson)}` },
+      ] }),
     });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `OpenAI refine failed with ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error((await response.text()) || `AI refine failed with ${response.status}`);
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("OpenAI không trả về nội dung tinh chỉnh.");
-
-    const refined = normalizeLesson(lesson, extractJson(content), model);
-    await incrementGenerationUsage(user.uid);
-    console.info("[EduPlan AI] OpenAI refine completed", { model, action });
-    return NextResponse.json({ lesson: refined });
+    if (!content) throw new Error("AI không trả về nội dung tinh chỉnh.");
+    const refined = normalizeLesson(lesson, extractJson(content), strategy.model);
+    refined.meta = { ...refined.meta, plan: reservation.plan };
+    await commitUsage(reservation, String(lesson.meta?.lessonId || ""));
+    return NextResponse.json({ lesson: refined, modelRouting: { provider: strategy.provider, modelUsed: strategy.model, fallbackUsed: false } });
   } catch (error) {
+    if (reservation) await releaseUsage(reservation, "refine_failed").catch(() => undefined);
+    const policyError = subscriptionErrorResponse(error);
+    if (policyError) return NextResponse.json(policyError.body, { status: policyError.status });
     const status = error instanceof Error && error.name === "UNAUTHENTICATED" ? 401 : 500;
-    return NextResponse.json(
-      { error: error instanceof Error ? `Lỗi OpenAI refine: ${error.message}` : "Không thể tinh chỉnh giáo án lúc này." },
-      { status },
-    );
+    return NextResponse.json({ error: error instanceof Error ? `Lỗi AI refine: ${error.message}` : "Không thể tinh chỉnh giáo án lúc này." }, { status });
   }
 }

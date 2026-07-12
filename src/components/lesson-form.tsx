@@ -397,6 +397,16 @@ export function LessonForm({ input, errors, isGenerating, onChange, onGenerate }
                 Các mục này mặc định để Auto. Thay đổi trong phần này chỉ áp dụng sau khi bấm <strong>Lưu tùy chọn</strong>.
               </div>
 
+              {/* Checkbox Năng lực số */}
+              <label className="flex gap-3 rounded-xl border border-brand-100 bg-brand-50/20 p-3 text-[12px] leading-5 text-slate-700 transition-all duration-200 hover:border-brand-200 cursor-pointer">
+                <input type="checkbox" className="mt-0.5 accent-brand-600 shrink-0" checked={!!advancedInput.enableDigitalCompetency} onChange={(event) => patchAdvanced({ enableDigitalCompetency: event.target.checked })} />
+                <span>
+                  <strong className="text-slate-800">Tích hợp Năng lực số (TT 02/2026/TT-BGDĐT)</strong>
+                  <br />
+                  <span className="text-slate-500">Tự động chèn Yêu cầu cần đạt về năng lực số Bậc 1 phù hợp với bài học môn Toán.</span>
+                </span>
+              </label>
+
               <div>
                 <Label>Phong cách giáo án</Label>
                 <select className="input-field" value={advancedInput.style} onChange={(event) => patchAdvanced({ style: event.target.value as LessonInput["style"] })}>

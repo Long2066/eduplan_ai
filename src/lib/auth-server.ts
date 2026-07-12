@@ -1,8 +1,9 @@
 import "server-only";
 import { cookies } from "next/headers";
 import type { DecodedIdToken } from "firebase-admin/auth";
-import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminAuth, getFirebaseDb } from "@/lib/firebase-admin";
+import { normalizeSubscriptionPlan, type SubscriptionPlan } from "@/lib/model-strategy";
+import { buildSubscriptionStatus, initialSubscriptionFields, type SubscriptionStatus } from "@/lib/subscription-policy";
 
 export const SESSION_COOKIE_NAME = "eduplan_session";
 export const DEFAULT_FREE_LIMIT = 10;
@@ -15,11 +16,13 @@ export type AuthUser = {
   photoURL: string;
   emailVerified: boolean;
   disabled: boolean;
+  blockedReason: string;
   role: "user" | "admin";
-  plan: "free" | string;
+  plan: SubscriptionPlan;
   freeLimit: number;
   usedGenerations: number;
   remainingGenerations: number;
+  subscription: SubscriptionStatus;
 };
 
 export function lessonExpiresAt() {
@@ -52,10 +55,12 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
     photoURL: userRecord.photoURL || decoded.picture || "",
     emailVerified: Boolean(userRecord.emailVerified),
     disabled: Boolean(userRecord.disabled),
+    blockedReason: "",
     role: "user",
     plan: "free",
     freeLimit: DEFAULT_FREE_LIMIT,
     usedGenerations: 0,
+    ...initialSubscriptionFields(true),
     createdAt: now,
     updatedAt: now,
   };
@@ -71,7 +76,7 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
       displayName: baseProfile.displayName || snapshot.get("displayName") || "",
       photoURL: baseProfile.photoURL || snapshot.get("photoURL") || "",
       emailVerified: baseProfile.emailVerified,
-      disabled: baseProfile.disabled,
+      disabled: Boolean(userRecord.disabled || snapshot.get("disabled")),
       updatedAt: now,
     },
     { merge: true },
@@ -85,25 +90,11 @@ export async function currentUser(): Promise<AuthUser | null> {
   const decoded = await verifySessionCookie();
   if (!decoded) return null;
   const profile = await ensureUserProfile(decoded);
-  const freeLimit = Number(profile.freeLimit ?? DEFAULT_FREE_LIMIT);
-  const usedGenerations = Number(profile.usedGenerations ?? 0);
+  const subscription = buildSubscriptionStatus(profile);
   const disabled = Boolean(profile.disabled);
-
-  if (disabled) {
-    return {
-      uid: decoded.uid,
-      email: String(profile.email || decoded.email || ""),
-      displayName: String(profile.displayName || decoded.name || ""),
-      photoURL: String(profile.photoURL || decoded.picture || ""),
-      emailVerified: Boolean(profile.emailVerified),
-      disabled,
-      role: profile.role === "admin" ? "admin" : "user",
-      plan: String(profile.plan || "free"),
-      freeLimit,
-      usedGenerations,
-      remainingGenerations: 0,
-    };
-  }
+  const freeLimit = subscription.free.limit;
+  const usedGenerations = subscription.free.used;
+  const activeCard = subscription.cards.find((card) => card.id === subscription.activePlan);
 
   return {
     uid: decoded.uid,
@@ -112,11 +103,13 @@ export async function currentUser(): Promise<AuthUser | null> {
     photoURL: String(profile.photoURL || decoded.picture || ""),
     emailVerified: Boolean(profile.emailVerified),
     disabled,
+    blockedReason: String(profile.blockedReason || ""),
     role: profile.role === "admin" ? "admin" : "user",
-    plan: String(profile.plan || "free"),
+    plan: normalizeSubscriptionPlan(subscription.activePlan),
     freeLimit,
     usedGenerations,
-    remainingGenerations: Math.max(0, freeLimit - usedGenerations),
+    remainingGenerations: disabled ? 0 : Math.max(0, activeCard?.remaining || 0),
+    subscription,
   };
 }
 
@@ -128,19 +121,14 @@ export async function requireUser() {
     throw error;
   }
   if (user.disabled) {
-    const error = new Error("Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn.");
+    const message = user.blockedReason === "ip_account_limit"
+      ? "Bạn đang sử dụng quá nhiều tài khoản để truy cập, vui lòng chỉ sử dụng 1 tài khoản để truy cập. Trân trọng."
+      : "Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn.";
+    const error = new Error(message);
     error.name = "ACCOUNT_DISABLED";
     throw error;
   }
   return user;
 }
 
-export async function incrementGenerationUsage(uid: string) {
-  await getFirebaseDb().collection("users").doc(uid).set(
-    {
-      usedGenerations: FieldValue.increment(1),
-      updatedAt: new Date(),
-    },
-    { merge: true },
-  );
-}
+

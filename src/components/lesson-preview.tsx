@@ -62,10 +62,10 @@ function ActivityRow({ activity, index }: { activity: LessonActivity; index: num
           className={`paired-action-row ${pairIndex === block.actionPairs.length - 1 ? "activity-end-row" : ""}`}
         >
           <td>
-            <p>- {pair.teacher}</p>
+            <p style={{ whiteSpace: "pre-wrap" }}>- {pair.teacher}</p>
           </td>
           <td>
-            <p>- {pair.student}</p>
+            <p style={{ whiteSpace: "pre-wrap" }}>- {pair.student}</p>
           </td>
         </tr>
       ))}
@@ -124,14 +124,15 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
         <List items={outcomes.generalCompetencies} />
         <p className="sub-title">3. Năng lực đặc thù môn học:</p>
         <List items={outcomes.specificCompetencies} />
-        <p className="sub-title">4. Năng lực số:</p>
-        <List
-          items={[
-            "Nhận biết và khai thác thông tin từ ảnh/video/tài liệu số do giáo viên trình chiếu để phục vụ học tập.",
-            "Tham gia tương tác học tập trên thiết bị số ở mức phù hợp lứa tuổi theo hướng dẫn của giáo viên.",
-          ]}
-        />
-        <p className="sub-title">5. Phẩm chất:</p>
+        {outcomes.digitalCompetencies && outcomes.digitalCompetencies.length > 0 ? (
+          <>
+            <p className="sub-title">4. Năng lực số:</p>
+            <List items={outcomes.digitalCompetencies} />
+            <p className="sub-title">5. Phẩm chất:</p>
+          </>
+        ) : (
+          <p className="sub-title">4. Phẩm chất:</p>
+        )}
         <List items={outcomes.qualities} />
       </A4Section>
 

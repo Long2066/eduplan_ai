@@ -54,10 +54,19 @@ type ManagedUser = {
   role: "user" | "admin";
   emailVerified: boolean;
   disabled: boolean;
+  blockedReason: string;
+  lastLoginIpHash: string;
+  ipLimitOverride: boolean;
   mustChangePassword: boolean;
   freeLimit: number;
   usedGenerations: number;
   remainingGenerations: number;
+  activePlan: string;
+  paidPlan: string;
+  planStatus: string;
+  packageCredits: number;
+  topupCredits: number;
+  planExpiresAt: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -124,6 +133,24 @@ type AuditLog = {
 type FeedbackStatus = "new" | "in_progress" | "resolved" | "ignored" | "reviewed";
 type FeedbackPriority = "low" | "medium" | "high";
 
+type PaymentItem = {
+  id: string;
+  uid: string;
+  purchaseType: string;
+  targetPlan: string;
+  amountVnd: number;
+  credits: number;
+  senderName: string;
+  transferContent: string;
+  status: string;
+  approvalMode: string;
+  safeReason: string;
+  checks: Array<{ key: string; passed: boolean; detail: string }>;
+  ocr: Record<string, unknown> | null;
+  createdAt: string;
+  approvedAt: string;
+};
+
 type FeedbackItem = {
   id: string;
   category: "bug" | "improvement" | "feature" | "other" | string;
@@ -144,6 +171,7 @@ const tabs = [
   { id: "dashboard", label: "Tổng quan" },
   { id: "users", label: "Người dùng" },
   { id: "lessons", label: "Giáo án" },
+  { id: "payments", label: "Thanh toán" },
   { id: "feedback", label: "Góp ý" },
   { id: "led", label: "Bảng LED" },
   { id: "settings", label: "Cấu hình" },
@@ -234,6 +262,7 @@ export default function AdminPage() {
   const [userQuery, setUserQuery] = useState("");
   const [userFilter, setUserFilter] = useState("all");
   const [userPage, setUserPage] = useState(1);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
   const [userLessons, setUserLessons] = useState<LessonItem[]>([]);
   const [lessons, setLessons] = useState<LessonItem[]>([]);
@@ -255,13 +284,21 @@ export default function AdminPage() {
   const [feedbackDraft, setFeedbackDraft] = useState<{ status: FeedbackStatus; priority: FeedbackPriority; adminNote: string } | null>(null);
   const [policies, setPolicies] = useState<Policies>({ terms: "", privacy: "", version: "1.0" });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [paymentStatus, setPaymentStatus] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState<PaymentItem | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<ManagedUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [revokeSessions, setRevokeSessions] = useState(true);
   const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [grantTarget, setGrantTarget] = useState<ManagedUser | null>(null);
+  const [grantCreditsAmount, setGrantCreditsAmount] = useState(25);
+  const [deductAmount, setDeductAmount] = useState(10);
 
   const ledText = useMemo(() => led.messages.join("\n"), [led.messages]);
   const pagedUsers = useMemo(() => slicePage(users, clampPage(userPage, users.length)), [users, userPage]);
+  const selectablePagedUsers = useMemo(() => pagedUsers.filter((user) => user.uid !== admin?.uid), [pagedUsers, admin?.uid]);
+  const selectedUsers = useMemo(() => users.filter((user) => selectedUserIds.includes(user.uid)), [users, selectedUserIds]);
   const pagedLessons = useMemo(() => slicePage(lessons, clampPage(lessonPage, lessons.length)), [lessons, lessonPage]);
   const pagedFeedback = useMemo(() => slicePage(feedback, clampPage(feedbackPage, feedback.length)), [feedback, feedbackPage]);
 
@@ -291,6 +328,7 @@ export default function AdminPage() {
     if (filter !== "all") params.set("filter", filter);
     const result = await api<{ users: ManagedUser[] }>(`/api/admin/users${params.toString() ? `?${params}` : ""}`);
     setUsers(result.users);
+    setSelectedUserIds([]);
     setUserPage(1);
   }
 
@@ -308,6 +346,21 @@ export default function AdminPage() {
       setLessons(nextLessons);
       setLessonPage(1);
     }
+  }
+
+  async function loadPayments(status = paymentStatus) {
+    const params = status === "all" ? "" : `?status=${encodeURIComponent(status)}`;
+    const result = await api<{ payments: PaymentItem[] }>(`/api/admin/payments${params}`);
+    setPayments(result.payments);
+  }
+
+  async function reviewPayment(paymentId: string, action: "approve" | "reject") {
+    const label = action === "approve" ? "duyệt" : "từ chối";
+    if (!window.confirm(`Xác nhận ${label} giao dịch này?`)) return;
+    await api("/api/admin/payments", { method: "PATCH", body: JSON.stringify({ paymentId, action }) });
+    setMessage(`Đã ${label} giao dịch.`);
+    setSelectedPayment(null);
+    await loadPayments();
   }
 
   async function loadFeedback() {
@@ -342,6 +395,7 @@ export default function AdminPage() {
       if (nextTab === "users") await loadUsers();
       if (nextTab === "lessons") await loadLessons();
       if (nextTab === "feedback") await loadFeedback();
+      if (nextTab === "payments") await loadPayments();
       if (nextTab === "policies") await loadPolicies();
       if (nextTab === "audit") await loadAudit();
     } catch (loadError) {
@@ -451,6 +505,71 @@ export default function AdminPage() {
     }
   }
 
+  function toggleUserSelection(uid: string, checked: boolean) {
+    setSelectedUserIds((current) => (
+      checked
+        ? Array.from(new Set([...current, uid]))
+        : current.filter((item) => item !== uid)
+    ));
+  }
+
+  function toggleCurrentPageUsers(checked: boolean) {
+    const pageIds = selectablePagedUsers.map((user) => user.uid);
+    setSelectedUserIds((current) => (
+      checked
+        ? Array.from(new Set([...current, ...pageIds]))
+        : current.filter((uid) => !pageIds.includes(uid))
+    ));
+  }
+
+  async function deleteUser(user: ManagedUser) {
+    if (user.uid === admin?.uid) {
+      setError("Không thể xóa chính tài khoản admin đang đăng nhập.");
+      return;
+    }
+    const confirmed = window.confirm(`Xóa user ${user.email || user.displayName}? Thao tác này xóa tài khoản đăng nhập và hồ sơ user, không tự khôi phục.`);
+    if (!confirmed) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${user.uid}`, { method: "DELETE" });
+      setSelectedUserIds((current) => current.filter((uid) => uid !== user.uid));
+      if (selectedUser?.uid === user.uid) setSelectedUser(null);
+      if (passwordTarget?.uid === user.uid) setPasswordTarget(null);
+      setMessage(`Đã xóa user ${user.email}.`);
+      await loadUsers();
+      await loadDashboard().catch(() => undefined);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể xóa user.");
+    }
+  }
+
+  async function deleteSelectedUsers() {
+    const targets = selectedUsers.filter((user) => user.uid !== admin?.uid);
+    if (!targets.length) {
+      setError("Chưa chọn user để xóa.");
+      return;
+    }
+    const confirmed = window.confirm(`Xóa ${targets.length} user đã chọn? Thao tác này xóa tài khoản đăng nhập và hồ sơ user, không tự khôi phục.`);
+    if (!confirmed) return;
+    setError("");
+    setMessage("");
+    try {
+      const result = await api<{ deletedCount: number }>("/api/admin/users", {
+        method: "DELETE",
+        body: JSON.stringify({ uids: targets.map((user) => user.uid) }),
+      });
+      setSelectedUserIds([]);
+      if (selectedUser && targets.some((user) => user.uid === selectedUser.uid)) setSelectedUser(null);
+      if (passwordTarget && targets.some((user) => user.uid === passwordTarget.uid)) setPasswordTarget(null);
+      setMessage(`Đã xóa ${result.deletedCount} user.`);
+      await loadUsers();
+      await loadDashboard().catch(() => undefined);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể xóa user đã chọn.");
+    }
+  }
+
   function adjustQuota(user: ManagedUser, delta: number) {
     const next = users.map((item) => (
       item.uid === user.uid
@@ -482,6 +601,52 @@ export default function AdminPage() {
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Không thể đổi mật khẩu.");
     }
+  }
+
+  async function grantPlan(uid: string, plan: "plus" | "pro") {
+    if (!window.confirm(`Kích hoạt gói ${plan.toUpperCase()} (50 tín dụng, 30 ngày) cho user này?`)) return;
+    setError(""); setMessage("");
+    try {
+      const result = await api<{ granted: { plan: string; credits: number; expiresAt: string } }>(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ grantPlan: plan }) });
+      setMessage(`Đã kích hoạt gói ${result.granted.plan.toUpperCase()} với ${result.granted.credits} tín dụng.`);
+      setGrantTarget(null);
+      await loadUsers();
+    } catch (e) { setError(e instanceof Error ? e.message : "Không thể kích hoạt gói."); }
+  }
+
+  async function grantCredits(uid: string, amount: number) {
+    if (amount < 1) return setError("Số tín dụng phải lớn hơn 0.");
+    if (!window.confirm(`Cộng ${amount} tín dụng cho user này?`)) return;
+    setError(""); setMessage("");
+    try {
+      await api(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ grantCredits: amount }) });
+      setMessage(`Đã cộng ${amount} tín dụng.`);
+      setGrantTarget(null);
+      await loadUsers();
+    } catch (e) { setError(e instanceof Error ? e.message : "Không thể cộng tín dụng."); }
+  }
+
+  async function revokePlan(uid: string) {
+    if (!window.confirm("Xác nhận tước quyền gói Plus/Pro của user này?\n\nUser sẽ bị chuyển về FREE, mất toàn bộ tín dụng còn lại.")) return;
+    setError(""); setMessage("");
+    try {
+      await api(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ revokePlan: true }) });
+      setMessage("Đã tước quyền gói. User đã chuyển về FREE.");
+      setGrantTarget(null);
+      await loadUsers();
+    } catch (e) { setError(e instanceof Error ? e.message : "Không thể tước quyền gói."); }
+  }
+
+  async function deductCredits(uid: string, amount: number) {
+    if (amount < 1) return setError("Số tín dụng phải lớn hơn 0.");
+    if (!window.confirm(`Xác nhận trừ ${amount} tín dụng của user này?`)) return;
+    setError(""); setMessage("");
+    try {
+      await api(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ deductCredits: amount }) });
+      setMessage(`Đã trừ ${amount} tín dụng.`);
+      setGrantTarget(null);
+      await loadUsers();
+    } catch (e) { setError(e instanceof Error ? e.message : "Không thể trừ tín dụng."); }
   }
 
   async function savePolicies() {
@@ -656,6 +821,37 @@ export default function AdminPage() {
           </div>
         ) : null}
 
+        {tab === "payments" ? (
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="toolbar-grid user-toolbar">
+              <select className="select" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)}>
+                <option value="all">Tất cả giao dịch</option>
+                <option value="pending_review">Cần kiểm tra</option>
+                <option value="precheck_failed">OCR không khớp</option>
+                <option value="awaiting_proof">Chờ bill</option>
+                <option value="approved">Đã duyệt</option>
+                <option value="rejected">Từ chối</option>
+              </select>
+              <button className="button secondary" onClick={() => loadPayments()}>Lọc / làm mới</button>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Giao dịch</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
+                <tbody>{payments.length ? payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td><strong>{payment.senderName}</strong><div className="muted">{payment.transferContent}</div></td>
+                    <td>{payment.purchaseType === "package" ? `Gói ${payment.targetPlan}` : `${payment.credits} tín dụng ${payment.targetPlan}`}</td>
+                    <td>{payment.amountVnd.toLocaleString("vi-VN")}đ</td>
+                    <td><span className={`status-pill ${payment.status === "approved" ? "" : payment.status === "precheck_failed" || payment.status === "rejected" ? "danger-pill" : "new"}`}>{payment.status}</span><div className="muted">{payment.safeReason}</div></td>
+                    <td>{shortDate(payment.createdAt)}</td>
+                    <td><button className="button secondary" onClick={() => setSelectedPayment(payment)}>Chi tiết</button></td>
+                  </tr>
+                )) : <tr><td colSpan={6} className="muted">Chưa có giao dịch phù hợp.</td></tr>}</tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+
         {tab === "settings" ? (
           <div className="card form-card" style={{ marginTop: 14 }}>
             <div className="section-title">
@@ -687,7 +883,7 @@ export default function AdminPage() {
 
         {tab === "users" ? (
           <div className="card" style={{ marginTop: 14 }}>
-            <div className="toolbar-grid">
+            <div className="toolbar-grid user-toolbar">
               <input className="input" placeholder="Tìm theo email hoặc họ tên" value={userQuery} onChange={(event) => setUserQuery(event.target.value)} />
               <select className="select" value={userFilter} onChange={(event) => setUserFilter(event.target.value)}>
                 <option value="all">Tất cả user</option>
@@ -696,13 +892,23 @@ export default function AdminPage() {
                 <option value="admin">Admin</option>
                 <option value="unverified">Chưa xác minh</option>
                 <option value="disabled">Đang khóa</option>
+                <option value="ip_blocked">Khóa do giới hạn IP</option>
               </select>
               <button className="button secondary" onClick={() => loadUsers()}>Lọc</button>
+              <button className="button danger" disabled={!selectedUsers.length} onClick={deleteSelectedUsers}>Xóa đã chọn ({selectedUsers.length})</button>
             </div>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
+                    <th className="select-cell">
+                      <input
+                        aria-label="Chọn user trên trang này"
+                        type="checkbox"
+                        checked={selectablePagedUsers.length > 0 && selectablePagedUsers.every((user) => selectedUserIds.includes(user.uid))}
+                        onChange={(event) => toggleCurrentPageUsers(event.target.checked)}
+                      />
+                    </th>
                     <th>User</th>
                     <th>Trạng thái</th>
                     <th>Role</th>
@@ -713,6 +919,15 @@ export default function AdminPage() {
                 <tbody>
                   {pagedUsers.length ? pagedUsers.map((user) => (
                     <tr key={user.uid}>
+                      <td className="select-cell">
+                        <input
+                          aria-label={`Chọn ${user.email || user.displayName}`}
+                          type="checkbox"
+                          checked={selectedUserIds.includes(user.uid)}
+                          disabled={user.uid === admin.uid}
+                          onChange={(event) => toggleUserSelection(user.uid, event.target.checked)}
+                        />
+                      </td>
                       <td>
                         <input className="input" value={user.displayName} onChange={(event) => {
                           setUsers(users.map((item) => item.uid === user.uid ? { ...item, displayName: event.target.value } : item));
@@ -736,6 +951,20 @@ export default function AdminPage() {
                               Xác minh
                             </button>
                           ) : null}
+                          {user.blockedReason === "ip_account_limit" ? (
+                            <span className="muted" title={user.lastLoginIpHash}>Giới hạn 2 tài khoản/IP · {user.lastLoginIpHash.slice(0, 10)}…</span>
+                          ) : null}
+                          <label className="muted" title="Cho phép tài khoản này bỏ qua giới hạn Free/Trial theo IP">
+                            <input
+                              type="checkbox"
+                              checked={user.ipLimitOverride}
+                              onChange={(event) => {
+                                const next = { ...user, ipLimitOverride: event.target.checked };
+                                setUsers(users.map((item) => item.uid === user.uid ? next : item));
+                                void saveUser(next);
+                              }}
+                            /> Ngoại lệ IP
+                          </label>
                         </div>
                       </td>
                       <td>
@@ -770,11 +999,13 @@ export default function AdminPage() {
                             {user.disabled ? "Mở khóa" : "Khóa"}
                           </button>
                           <button className="button secondary" onClick={() => openUserHistory(user)}>Lịch sử</button>
+                          <button className="button secondary" onClick={() => { setGrantTarget(user); setGrantCreditsAmount(25); }}>Gói</button>
                           <button className="button" onClick={() => setPasswordTarget(user)}>Đổi mật khẩu</button>
+                          <button className="button danger" disabled={user.uid === admin.uid} onClick={() => deleteUser(user)}>Xóa</button>
                         </div>
                       </td>
                     </tr>
-                  )) : <EmptyTable colSpan={5} text="Không có user theo bộ lọc hiện tại." />}
+                  )) : <EmptyTable colSpan={6} text="Không có user theo bộ lọc hiện tại." />}
                 </tbody>
               </table>
             </div>
@@ -1060,6 +1291,96 @@ export default function AdminPage() {
               }}>Đóng</button>
               <button className="button" onClick={saveFeedbackDraft}>Lưu xử lý</button>
               <button className="button danger" onClick={() => deleteFeedback(selectedFeedback)}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedPayment ? (
+        <div className="modal-backdrop" onClick={() => setSelectedPayment(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-title-row"><div><p className="eyebrow">Đối soát giao dịch</p><h2>{selectedPayment.transferContent}</h2></div><span className="status-pill">{selectedPayment.status}</span></div>
+            <div className="detail-grid">
+              <div><span className="label">Người chuyển</span><strong>{selectedPayment.senderName}</strong></div>
+              <div><span className="label">Số tiền</span><strong>{selectedPayment.amountVnd.toLocaleString("vi-VN")}đ</strong></div>
+              <div><span className="label">Gói / tín dụng</span><strong>{selectedPayment.targetPlan} · {selectedPayment.credits} credits</strong></div>
+              <div><span className="label">Mã giao dịch</span><strong>{selectedPayment.id}</strong></div>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              {selectedPayment.checks.map((check) => <div key={check.key} className={`message ${check.passed ? "ok" : "error"}`}>{check.passed ? "✓" : "✕"} {check.key}: {check.detail}</div>)}
+            </div>
+            <pre className="code-block">{JSON.stringify(selectedPayment.ocr, null, 2)}</pre>
+            <div className="modal-actions">
+              {!['approved','rejected'].includes(selectedPayment.status) ? <>
+                <button className="button" onClick={() => reviewPayment(selectedPayment.id, "approve")}>Duyệt & cộng quyền lợi</button>
+                <button className="button danger" onClick={() => reviewPayment(selectedPayment.id, "reject")}>Từ chối</button>
+              </> : null}
+              <button className="button secondary" onClick={() => setSelectedPayment(null)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {grantTarget ? (
+        <div className="modal-backdrop" onClick={() => setGrantTarget(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()} style={{ width: 'min(560px, 100%)' }}>
+            <div className="modal-title-row">
+              <div>
+                <p className="eyebrow">Quản lý gói & tín dụng</p>
+                <h2>{grantTarget.displayName || grantTarget.email}</h2>
+              </div>
+              <button className="button secondary" onClick={() => setGrantTarget(null)}>Đóng</button>
+            </div>
+
+            <div className="detail-grid">
+              <div><span className="label">Gói hiện tại</span><strong>{grantTarget.paidPlan ? grantTarget.paidPlan.toUpperCase() : 'FREE'}</strong></div>
+              <div><span className="label">Trạng thái</span><strong>{grantTarget.planStatus}</strong></div>
+              <div><span className="label">Tín dụng gói</span><strong>{grantTarget.packageCredits}</strong></div>
+              <div><span className="label">Tín dụng top-up</span><strong>{grantTarget.topupCredits}</strong></div>
+              <div><span className="label">Hết hạn</span><strong>{grantTarget.planExpiresAt ? shortDate(grantTarget.planExpiresAt) : '—'}</strong></div>
+              <div><span className="label">Email</span><strong>{grantTarget.email}</strong></div>
+            </div>
+
+            {/* ── Kích hoạt gói ── */}
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 18 }}>
+              <p className="label">Kích hoạt gói mới (50 tín dụng, 30 ngày)</p>
+              <p className="muted" style={{ margin: '4px 0 10px' }}>Reset tín dụng về 50, gia hạn 30 ngày. Top-up cũ sẽ bị xóa.</p>
+              <div className="row-actions">
+                <button className="button" onClick={() => grantPlan(grantTarget.uid, 'plus')}>Kích hoạt PLUS</button>
+                <button className="button" onClick={() => grantPlan(grantTarget.uid, 'pro')}>Kích hoạt PRO</button>
+              </div>
+            </div>
+
+            {/* ── Cộng tín dụng ── */}
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 18 }}>
+              <p className="label">Cộng tín dụng (yêu cầu gói Plus/Pro còn hạn)</p>
+              <div className="row-actions" style={{ marginTop: 8 }}>
+                <input className="input" type="number" min={1} max={9999} value={grantCreditsAmount} onChange={(event) => setGrantCreditsAmount(Math.max(1, Number(event.target.value)))} style={{ maxWidth: 120 }} />
+                <button className="button" onClick={() => grantCredits(grantTarget.uid, grantCreditsAmount)}>Cộng {grantCreditsAmount} tín dụng</button>
+              </div>
+            </div>
+
+            {/* ── Trừ tín dụng ── */}
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 18 }}>
+              <p className="label">Trừ tín dụng</p>
+              <p className="muted" style={{ margin: '4px 0 10px' }}>Trừ từ tín dụng gói trước, sau đó trừ top-up. Không thể trừ quá số dư.</p>
+              <div className="row-actions" style={{ marginTop: 8 }}>
+                <input className="input" type="number" min={1} max={9999} value={deductAmount} onChange={(event) => setDeductAmount(Math.max(1, Number(event.target.value)))} style={{ maxWidth: 120 }} />
+                <button className="button danger" onClick={() => deductCredits(grantTarget.uid, deductAmount)}>Trừ {deductAmount} tín dụng</button>
+              </div>
+            </div>
+
+            {/* ── Tước quyền gói ── */}
+            {grantTarget.paidPlan && grantTarget.paidPlan !== 'free' ? (
+              <div style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 18 }}>
+                <p className="label">Tước quyền gói</p>
+                <p className="muted" style={{ margin: '4px 0 10px' }}>Chuyển user về FREE, xóa toàn bộ tín dụng và hạn gói. Thao tác không thể hoàn tác.</p>
+                <button className="button danger" onClick={() => revokePlan(grantTarget.uid)}>Tước quyền {grantTarget.paidPlan.toUpperCase()}</button>
+              </div>
+            ) : null}
+
+            <div className="modal-actions" style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 16 }}>
+              <button className="button secondary" onClick={() => setGrantTarget(null)}>Đóng</button>
             </div>
           </div>
         </div>

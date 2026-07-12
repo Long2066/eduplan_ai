@@ -49,6 +49,28 @@ function paragraph(
   });
 }
 
+function paragraphWithBreaks(
+  content: string,
+  options: { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingAfter?: number; bold?: boolean; italic?: boolean; color?: string; size?: number } = {},
+) {
+  const lines = content.split("\n");
+  const runs = lines.map((line, idx) => new TextRun({
+    text: line,
+    font: "Times New Roman",
+    size: options.size || 28,
+    bold: options.bold,
+    italics: options.italic,
+    color: options.color || BLACK,
+    break: idx > 0 ? 1 : undefined,
+  }));
+
+  return new Paragraph({
+    children: runs,
+    alignment: options.alignment || AlignmentType.JUSTIFIED,
+    spacing: { after: options.spacingAfter ?? 60 },
+  });
+}
+
 function sectionTitle(title: string) {
   return paragraph([text(title, { bold: true, color: BLUE, size: 30 })], { spacingAfter: 80 });
 }
@@ -102,11 +124,11 @@ function activitiesTable(activities: LessonActivity[]) {
         (pair, pairIndex) =>
           new TableRow({
             children: [
-              cell([paragraph([text(`- ${pair.teacher}`)], { spacingAfter: 25 })], {
+              cell([paragraphWithBreaks(`- ${pair.teacher}`, { spacingAfter: 25 })], {
                 topBorder: false,
                 bottomBorder: pairIndex === block.actionPairs.length - 1,
               }),
-              cell([paragraph([text(`- ${pair.student}`)], { spacingAfter: 25 })], {
+              cell([paragraphWithBreaks(`- ${pair.student}`, { spacingAfter: 25 })], {
                 topBorder: false,
                 bottomBorder: pairIndex === block.actionPairs.length - 1,
               }),
@@ -178,12 +200,13 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
     ...dashList(outcomes.generalCompetencies),
     subTitle("3. Năng lực đặc thù môn học:"),
     ...dashList(outcomes.specificCompetencies),
-    subTitle("4. Năng lực số:"),
-    ...dashList([
-      "Nhận biết và khai thác thông tin từ ảnh/video/tài liệu số do giáo viên trình chiếu để phục vụ học tập.",
-      "Tham gia tương tác học tập trên thiết bị số ở mức phù hợp lứa tuổi theo hướng dẫn của giáo viên.",
+    ...(outcomes.digitalCompetencies && outcomes.digitalCompetencies.length > 0 ? [
+      subTitle("4. Năng lực số:"),
+      ...dashList(outcomes.digitalCompetencies),
+      subTitle("5. Phẩm chất:"),
+    ] : [
+      subTitle("4. Phẩm chất:"),
     ]),
-    subTitle("5. Phẩm chất:"),
     ...dashList(outcomes.qualities),
 
     sectionTitle("II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU"),

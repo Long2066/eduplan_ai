@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     await setAdminSessionCookie(session);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("[Admin Session Auth Error]", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Không thể tạo phiên admin." },
       { status: 401 },

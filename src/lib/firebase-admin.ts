@@ -2,18 +2,25 @@ import "server-only";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || "unihubhg-tnu";
 const firebaseDatabaseId = process.env.FIREBASE_DATABASE_ID || "(default)";
+const firebaseStorageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "";
 
 function firebasePrivateKey() {
-  return process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const rawKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (!rawKey) return undefined;
+  // Loại bỏ các dấu nháy kép hoặc đơn ở đầu và cuối chuỗi nếu có
+  const cleaned = rawKey.replace(/^['"]|['"]$/g, "");
+  return cleaned.replace(/\\n/g, "\n");
 }
 
 export function firebaseConfigStatus() {
   return {
     projectId: firebaseProjectId,
     databaseId: firebaseDatabaseId,
+    storageBucket: firebaseStorageBucket,
     hasClientEmail: Boolean(process.env.FIREBASE_CLIENT_EMAIL),
     hasPrivateKey: Boolean(firebasePrivateKey()),
   };
@@ -35,6 +42,7 @@ export function getFirebaseAdminApp() {
       clientEmail,
       privateKey,
     }),
+    ...(firebaseStorageBucket ? { storageBucket: firebaseStorageBucket } : {}),
   });
 }
 
@@ -44,4 +52,11 @@ export function getFirebaseDb() {
 
 export function getFirebaseAdminAuth() {
   return getAuth(getFirebaseAdminApp());
+}
+
+export function getFirebaseStorageBucket() {
+  if (!firebaseStorageBucket) {
+    throw new Error("Thiếu FIREBASE_STORAGE_BUCKET trong .env.local.");
+  }
+  return getStorage(getFirebaseAdminApp()).bucket(firebaseStorageBucket);
 }

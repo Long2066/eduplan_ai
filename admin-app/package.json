@@ -3,10 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ../node_modules/next/dist/bin/next dev -p 3001",
-    "build": "node ../node_modules/next/dist/bin/next build",
-    "start": "node ../node_modules/next/dist/bin/next start -p 3001",
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
     "grant-admin": "node scripts/grant-admin.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "firebase": "^12.14.0",
+    "firebase-admin": "^13.10.0",
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.24.0",
+    "eslint-config-next": "^15.3.0",
+    "typescript": "^5.8.3"
+  }
 }

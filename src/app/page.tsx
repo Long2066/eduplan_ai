@@ -125,6 +125,7 @@ function migrateDraft(raw: unknown): LessonInput {
     style: normalizeDraftStyle(parsed),
     specialRequest: parsed.specialRequest || "",
     allowAiInference: parsed.allowAiInference ?? defaultLessonInput.allowAiInference,
+    enableDigitalCompetency: parsed.enableDigitalCompetency ?? defaultLessonInput.enableDigitalCompetency,
     uploadedAssets: parsed.uploadedAssets || [],
   };
 }
@@ -146,6 +147,7 @@ function serializableDraft(input: LessonInput): LessonInput {
     style: input.style,
     specialRequest: input.specialRequest,
     allowAiInference: input.allowAiInference,
+    enableDigitalCompetency: input.enableDigitalCompetency,
     uploadedAssets: [],
   };
 }

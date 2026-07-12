@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE_NAME, ensureUserProfile } from "@/lib/auth-server";
 import { getFirebaseAdminAuth } from "@/lib/firebase-admin";
+import { enforceFreeTrialIpLimit, IP_ACCOUNT_LIMIT_MESSAGE } from "@/lib/ip-abuse-policy";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
       );
     }
     await ensureUserProfile(decoded);
+    await enforceFreeTrialIpLimit(request, decoded.uid);
     const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: SESSION_EXPIRES_IN });
 
     (await cookies()).set(SESSION_COOKIE_NAME, sessionCookie, {
@@ -34,9 +36,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("[Session Auth Error]", error);
+    const message = error instanceof Error ? error.message : "Không thể tạo phiên đăng nhập.";
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Không thể tạo phiên đăng nhập." },
-      { status: 401 },
+      { error: message },
+      { status: message === IP_ACCOUNT_LIMIT_MESSAGE ? 403 : 401 },
     );
   }
 }

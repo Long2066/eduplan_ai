@@ -159,12 +159,15 @@ function PeriodPage({ lesson, period }: { lesson: LessonPlan; period: PeriodPlan
       {listItems(outcomes.generalCompetencies)}
       <SubTitle>3. Năng lực đặc thù môn học:</SubTitle>
       {listItems(outcomes.specificCompetencies)}
-      <SubTitle>4. Năng lực số:</SubTitle>
-      {listItems([
-        "Nhận biết và khai thác thông tin từ ảnh/video/tài liệu số do giáo viên trình chiếu để phục vụ học tập.",
-        "Tham gia tương tác học tập trên thiết bị số ở mức phù hợp lứa tuổi theo hướng dẫn của giáo viên.",
-      ])}
-      <SubTitle>5. Phẩm chất:</SubTitle>
+      {outcomes.digitalCompetencies && outcomes.digitalCompetencies.length > 0 ? (
+        <>
+          <SubTitle>4. Năng lực số:</SubTitle>
+          {listItems(outcomes.digitalCompetencies)}
+          <SubTitle>5. Phẩm chất:</SubTitle>
+        </>
+      ) : (
+        <SubTitle>4. Phẩm chất:</SubTitle>
+      )}
       {listItems(outcomes.qualities)}
 
       <SectionTitle>II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU</SectionTitle>

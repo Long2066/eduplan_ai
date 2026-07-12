@@ -10,7 +10,10 @@ const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PU
 const firebaseDatabaseId = process.env.FIREBASE_DATABASE_ID || "(default)";
 
 function firebasePrivateKey() {
-  return process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const rawKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (!rawKey) return undefined;
+  const cleaned = rawKey.replace(/^['"]|['"]$/g, "");
+  return cleaned.replace(/\\n/g, "\n");
 }
 
 export function getFirebaseAdminApp() {

@@ -36,6 +36,25 @@ function isAllowedNavigation(targetUrl, appUrl) {
   }
 }
 
+function isAllowedAuthPopup(targetUrl) {
+  try {
+    const target = new URL(targetUrl);
+    if (target.protocol !== "https:") return false;
+
+    const hostname = target.hostname.toLowerCase();
+    return (
+      hostname === "accounts.google.com" ||
+      hostname === "apis.google.com" ||
+      hostname === "www.googleapis.com" ||
+      hostname === "oauth2.googleapis.com" ||
+      hostname.endsWith(".firebaseapp.com") ||
+      hostname.endsWith(".web.app")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function createWindow() {
   const appUrl = getAppUrl();
   const iconPath = app.isPackaged
@@ -61,6 +80,25 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (appUrl && isAllowedNavigation(url, appUrl)) {
       return { action: "allow" };
+    }
+
+    if (isAllowedAuthPopup(url)) {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          width: 520,
+          height: 720,
+          minWidth: 420,
+          minHeight: 560,
+          title: "Đăng nhập",
+          backgroundColor: "#ffffff",
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+          },
+        },
+      };
     }
 
     shell.openExternal(url);

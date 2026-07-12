@@ -3,8 +3,14 @@ import type { LessonActivity } from "@/types/lesson";
 export const requiredActivityPhases = ["Khởi động", "Khám phá", "Luyện tập", "Vận dụng"] as const;
 
 export function lessonHeadingTitle(title: string) {
-  const normalized = (title || "").trim().replace(/\s+/g, " ");
-  if (!normalized) return "BÀI: BÀI HỌC";
+  let cleaned = (title || "").trim().replace(/\s+/g, " ");
+  if (!cleaned) return "BÀI: BÀI HỌC";
+
+  // Strip common subject/book metadata prefixes ending with ':'
+  const metadataRegex = /^(?:toán|tiếng việt|tiếng anh|khoa học|lịch sử|địa lí|đạo đức|mĩ thuật|âm nhạc|công nghệ|tin học|tự nhiên và xã hội|hoạt động trải nghiệm|lớp\s*\d+|tập\s*(?:một|hai|1|2)|kết nối tri thức|chân trời sáng tạo|cánh diều)\s*.*?:/i;
+  cleaned = cleaned.replace(metadataRegex, "").trim();
+
+  const normalized = cleaned;
 
   const existingLesson = normalized.match(/^bài\s*[:.]?\s*(\d+)\s*[:.]?\s*(.+)$/i);
   if (existingLesson) return `BÀI ${existingLesson[1]}. ${existingLesson[2]}`.toUpperCase();
@@ -40,8 +46,13 @@ export function activityMinutes(activity: LessonActivity, index: number) {
 }
 
 function cleanActionText(value: string) {
-  return (value || "")
-    .trim()
+  const trimmed = (value || "").trim();
+  if (trimmed.includes("\n")) {
+    return trimmed
+      .replace(/^[-–—•\s]+/, "")
+      .replace(/\r\n/g, "\n");
+  }
+  return trimmed
     .replace(/^[-–—•\s]+/, "")
     .replace(/\s+/g, " ");
 }
@@ -78,9 +89,27 @@ function studentFallbackForTeacherAction(teacherAction: string, stepNumber: numb
   return `HS theo dõi hướng dẫn của GV và tham gia bước ${stepNumber} của hoạt động.`;
 }
 
+export function safeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.includes("\n")) {
+      return trimmed
+        .split("\n")
+        .map((line) => line.replace(/^[-*–—•\s\d.]+\s*/, "").trim())
+        .filter(Boolean);
+    }
+    return [trimmed];
+  }
+  return [];
+}
+
 export function pairedActivityActions(activity: LessonActivity) {
-  const teacherActions = activity.teacherActions?.filter(Boolean) || [];
-  const studentActions = activity.studentActions?.filter(Boolean) || [];
+  const teacherActions = safeStringArray(activity.teacherActions);
+  const studentActions = safeStringArray(activity.studentActions);
   const size = Math.max(teacherActions.length, studentActions.length, 1);
 
   return Array.from({ length: size }, (_, index) => {

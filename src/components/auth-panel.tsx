@@ -64,7 +64,8 @@ function friendlyAuthError(error: unknown) {
   if (/auth\/weak-password/i.test(message)) {
     return "Mật khẩu cần tối thiểu 6 ký tự.";
   }
-  return message || "Không thể xử lý tài khoản lúc này.";
+  const firebaseCode = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: string }).code) : "";
+  return firebaseCode ? `Lỗi Firebase (${firebaseCode}): ${message}` : message || "Không thể xử lý tài khoản lúc này.";
 }
 
 type Policies = {
@@ -210,6 +211,16 @@ function BotIcon() {
   );
 }
 
+function GraduationIcon() {
+  return (
+    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3L2 8l10 5 10-5-10-5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 10v6c0 3 6 3 6 3s6 0 6-3v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M22 8v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function LessonMockup() {
   return (
     <div className="lesson-mockup" aria-hidden="true">
@@ -343,7 +354,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
         />
       ) : null}
 
-      <div className="auth-shell animate-fade-in flex w-full max-w-7xl overflow-hidden bg-white shadow-float md:min-h-[660px]">
+      <div className="auth-shell animate-fade-in flex w-full max-w-6xl overflow-hidden bg-white shadow-float md:min-h-[600px] lg:min-h-[660px]">
         <div className="auth-hero relative hidden w-[48%] flex-shrink-0 overflow-hidden px-10 py-9 text-white md:flex md:flex-col lg:px-14">
           <div className="auth-hero-dots pointer-events-none absolute inset-0" />
           <div className="auth-hero-wave pointer-events-none absolute inset-0" />
@@ -359,7 +370,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
               EduPlan AI
             </h1>
             <p className="mt-4 max-w-md text-xl font-bold leading-snug text-white/95">
-              Soạn giáo án chuẩn Công văn 2345 trong vài phút
+              Soạn giáo án chuẩn Công văn 2345 - Chương trình GDPT 2018 trong vài phút
             </p>
           </div>
 
@@ -378,11 +389,15 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             ))}
           </ul>
 
-          <div className="relative z-10 mt-auto grid grid-cols-[190px_minmax(0,1fr)] items-end gap-5 pt-8">
+          <div className="relative z-10 mt-auto grid grid-cols-[210px_minmax(0,1fr)] items-end gap-5 pt-8">
             <div className="space-y-3">
               <div className="auth-feature-chip">
                 <ShieldIcon />
                 <span>Chuẩn CV 2345</span>
+              </div>
+              <div className="auth-feature-chip">
+                <GraduationIcon />
+                <span>Chuẩn CT GDPT 2018</span>
               </div>
               <div className="auth-feature-chip">
                 <DocumentIcon />
@@ -397,11 +412,11 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </div>
 
           <p className="relative z-10 mt-6 text-xs font-medium text-white/70">
-            © 2025 EduPlan AI - Hỗ trợ giáo viên Việt Nam
+            © 2026 EduPlan AI - Hỗ trợ giáo viên Việt Nam
           </p>
         </div>
 
-        <div className="flex w-full flex-1 flex-col justify-center px-6 py-9 sm:px-10 md:px-12 lg:px-16 xl:px-20">
+        <div className="auth-form-container flex w-full flex-1 flex-col justify-center overflow-y-auto px-6 py-9 sm:px-10 md:px-12 lg:px-16 xl:px-20">
           <div className="mb-7 flex items-center gap-3 md:hidden">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/20">
               <BookLogoIcon />
@@ -410,7 +425,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </div>
 
           {mode !== "reset" ? (
-            <div className="mb-10">
+            <div className="auth-switcher-container mb-10">
               <div className="relative inline-flex rounded-full bg-surface-100 p-1.5 shadow-inner">
                 <div
                   className="absolute inset-y-1.5 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
@@ -439,7 +454,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             </div>
           ) : null}
 
-          <div className="mb-8">
+          <div className="auth-header-container mb-8">
             <h2 className="text-4xl font-black leading-tight text-slate-950">
               {title}
             </h2>
@@ -450,7 +465,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             </p>
           </div>
 
-          <div className="space-y-5">
+          <div className="auth-fields-container space-y-5">
             {mode === "register" ? (
               <label className="block">
                 <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
@@ -539,7 +554,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             ) : null}
 
             <button
-              className="btn-primary w-full py-4 text-lg font-black"
+              className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
               disabled={isSubmitting}
               onClick={handleEmailAuth}
             >
@@ -548,7 +563,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
             {mode !== "reset" ? (
               <button
-                className="btn-secondary w-full py-3.5 text-lg font-black"
+                className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
                 disabled={isSubmitting}
                 onClick={handleGoogleLogin}
               >
