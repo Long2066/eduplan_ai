@@ -252,6 +252,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [led, setLed] = useState<LedSettings>({ enabled: true, messages: [], durationSeconds: 18, theme: "blue" });
   const [system, setSystem] = useState<SystemSettings>({
@@ -428,24 +430,30 @@ export default function AdminPage() {
   async function handleEmailLogin() {
     setError("");
     setMessage("");
+    setIsSubmitting(true);
     try {
       const auth = await getFirebaseClientAuth();
       await signInWithEmailAndPassword(auth, email, password);
       await createSession();
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Không thể đăng nhập admin.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   async function handleGoogleLogin() {
     setError("");
     setMessage("");
+    setIsSubmitting(true);
     try {
       const auth = await getFirebaseClientAuth();
       await signInWithPopup(auth, googleAuthProvider);
       await createSession();
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Không thể đăng nhập Google.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -738,18 +746,124 @@ export default function AdminPage() {
   if (!admin) {
     return (
       <main className="login-page">
-        <section className="login-card">
-          <p className="eyebrow">EduPlan AI Admin</p>
-          <h1>Đăng nhập quản trị</h1>
-          <p className="muted">Chỉ tài khoản có role admin mới được truy cập hệ thống quản lý.</p>
-          {error ? <div className="message error">{error}</div> : null}
-          <label className="label">Email</label>
-          <input className="input" value={email} onChange={(event) => setEmail(event.target.value)} />
-          <label className="label">Mật khẩu</label>
-          <input className="input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-          <button className="button" onClick={handleEmailLogin}>Đăng nhập</button>
-          <button className="button secondary" onClick={handleGoogleLogin}>Tiếp tục với Google</button>
-        </section>
+        {/* ── Left Hero Panel ── */}
+        <div className="login-hero">
+          <div className="login-hero-dots" />
+          <div className="login-orb login-orb-1" />
+          <div className="login-orb login-orb-2" />
+          <div className="login-orb login-orb-3" />
+          <div className="login-hero-content">
+            <div className="login-hero-brand">
+              <div className="login-hero-brand-icon">
+                <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+                  <path d="M9 15.5c5.6.6 10 2.4 13.3 5.3v18.7C18.6 36.9 14.2 35.4 9 35V15.5Z" fill="white" opacity="0.96" />
+                  <path d="M39 15.5c-5.6.6-10 2.4-13.3 5.3v18.7c3.7-2.6 8.1-4.1 13.3-4.5V15.5Z" fill="white" opacity="0.96" />
+                  <path d="M24 18.6V40" stroke="white" strokeWidth="2.8" strokeLinecap="round" opacity="0.9" />
+                  <path d="M24 7.5l1.7 3.5 3.8.6-2.7 2.7.6 3.8-3.4-1.8-3.4 1.8.6-3.8-2.7-2.7 3.8-.6L24 7.5Z" fill="white" />
+                </svg>
+              </div>
+              <span>EduPlan AI</span>
+            </div>
+
+            <h1>Admin Console</h1>
+            <p className="login-hero-subtitle">
+              Hệ thống quản trị tập trung — quản lý người dùng, giáo án, cấu hình và theo dõi hoạt động toàn hệ thống.
+            </p>
+
+            <div className="login-hero-features">
+              <div className="login-hero-feature">
+                <div className="login-hero-feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="white" strokeWidth="2" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="white" strokeWidth="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+                </div>
+                <span className="login-hero-feature-text">Quản lý người dùng & phân quyền</span>
+              </div>
+              <div className="login-hero-feature">
+                <div className="login-hero-feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+                </div>
+                <span className="login-hero-feature-text">Theo dõi giáo án & lịch sử tạo</span>
+              </div>
+              <div className="login-hero-feature">
+                <div className="login-hero-feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 20V10M18 20V4M6 20v-4" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                </div>
+                <span className="login-hero-feature-text">Thống kê & báo cáo trực quan</span>
+              </div>
+              <div className="login-hero-feature">
+                <div className="login-hero-feature-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/><path d="m9 12 2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <span className="login-hero-feature-text">Bảo mật & kiểm soát truy cập</span>
+              </div>
+            </div>
+
+            <p className="login-hero-footer">© 2026 EduPlan AI — Admin Console</p>
+          </div>
+        </div>
+
+        {/* ── Right Form Panel ── */}
+        <div className="login-form-side">
+          <div className="login-mesh" />
+          <section className="login-card">
+            <div className="login-card-header">
+              <div className="login-card-badge">
+                <div className="login-card-badge-dot" />
+                <span>Admin Portal</span>
+              </div>
+              <h1>Đăng nhập quản trị</h1>
+              <p className="login-card-desc">Chỉ tài khoản có quyền admin mới được truy cập hệ thống quản lý.</p>
+            </div>
+
+            {error ? <div className="login-message-area"><div className="message error">{error}</div></div> : null}
+
+            <div className="login-fields">
+              <div className="login-field-group">
+                <label className="login-field-label">Email</label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2"/><path d="m3 7 9 6 9-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                  <input className="login-input" type="email" placeholder="admin@eduplan.vn" value={email} onChange={(event) => setEmail(event.target.value)} />
+                </div>
+              </div>
+
+              <div className="login-field-group">
+                <label className="login-field-label">Mật khẩu</label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg>
+                  </span>
+                  <input className="login-input" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} />
+                  <button type="button" className="login-toggle-pw" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>
+                    {showPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12Z" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="login-actions">
+              <button className={`login-btn-primary${isSubmitting ? " loading" : ""}`} disabled={isSubmitting} onClick={handleEmailLogin}>
+                <span className="login-spinner" />
+                {isSubmitting ? "Đang xác thực..." : "Đăng nhập"}
+              </button>
+
+              <div className="login-divider">hoặc</div>
+
+              <button className="login-btn-google" disabled={isSubmitting} onClick={handleGoogleLogin}>
+                <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.6 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h5.9a5 5 0 0 1-2.2 3.3v2.8h3.6c2.1-2 3.3-4.8 3.3-8.2Z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.6l-3.6-2.8c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5H2.2V17A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.9 14.2a6.6 6.6 0 0 1 0-4.3V7H2.2a11 11 0 0 0 0 10l3.7-2.8Z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A10.8 10.8 0 0 0 12 1 11 11 0 0 0 2.2 7l3.7 2.9c.9-2.6 3.3-4.5 6.1-4.5Z"/></svg>
+                Tiếp tục với Google
+              </button>
+            </div>
+
+            <div className="login-card-footer">
+              Bằng việc đăng nhập, bạn đồng ý với điều khoản sử dụng của EduPlan AI.
+            </div>
+          </section>
+        </div>
       </main>
     );
   }

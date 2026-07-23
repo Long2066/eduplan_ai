@@ -46,9 +46,11 @@ function normalizedSnapshot(data: DocumentData, now: Date) {
   const activePlan = normalizeSubscriptionPlan(data.activePlan ?? data.plan);
   const paidPlan = normalizeSubscriptionPlan(data.paidPlan ?? (data.planStatus === "paid" ? activePlan : "free"));
   const expiresAt = dateValue(data.planExpiresAt);
+  // `activePlan` is only the model selected for the next generation. The paid
+  // entitlement remains owned independently until its expiry date.
   const hasPaidEntitlement = paidPlan !== "free" && Boolean(expiresAt && expiresAt > now);
   const activeTrialRemaining = activePlan === "plus" ? numberValue(data.trials?.plusRemaining, 0) : activePlan === "pro" ? numberValue(data.trials?.proRemaining, 0) : 0;
-  const paid = activePlan !== "free" && activePlan === paidPlan && hasPaidEntitlement;
+  const paid = activePlan === paidPlan && hasPaidEntitlement;
   const trial = activePlan !== "free" && !paid && activeTrialRemaining > 0;
   const expired = activePlan !== "free" && activePlan === paidPlan && !hasPaidEntitlement;
   return { activePlan, paidPlan, hasPaidEntitlement, planStatus: (paid ? "paid" : trial ? "trial" : expired ? "expired" : "free") as PlanStatus, paid, dayKey: String(data.freeDailyDayKey || ""), freeLimit: numberValue(data.freeDailyLimit ?? data.freeLimit, 10), freeUsed: numberValue(data.freeDailyUsed, 0), packageCredits: numberValue(data.packageCredits, 0), topupCredits: numberValue(data.topupCredits, 0), plusTrial: numberValue(data.trials?.plusRemaining, 0), proTrial: numberValue(data.trials?.proRemaining, 0), expiresAt };
@@ -61,8 +63,10 @@ export function buildSubscriptionStatus(data: DocumentData, now = new Date()): S
   const today = vietnamDayKey(now);
   const freeUsed = snapshot.dayKey === today ? snapshot.freeUsed : 0;
   const freeRemaining = Math.max(0, snapshot.freeLimit - freeUsed);
-  const packageCredits = snapshot.paid ? snapshot.packageCredits : 0;
-  const topupCredits = snapshot.paid ? snapshot.topupCredits : 0;
+  // Do not hide or discard an owned paid balance merely because the user has
+  // temporarily selected Free or another trial plan.
+  const packageCredits = snapshot.hasPaidEntitlement ? snapshot.packageCredits : 0;
+  const topupCredits = snapshot.hasPaidEntitlement ? snapshot.topupCredits : 0;
   const totalCredits = packageCredits + topupCredits;
   const cards = (Object.values(PLAN_CATALOG) as PlanCatalogItem[]).map((catalog): PlanCard => {
     if (catalog.id === "free") {

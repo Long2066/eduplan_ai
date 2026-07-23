@@ -5,7 +5,7 @@ import { sendEmailVerification } from "firebase/auth";
 import { AuthPanel } from "@/components/auth-panel";
 import { LessonForm } from "@/components/lesson-form";
 import { LessonPreview } from "@/components/lesson-preview";
-import { PreviewToolbar, type RefineAction } from "@/components/preview-toolbar";
+import { PreviewToolbar } from "@/components/preview-toolbar";
 import { type AppUser, UserMenu } from "@/components/user-menu";
 import { defaultLessonInput, gradeOptions, subjectOptions } from "@/lib/defaults";
 import { exportLessonToDocx } from "@/lib/export-docx";
@@ -26,6 +26,27 @@ type ModelRoutingNotice = {
   primaryModel: string;
   modelUsed: string;
 };
+
+function generationUsageLabel(user: AppUser) {
+  const { activePlan, planStatus, cards, free, credits, trials } = user.subscription;
+  const planName = activePlan === "plus" ? "Plus" : activePlan === "pro" ? "Pro" : "Free";
+
+  if (activePlan === "free") {
+    return `Miễn phí · dùng 1 lượt (còn ${free.remaining} hôm nay)`;
+  }
+
+  if (planStatus === "trial") {
+    const remaining = activePlan === "plus" ? trials.plusRemaining : trials.proRemaining;
+    return `Dùng thử ${planName} · dùng 1 lượt (còn ${remaining})`;
+  }
+
+  const activeCard = cards.find((card) => card.id === activePlan);
+  if (planStatus === "paid" && activeCard) {
+    return `Gói ${planName} · ${activeCard.generationCost} tín dụng (còn ${credits.total})`;
+  }
+
+  return `Gói ${planName} hiện không khả dụng`;
+}
 
 function PedagogyAuditCard({ audit }: { audit: PedagogyAudit | null }) {
   if (!audit) return null;
@@ -335,30 +356,6 @@ export default function Home() {
     setToastMessage("Đã xuất file Word (.docx) có thể chỉnh sửa.");
   }
 
-  async function handleRefine(action: RefineAction) {
-    if (!lesson) return;
-    setIsGenerating(true);
-    setGenerationError("");
-    try {
-      const response = await fetch("/api/lesson/refine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lesson, action }),
-      });
-      const result = (await response.json()) as { lesson?: LessonPlan; error?: string };
-      if (!response.ok || !result.lesson) throw new Error(result.error || "Không thể tinh chỉnh giáo án lúc này.");
-      setLesson(result.lesson);
-      setPedagogyAudit(null);
-      await saveLessonDraft(result.lesson, currentLessonId);
-      await loadCurrentUser();
-      setToastMessage("Đã tinh chỉnh, lưu lịch sử và trừ 1 lượt tạo.");
-    } catch (error) {
-      setGenerationError(error instanceof Error ? error.message : "Không thể tinh chỉnh giáo án lúc này.");
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
   async function saveLessonDraft(nextLesson: LessonPlan, lessonId: string | null) {
     const response = await fetch("/api/lessons", {
       method: "POST",
@@ -505,7 +502,14 @@ export default function Home() {
         <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[420px_1fr] xl:gap-5 xl:overflow-hidden">
           {/* Left: Form */}
           <div className="xl:min-h-0 xl:overflow-hidden xl:pr-1">
-            <LessonForm input={input} errors={errors} isGenerating={isGenerating} onChange={handleChange} onGenerate={handleGenerate} />
+            <LessonForm
+              input={input}
+              errors={errors}
+              isGenerating={isGenerating}
+              generationUsageLabel={generationUsageLabel(user)}
+              onChange={handleChange}
+              onGenerate={handleGenerate}
+            />
           </div>
 
           {/* Right: Preview */}
@@ -533,13 +537,15 @@ export default function Home() {
               </div>
             ) : null}
 
-            {/* Toolbar */}
-            <PreviewToolbar disabled={!lesson} isGenerating={isGenerating} onRefine={handleRefine} onExportWord={handleExportWord} onExportPdf={handleExportPdf} />
-
             {/* Preview */}
             <div className="xl:min-h-0 xl:flex-1 xl:overflow-hidden">
               <LessonPreview lesson={lesson} isGenerating={isGenerating} />
             </div>
+
+            {/* Export actions — only available after a lesson is ready */}
+            {lesson && !isGenerating ? (
+              <PreviewToolbar onExportWord={handleExportWord} onExportPdf={handleExportPdf} />
+            ) : null}
           </div>
         </div>
       </div>

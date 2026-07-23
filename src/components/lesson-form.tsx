@@ -21,6 +21,7 @@ type LessonFormProps = {
   input: LessonInput;
   errors: FormErrors;
   isGenerating: boolean;
+  generationUsageLabel: string;
   onChange: (next: LessonInput) => void;
   onGenerate: () => void;
 };
@@ -55,7 +56,7 @@ function FormGroup({ step, title, description, children }: { step: string; title
   );
 }
 
-export function LessonForm({ input, errors, isGenerating, onChange, onGenerate }: LessonFormProps) {
+export function LessonForm({ input, errors, isGenerating, generationUsageLabel, onChange, onGenerate }: LessonFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedDraft, setAdvancedDraft] = useState<LessonInput | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -524,7 +525,12 @@ export function LessonForm({ input, errors, isGenerating, onChange, onGenerate }
                 AI đang soạn giáo án...
               </>
             ) : (
-              <>Tạo giáo án ngay</>
+              <span className="flex flex-col items-center leading-tight">
+                <span>Tạo giáo án ngay</span>
+                <span className="mt-1 text-[11px] font-semibold text-white/80">
+                  {generationUsageLabel}
+                </span>
+              </span>
             )}
           </span>
         </button>

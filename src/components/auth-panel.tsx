@@ -416,7 +416,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </p>
         </div>
 
-        <div className="auth-form-container flex w-full flex-1 flex-col justify-center overflow-y-auto px-6 py-9 sm:px-10 md:px-12 lg:px-16 xl:px-20">
+        <div className="auth-form-container flex w-full flex-1 flex-col overflow-y-auto px-6 py-9 sm:px-10 md:px-12 lg:px-16 xl:px-20">
           <div className="mb-7 flex items-center gap-3 md:hidden">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/20">
               <BookLogoIcon />
@@ -424,8 +424,9 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             <span className="text-xl font-black text-slate-950">EduPlan AI</span>
           </div>
 
+          <div className="flex flex-1 flex-col justify-center">
           {mode !== "reset" ? (
-            <div className="auth-switcher-container mb-10">
+            <div className="auth-switcher-container mb-10 text-center">
               <div className="relative inline-flex rounded-full bg-surface-100 p-1.5 shadow-inner">
                 <div
                   className="absolute inset-y-1.5 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
@@ -571,6 +572,8 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 Tiếp tục với Google
               </button>
             ) : null}
+          </div>
+
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-base">
