@@ -127,11 +127,12 @@ export const vietnamesePedagogyProfile: PedagogyProfile = {
   purpose:
     "Giúp học sinh phát triển năng lực đọc, viết, nói, nghe và dùng tiếng Việt để học tập, giao tiếp, cảm nhận văn bản và bày tỏ suy nghĩ phù hợp lứa tuổi.",
   coreTeachingFocus: [
-    "Dạy tiếng Việt phải đi từ ngữ liệu cụ thể: âm, vần, tiếng, từ, câu, đoạn, văn bản và tình huống giao tiếp.",
-    "Kết hợp đọc đúng, đọc hiểu, nói nghe và viết; không tách kỹ năng thành các việc rời rạc không có mục đích giao tiếp.",
-    "Với văn bản đọc, cần có câu hỏi trước khi đọc, trong khi đọc và sau khi đọc để dẫn học sinh hiểu nội dung, chi tiết, nhân vật, cảm xúc hoặc thông điệp.",
-    "Với tập viết/chính tả/luyện từ và câu/tập làm văn, cần có mẫu, phân tích mẫu, luyện có kiểm soát rồi mới vận dụng.",
-    "Tôn trọng trải nghiệm và vốn từ của học sinh; khuyến khích diễn đạt bằng lời của mình trước khi chuẩn hóa.",
+    "Bám chính xác nội dung và thứ tự nhiệm vụ trong SGK. Mọi hoạt động phải xoay quanh ngữ liệu cốt lõi này.",
+    "Mỗi tiết chỉ xác định 4–6 yêu cầu cần đạt, dùng động từ quan sát và đánh giá được; không chèn câu đệm, câu lặp hoặc diễn giải máy móc.",
+    "Mỗi hoạt động phải nêu rõ một mục tiêu trọng tâm, một sản phẩm chính, tiêu chí đánh giá ngắn gọn và cách hỗ trợ học sinh chưa đạt.",
+    "Thiết kế hoạt động phải khả thi trong thời lượng thực tế, có tối thiểu hai phút dự phòng; không nhồi nhiều trò chơi, phiếu và nhiệm vụ vào một tiết.",
+    "Học liệu phải được chọn riêng cho từng tiết và mọi học liệu liệt kê đều phải được sử dụng trong tiến trình.",
+    "Với tiết trả bài hoặc chỉnh sửa bài viết, phải sử dụng lỗi và sản phẩm thật của học sinh. Nếu chưa có dữ liệu, tạo các ô chờ [...] để giáo viên nhập, tuyệt đối không tự giả định tình hình lớp học.",
   ],
   signatureActivities: [
     "Khởi động bằng tranh, tình huống giao tiếp, câu đố, từ khóa hoặc trải nghiệm gần bài.",
@@ -166,10 +167,10 @@ export const vietnamesePedagogyProfile: PedagogyProfile = {
     "Học sinh vận dụng từ/cấu trúc/cách diễn đạt vào tình huống giao tiếp hoặc bài viết ngắn.",
   ],
   differentiationMoves: [
+    "Mỗi nhiệm vụ chính phải có phân hóa ba mức: hỗ trợ (học sinh chưa đạt), đạt chuẩn và nâng cao.",
     "Học sinh yếu: cho đọc câu ngắn, từ khóa, tranh gợi ý, khung câu và câu hỏi lựa chọn.",
     "Học sinh trung bình: yêu cầu trả lời đủ ý, tìm bằng chứng trong văn bản, viết câu/đoạn có gợi ý.",
     "Học sinh khá giỏi: nêu cảm nhận, so sánh nhân vật, viết mở rộng, đặt câu hỏi cho bạn hoặc đổi vai giao tiếp.",
-    "Với lớp có nhiều mức đọc, tổ chức đọc theo nhóm nhỏ và giao nhiệm vụ khác nhau trên cùng văn bản.",
   ],
   applicationMoves: [
     "Gắn bài học với giao tiếp hằng ngày: chào hỏi, xin lỗi, cảm ơn, kể việc, viết lời nhắn, viết đoạn chia sẻ.",
@@ -177,6 +178,8 @@ export const vietnamesePedagogyProfile: PedagogyProfile = {
     "Vận dụng nên ngắn, rõ sản phẩm: một câu nói, một đoạn 3-5 câu, một lời kể, một phiếu đọc hoặc một cuộc trao đổi.",
   ],
   avoid: [
+    "Không tự ý chèn tên địa phương, đặc điểm vùng miền, sĩ số, trình độ học sinh hoặc điều kiện thiết bị khi người dùng chưa cung cấp.",
+    "Đáp án dự kiến chỉ ghi ý cốt lõi, chấp nhận nhiều cách diễn đạt phù hợp, không viết kịch bản khiến giáo viên và học sinh phải nói theo mẫu.",
     "Không biến tiết Tiếng Việt thành hỏi đáp máy móc chỉ để tìm đáp án đúng.",
     "Không yêu cầu học sinh viết dài khi chưa có mẫu, vốn từ và khung ý.",
     "Không bỏ qua luyện đọc từ khó, câu dài hoặc phát âm với lớp 1-2.",
@@ -201,6 +204,7 @@ export const vietnamesePedagogyProfile: PedagogyProfile = {
     ],
   },
   qualityChecks: [
+    "Kiểm tra khớp giữa yêu cầu cần đạt – hoạt động – sản phẩm – đánh giá và tính khả thi của thời gian.",
     "Có ngữ liệu và mục tiêu kỹ năng rõ: đọc, viết, nói nghe, luyện từ/câu hay chính tả.",
     "Có hoạt động trước - trong - sau đọc nếu là bài đọc.",
     "Có luyện mẫu trước khi yêu cầu học sinh nói/viết độc lập.",
@@ -210,7 +214,7 @@ export const vietnamesePedagogyProfile: PedagogyProfile = {
   ],
   repairHints: [
     "Nếu giáo án chỉ hỏi đáp nội dung, bổ sung hoạt động đọc có nhiệm vụ, giải nghĩa từ và nói/viết vận dụng.",
-    "Nếu yêu cầu viết quá dài, thêm mẫu, khung ý và rút sản phẩm theo mức lớp.",
+    "If yêu cầu viết quá dài, thêm mẫu, khung ý và rút sản phẩm theo mức lớp.",
     "Nếu thiếu hỗ trợ học sinh yếu, thêm tranh/từ khóa/khung câu/câu hỏi lựa chọn.",
     "Nếu câu hỏi quá chung, chuyển thành câu hỏi bám chi tiết văn bản và yêu cầu nêu bằng chứng.",
     "Nếu thiếu đánh giá, thêm tiêu chí đọc đúng, hiểu ý, diễn đạt và chỉnh sửa.",

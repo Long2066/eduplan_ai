@@ -5,38 +5,37 @@ import { sendEmailVerification } from "firebase/auth";
 import { AuthPanel } from "@/components/auth-panel";
 import { LessonForm } from "@/components/lesson-form";
 import { LessonPreview } from "@/components/lesson-preview";
+import { PedagogyAuditCard } from "@/components/pedagogy-audit-card";
 import { PreviewToolbar } from "@/components/preview-toolbar";
 import { type AppUser, UserMenu } from "@/components/user-menu";
 import { defaultLessonInput, gradeOptions, subjectOptions } from "@/lib/defaults";
 import { exportLessonToDocx } from "@/lib/export-docx";
+import { accountBlockedMessage } from "@/lib/account-block";
 import { getEmailActionSettings, getFirebaseClientAuth, hasFirebaseClientConfig } from "@/lib/firebase-client";
 import { hasBlockingErrors, validateLessonInput } from "@/lib/lesson-validation";
+import { MAX_GENERATION_REQUEST_BYTES, serializeGenerationInput } from "@/lib/client-image-processing";
 import type { FormErrors, LessonInput, LessonPlan, LessonStyle, PedagogyAudit } from "@/types/lesson";
 
 const DRAFT_KEY = "eduplan-ai.lesson-input.v1";
 const defaultBillboardMessages = [
   "EduPlan AI chào mừng thầy cô đến với công cụ soạn giáo án thông minh",
   "Tạo giáo án chuẩn CV2345 nhanh chóng, rõ hoạt động giáo viên và học sinh",
-  "Xuất Word và PDF giữ định dạng đẹp, tiện chỉnh sửa và lưu trữ",
+  "Xuất Word giữ định dạng đẹp, tiện chỉnh sửa và lưu trữ",
   "Dữ liệu giáo án được lưu trong 7 ngày, dễ mở lại khi cần",
 ];
 const VISIT_COUNTED_KEY = "__eduplanVisitCountedForLoad";
 
-type ModelRoutingNotice = {
-  primaryModel: string;
-  modelUsed: string;
-};
 
 function generationUsageLabel(user: AppUser) {
   const { activePlan, planStatus, cards, free, credits, trials } = user.subscription;
-  const planName = activePlan === "plus" ? "Plus" : activePlan === "pro" ? "Pro" : "Free";
+  const planName = activePlan === "plus" ? "Trả phí" : "Miễn phí";
 
   if (activePlan === "free") {
     return `Miễn phí · dùng 1 lượt (còn ${free.remaining} hôm nay)`;
   }
 
   if (planStatus === "trial") {
-    const remaining = activePlan === "plus" ? trials.plusRemaining : trials.proRemaining;
+    const remaining = trials.plusRemaining;
     return `Dùng thử ${planName} · dùng 1 lượt (còn ${remaining})`;
   }
 
@@ -48,55 +47,7 @@ function generationUsageLabel(user: AppUser) {
   return `Gói ${planName} hiện không khả dụng`;
 }
 
-function PedagogyAuditCard({ audit }: { audit: PedagogyAudit | null }) {
-  if (!audit) return null;
 
-  const statusLabel =
-    audit.status === "passed" ? "Đạt checklist môn học" : audit.status === "repaired" ? "Đã tự repair theo môn" : "Cần xem lại";
-  const statusClass =
-    audit.status === "needs-review"
-      ? "border-amber-200 bg-amber-50 text-amber-900"
-      : audit.status === "repaired"
-        ? "border-sky-200 bg-sky-50 text-sky-900"
-        : "border-emerald-200 bg-emerald-50 text-emerald-900";
-  const dotClass = audit.status === "needs-review" ? "bg-amber-500" : audit.status === "repaired" ? "bg-sky-500" : "bg-emerald-500";
-
-  return (
-    <section className={`mb-2.5 shrink-0 rounded-xl border px-4 py-3 text-sm shadow-sm ${statusClass}`} role="status">
-      <div className="flex flex-wrap items-center gap-2 font-semibold">
-        <span className={`inline-flex h-2.5 w-2.5 rounded-full ${dotClass}`} aria-hidden="true" />
-        <span>Kiểm tra sư phạm theo môn: {statusLabel}</span>
-        <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
-          {audit.subject} · {audit.grade}
-        </span>
-        {audit.repairApplied ? <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">Đã repair</span> : null}
-      </div>
-
-      {audit.issues.length ? (
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
-          {audit.issues.slice(0, 4).map((issue) => (
-            <li key={issue}>{issue}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-1 text-xs leading-5 opacity-90">
-          Giáo án đã có các tín hiệu sư phạm chính của môn. Checklist sâu vẫn nên được giáo viên đọc lại trước khi dạy thật.
-        </p>
-      )}
-
-      {audit.checks.length ? (
-        <details className="mt-2 text-xs">
-          <summary className="cursor-pointer font-semibold">Xem checklist môn học</summary>
-          <ul className="mt-1 list-disc space-y-1 pl-5 leading-5">
-            {audit.checks.slice(0, 6).map((check) => (
-              <li key={check}>{check}</li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
-    </section>
-  );
-}
 
 function normalizeDraftGrade(grade?: string) {
   const trimmed = (grade || "").trim();
@@ -181,11 +132,9 @@ export default function Home() {
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const [toastMessage, setToastMessage] = useState("");
-  const [modelRoutingNotice, setModelRoutingNotice] = useState<ModelRoutingNotice | null>(null);
   const [pedagogyAudit, setPedagogyAudit] = useState<PedagogyAudit | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
-  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState("");
   const [verificationError, setVerificationError] = useState("");
   const [isSendingVerification, setIsSendingVerification] = useState(false);
@@ -194,10 +143,14 @@ export default function Home() {
   const [ledDurationSeconds, setLedDurationSeconds] = useState(18);
 
   async function loadCurrentUser() {
-    const response = await fetch("/api/auth/me");
-    const result = (await response.json()) as { user: AppUser | null };
-    setUser(result.user);
-    setAuthLoaded(true);
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      const result = (await response.json()) as { user?: AppUser | null; error?: string };
+      if (!response.ok) throw new Error(result.error || "Không thể đồng bộ tài khoản.");
+      setUser(result.user ?? null);
+    } finally {
+      setAuthLoaded(true);
+    }
   }
 
   useEffect(() => {
@@ -270,6 +223,30 @@ export default function Home() {
     void recordVisit();
   }, [authLoaded, user?.emailVerified]);
 
+  useEffect(() => {
+    if (!user?.uid || user.disabled) return;
+
+    const sendHeartbeat = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetch("/api/presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "online" }),
+        cache: "no-store",
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+
+    sendHeartbeat();
+    const interval = window.setInterval(sendHeartbeat, 60_000);
+    document.addEventListener("visibilitychange", sendHeartbeat);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", sendHeartbeat);
+    };
+  }, [user?.uid, user?.disabled]);
+
   function handleChange(next: LessonInput) {
     setInput(next);
     if (Object.keys(errors).length) setErrors(validateLessonInput(next));
@@ -279,31 +256,55 @@ export default function Home() {
     const nextErrors = validateLessonInput(input);
     setErrors(nextErrors);
     if (hasBlockingErrors(nextErrors)) return;
+    if (!user) {
+      setGenerationError("Vui lòng đăng nhập trước khi tạo giáo án.");
+      return;
+    }
 
     setIsGenerating(true);
     setGenerationError("");
-    setModelRoutingNotice(null);
     setPedagogyAudit(null);
 
     try {
+      const auth = getFirebaseClientAuth();
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      const requestId = typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `generate-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const { payload, bytes: payloadBytes } = serializeGenerationInput(input);
+      if (payloadBytes > MAX_GENERATION_REQUEST_BYTES) {
+        throw new Error("Tổng dung lượng ảnh SGK vẫn quá lớn. Vui lòng xóa bớt ảnh hoặc chụp gần phần nội dung bài học hơn.");
+      }
       const response = await fetch("/api/lesson/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "Idempotency-Key": requestId },
+        body: payload,
       });
-      const result = (await response.json()) as {
-        lesson?: LessonPlan;
-        lessonId?: string;
+      const responseText = await response.text();
+      let result: {
         error?: string;
-        modelRouting?: ModelRoutingNotice & { fallbackUsed: boolean };
+        lesson?: LessonPlan;
         pedagogyAudit?: PedagogyAudit;
-      };
+      } = {};
+      if (responseText) {
+        try {
+          result = JSON.parse(responseText) as typeof result;
+        } catch {
+          const timedOut = response.status === 504 || /timeout|timed out|an error occurred/i.test(responseText);
+          result = {
+            error: response.status === 413
+              ? "Ảnh SGK vượt giới hạn dung lượng máy chủ. Vui lòng xóa bớt ảnh hoặc tải lại ảnh để hệ thống tối ưu rồi thử lại."
+              : timedOut
+                ? "Máy chủ đã hết thời gian xử lý giáo án. Lượt sử dụng không bị tính; vui lòng thử lại."
+                : `Máy chủ trả phản hồi không hợp lệ (HTTP ${response.status}). Vui lòng tải lại trang và thử lại.`,
+          };
+        }
+      }
       if (!response.ok || !result.lesson) {
-        throw new Error(result.error || "Không thể tạo giáo án lúc này.");
+        throw new Error(result.error || `Không thể tạo giáo án (HTTP ${response.status}).`);
       }
       setLesson(result.lesson);
-      setCurrentLessonId(result.lessonId || null);
-      setModelRoutingNotice(result.modelRouting?.fallbackUsed ? result.modelRouting : null);
       setPedagogyAudit(result.pedagogyAudit || null);
       await loadCurrentUser();
       setToastMessage("Đã tạo và lưu giáo án vào lịch sử trong 7 ngày.");
@@ -314,40 +315,9 @@ export default function Home() {
     }
   }
 
-  function getA4Document() {
-    return document.querySelector(".a4-document") as HTMLElement | null;
-  }
 
   function safeFileName() {
     return (lesson?.generalInfo.lessonTitle || "giao-an-eduplan-ai").replace(/[\\/:*?"<>|]/g, "-").slice(0, 80);
-  }
-
-  async function handleExportPdf() {
-    if (!lesson) return;
-    try {
-      const response = await fetch("/api/lesson/export-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lesson, fileName: safeFileName() }),
-      });
-      if (!response.ok) {
-        const result = (await response.json()) as { error?: string };
-        throw new Error(result.error || "Không thể xuất PDF lúc này.");
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${safeFileName()}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setToastMessage("Đã tải file PDF xuống máy.");
-    } catch (error) {
-      setGenerationError(error instanceof Error ? error.message : "Không thể xuất PDF lúc này.");
-    }
   }
 
   async function handleExportWord() {
@@ -356,21 +326,8 @@ export default function Home() {
     setToastMessage("Đã xuất file Word (.docx) có thể chỉnh sửa.");
   }
 
-  async function saveLessonDraft(nextLesson: LessonPlan, lessonId: string | null) {
-    const response = await fetch("/api/lessons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lesson: nextLesson, lessonId }),
-    });
-    const result = (await response.json()) as { lessonId?: string; error?: string };
-    if (!response.ok) throw new Error(result.error || "Không thể lưu giáo án.");
-    if (result.lessonId) setCurrentLessonId(result.lessonId);
-  }
-
-  function handleOpenLesson(nextLesson: LessonPlan, lessonId: string) {
+  function handleOpenLesson(nextLesson: LessonPlan, _lessonId: string) {
     setLesson(nextLesson);
-    setCurrentLessonId(lessonId);
-    setModelRoutingNotice(null);
     setPedagogyAudit(null);
     setToastMessage("Đã mở giáo án từ lịch sử.");
   }
@@ -425,7 +382,7 @@ export default function Home() {
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-600">EduPlan AI</p>
           <h1 className="mt-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">Tài khoản đã bị khóa</h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
-            Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật <strong className="text-slate-800">0342 733 640</strong> nếu bạn cho là bị nhầm lẫn.
+            {accountBlockedMessage(user.blockedReason, user.blockedReasonDetail)}
           </p>
           <button className="btn-secondary mt-7" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }}>Đăng xuất</button>
         </div>
@@ -521,10 +478,10 @@ export default function Home() {
               </div>
             ) : null}
 
-            {/* Model routing notice */}
-            {modelRoutingNotice ? (
-              <div className="toast-banner mb-2.5 shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-5 text-amber-800 shadow-sm" role="status">
-                Model chính <strong>{modelRoutingNotice.primaryModel}</strong> tạm thời không khả dụng. Hệ thống đã chuyển sang model dự phòng <strong>{modelRoutingNotice.modelUsed}</strong> để hoàn tất giáo án.
+
+            {lesson && !isGenerating ? (
+              <div className="mb-2.5 shrink-0">
+                <PreviewToolbar onExportWord={handleExportWord} inline />
               </div>
             ) : null}
 
@@ -541,11 +498,6 @@ export default function Home() {
             <div className="xl:min-h-0 xl:flex-1 xl:overflow-hidden">
               <LessonPreview lesson={lesson} isGenerating={isGenerating} />
             </div>
-
-            {/* Export actions — only available after a lesson is ready */}
-            {lesson && !isGenerating ? (
-              <PreviewToolbar onExportWord={handleExportWord} onExportPdf={handleExportPdf} />
-            ) : null}
           </div>
         </div>
       </div>

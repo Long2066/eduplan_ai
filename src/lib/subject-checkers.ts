@@ -1,11 +1,26 @@
 import { getPedagogyProfile } from "./pedagogy-profiles";
-import { activityMinutes, pairedActivityActions, phaseKey, requiredActivityPhases } from "@/lib/lesson-format";
-import type { LessonPlan, LessonInput, PedagogyAudit, PeriodPlan, LessonOutcomes, MathPeriodChunk } from "@/types/lesson";
+import { activityMinutes, activityPhaseKey, pairedActivityActions, phaseKey, requiredActivityPhases } from "@/lib/lesson-format";
+import { validateMathContent } from "@/lib/math-content";
+import { validateMathLesson } from "@/lib/math-quality-validator";
+import { validateLessonQuality } from "@/lib/lesson-quality-validator";
+import { validateLessonTime } from "@/lib/lesson-time-validator";
+import { validateLessonContinuity } from "@/lib/lesson-continuity";
+import { validateNaturalSocialLesson } from "@/lib/natural-social-quality-validator";
+import { validateNaturalSocialTaskCoverage } from "@/lib/natural-social-task-coverage";
+import { validateVietnameseLesson } from "@/lib/vietnamese-quality-validator";
+import {
+  classifyNaturalSocialLesson,
+  getNaturalSocialChecklist,
+  isNaturalSocialSubjectName,
+  naturalSocialSourceInventoryText,
+} from "./natural-social-pedagogy";
+import { classifyVietnameseLesson, isVietnameseSubjectName, vietnameseLessonTypeProfiles } from "./vietnamese-pedagogy";
+import type { LessonPlan, LessonInput, PedagogyAudit, PeriodPlan, LessonOutcomes, MathPeriodChunk, NaturalSocialPeriodBlueprint, VietnameseLessonType, VietnamesePeriodBlueprint } from "@/types/lesson";
 
 // ─── VALIDATION HELPERS ───
 
 export function periodHasRequiredPhases(activities: LessonPlan["activities"]) {
-  const found = new Set(activities.map((activity) => phaseKey(`${activity.phase} ${activity.title}`)).filter(Boolean));
+  const found = new Set(activities.map(activityPhaseKey).filter(Boolean));
   return requiredActivityPhases.every((phase) => found.has(phase));
 }
 
@@ -34,7 +49,7 @@ export function hasWeaklyPairedActions(activity: LessonPlan["activities"][number
 
 export function maxActionPairsForDuration(activity: LessonPlan["activities"][number], index: number) {
   const minutes = activityMinutes(activity, index);
-  const key = phaseKey(`${activity.phase} ${activity.title}`);
+  const key = activityPhaseKey(activity);
   if (key === "Khởi động" || minutes <= 5) return 3;
   if (key === "Vận dụng" && minutes <= 5) return 3;
   if (minutes <= 10) return 4;
@@ -53,7 +68,99 @@ export function hasDetailedOutcomeGroup(outcomes?: Partial<LessonOutcomes>) {
     outcomes?.specificCompetencies || [],
     outcomes?.qualities || [],
   ];
-  return groups.every((items) => items.length > 0 && items.every((item) => item.trim().length >= 34 && /:|biết|thực hiện|trình bày|trao đổi|vận dụng|đề xuất|quan sát|hoàn thành/i.test(item)));
+  return groups.every((items) => items.length > 0 && items.every((item) => item.trim().length >= 34 && /:|biết|thực hiện|trình bày|trao đổi|vận dụng|đề xuất|quan sát|hoàn thành|đọc|viết|nêu|tìm|xác định/i.test(item)));
+}
+
+const mechanicalVietnameseOutcomePattern = /thực hiện được qua|sử dụng kiến thức,?\s*kĩ năng đặc thù|sử dụng kiến thức đặc thù|kiến thức đặc thù|nội dung học tập đặc thù|được hình thành qua|\.\s*:/i;
+const vietnameseMorningWordsPattern = /ban mai|sáng sớm|bình minh|sớm mai|rạng sáng/i;
+const vietnameseMovementWordsPattern = /khuân|vác|lôi|bê|xách|kéo|đẩy/i;
+const vietnameseSoundMeaningPattern = /(?:từ|nhóm|trường nghĩa|đồng nghĩa).{0,90}(?:âm thanh|tiếng động|tiếng kêu|tiếng vang)|(?:âm thanh|tiếng động|tiếng kêu|tiếng vang).{0,90}(?:từ|nhóm|đồng nghĩa)/i;
+const vietnameseOutcomeVerbPattern = /^(?:Đọc|Hiểu|Tìm|Xác định|Sắp xếp|Nêu|Lựa chọn|Đặt câu|Viết|Tự sửa)\b/iu;
+const vietnameseDifferentiationTemplatePattern = /ba từ khóa|có một bằng chứng|giải thích tác dụng|phân tích tác dụng/i;
+const vietnameseGrade2OverAnalysisPattern = /giải thích tác dụng|phân tích tác dụng|hiệu quả của nhịp|phân tích nghệ thuật|biện pháp nghệ thuật|phép lặp|hàm ý|hình ảnh nghệ thuật/i;
+
+function outcomeText(outcomes?: Partial<LessonOutcomes>) {
+  return [
+    ...(outcomes?.knowledgeAndSkills || []),
+    ...(outcomes?.generalCompetencies || []),
+    ...(outcomes?.specificCompetencies || []),
+    ...(outcomes?.qualities || []),
+    ...(outcomes?.digitalCompetencies || []),
+  ].join(" ");
+}
+
+function activityCriteriaCount(activity: LessonPlan["activities"][number]) {
+  return (activity.successCriteria || []).reduce((count, criterion) => {
+    const parts = criterion.split(/;|\n|•/).map((part) => part.trim()).filter(Boolean);
+    return count + Math.max(1, parts.length);
+  }, 0);
+}
+
+function hasVietnameseSynonymSemanticIssue(text: string) {
+  return (vietnameseMorningWordsPattern.test(text) || vietnameseMovementWordsPattern.test(text)) && vietnameseSoundMeaningPattern.test(text);
+}
+
+function hasVietnameseOutcomeGroup(outcomes?: Partial<LessonOutcomes>) {
+  const knowledge = outcomes?.knowledgeAndSkills || [];
+  return (
+    knowledge.length >= 4 &&
+    knowledge.length <= 6 &&
+    knowledge.every((item) => vietnameseOutcomeVerbPattern.test(item.trim())) &&
+    Boolean(outcomes?.generalCompetencies?.length) &&
+    Boolean(outcomes?.specificCompetencies?.length) &&
+    Boolean(outcomes?.qualities?.length)
+  );
+}
+
+function vietnameseListedAnswerItemCount(answer: string) {
+  const numbered = answer.match(/(?:^|\s)(?:\d+|[a-f])[\).]/gi) || [];
+  const splitItems = answer
+    .split(/[,;；、\n]|\s+-\s+|\s+\/\s+/)
+    .map((part) => part.trim())
+    .filter((part) => /[\p{L}\d]/u.test(part) && part.length >= 2);
+  return Math.max(numbered.length, splitItems.length);
+}
+
+function vietnameseSourceTaskMissingAnswer(activity: LessonPlan["activities"][number]) {
+  const text = JSON.stringify(activity);
+  if (!/(?:6|sáu)\s+(?:cụm từ|từ|câu)|ch\/tr|c\/k|ac\/at|dấu chấm|dấu chấm hỏi|đồ vật|tên các đồ vật|gọi tên/i.test(text)) return false;
+  const answer = [activity.expectedAnswer || "", ...(activity.acceptableResponses || [])].join(" ");
+  if (!answer.trim()) return true;
+  if (/theo sgk|chốt theo sgk|đối chiếu bằng sgk|đáp án phù hợp|giáo viên tự xác định/i.test(answer)) return true;
+  const expectsSix = /(?:6|sáu)\s+(?:cụm từ|từ|câu)/i.test(text);
+  return vietnameseListedAnswerItemCount(answer) < (expectsSix ? 5 : 2);
+}
+
+function vietnameseDuplicateActivityTexts(activities: LessonPlan["activities"]) {
+  const normalize = (value: string) => value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const words = (activity: LessonPlan["activities"][number]) => new Set(normalize([
+    activity.objective,
+    ...(activity.teacherActions || []),
+    ...(activity.studentActions || []),
+    ...(activity.learningProducts || []),
+    activity.expectedAnswer || "",
+  ].join(" ")).split(" ").filter((word) => word.length >= 3));
+  const duplicates: number[] = [];
+  activities.forEach((activity, index) => {
+    const current = words(activity);
+    if (current.size < 4) return;
+    for (let previous = 0; previous < index; previous += 1) {
+      const earlier = words(activities[previous]);
+      const hits = [...current].filter((word) => earlier.has(word)).length;
+      if (hits / Math.min(current.size, earlier.size || 1) >= 0.72) {
+        duplicates.push(index);
+        break;
+      }
+    }
+  });
+  return duplicates;
 }
 
 // ─── CHECKER HELPERS ───
@@ -135,7 +242,7 @@ export function subjectPedagogyIssues(lesson: LessonPlan, input: LessonInput) {
     }
   }
 
-  if (input.enableDigitalCompetency) {
+  if (input.enableDigitalCompetency && !isVietnameseSubjectName(input.subject)) {
     const hasDigitalComp = (lesson.outcomes?.digitalCompetencies || []).length > 0;
     if (!hasDigitalComp) {
       issues.push("Mục Yêu cầu cần đạt chung thiếu Năng lực số mặc dù đã bật tùy chọn Năng lực số.");
@@ -165,21 +272,14 @@ export function subjectPedagogyIssues(lesson: LessonPlan, input: LessonInput) {
     }
   }
 
-  if (input.subject === "Tiếng Việt") {
-    if (!/văn bản|ngữ liệu|bài đọc|đoạn|câu|từ|tranh/i.test(text)) {
-      issues.push("Môn Tiếng Việt thiếu ngữ liệu cụ thể như văn bản, bài đọc, đoạn, câu, từ hoặc tranh làm điểm tựa.");
-    }
-    if (!/đọc|đọc mẫu|đọc thầm|đọc nối tiếp|luyện đọc/i.test(text)) {
-      issues.push("Môn Tiếng Việt thiếu hoạt động đọc/luyện đọc phù hợp.");
-    }
-    if (!/viết|đặt câu|viết đoạn|chính tả|luyện từ|dấu câu|sửa lỗi/i.test(text)) {
-      issues.push("Môn Tiếng Việt thiếu hoạt động viết, luyện từ/câu, chính tả hoặc sửa lỗi ngôn ngữ.");
-    }
-    if (!/nói|nghe|trao đổi|kể lại|chia sẻ|trình bày|đóng vai/i.test(text)) {
-      issues.push("Môn Tiếng Việt thiếu hoạt động nói-nghe hoặc chia sẻ/trình bày.");
-    }
-    if (!/bằng chứng|dòng|đoạn|chi tiết|ý chính|cảm nhận|giải nghĩa/i.test(text)) {
-      issues.push("Môn Tiếng Việt thiếu câu hỏi đọc hiểu có bằng chứng, chi tiết, ý chính, cảm nhận hoặc giải nghĩa từ trong ngữ cảnh.");
+  if (isVietnameseSubjectName(input.subject)) {
+    // Use conditional checker based on lesson-type classification
+    const classification = classifyVietnameseLesson(input, text);
+    const typeIssues = vietnameseTypeIssues(classification.primaryType, text);
+    issues.push(...typeIssues);
+    // Universal Tiếng Việt check: must have some linguistic material
+    if (!/văn bản|ngữ liệu|bài đọc|đoạn|câu|từ|tranh|âm|vần|chữ|mẫu/i.test(text)) {
+      issues.push("TV-UNI-01: Môn Tiếng Việt thiếu ngữ liệu cụ thể (văn bản, từ, câu, tranh, âm-vần hoặc mẫu chữ).");
     }
   }
 
@@ -344,18 +444,252 @@ export function hasSubjectPedagogySignals(lesson: LessonPlan, input: LessonInput
   return subjectPedagogyIssues(lesson, input).length === 0;
 }
 
+// ─── VIETNAMESE CONDITIONAL CHECKERS ───
+
+function vietnameseTypeIssues(lessonType: VietnameseLessonType, text: string): string[] {
+  const issues: string[] = [];
+  const profile = vietnameseLessonTypeProfiles[lessonType];
+  if (!profile || lessonType === "mixed") return issues;
+
+  // Check the must-have pattern for this lesson type
+  if (!profile.checkerMustHave.test(text)) {
+    issues.push(`TV-TYPE-01: Kiểu bài "${profile.label}" thiếu dấu hiệu đặc trưng bắt buộc.`);
+  }
+
+  // Type-specific checks
+  switch (lessonType) {
+    case "reading":
+      if (!/đọc (mẫu|thành tiếng|thầm|nối tiếp|phân vai|diễn cảm)|luyện đọc/i.test(text)) {
+        issues.push("TV-READ-01: Bài đọc thiếu hoạt động luyện đọc (đọc mẫu/nối tiếp/thầm/phân vai).");
+      }
+      if (!/chi tiết|bằng chứng|dẫn chứng|tìm trong (đoạn|bài|câu)/i.test(text)) {
+        issues.push("TV-READ-02: Bài đọc thiếu câu hỏi tìm chi tiết/bằng chứng trong văn bản.");
+      }
+      if (!/ý chính|nội dung (chính|bài)|thông điệp|cảm nhận|cảm nghĩ/i.test(text)) {
+        issues.push("TV-READ-03: Bài đọc thiếu câu hỏi về ý chính, nội dung hoặc cảm nhận.");
+      }
+      break;
+
+    case "spelling":
+      if (!/nghe[- ]viết|nhớ[- ]viết|tập chép|viết (chính tả|bài)/i.test(text)) {
+        issues.push("TV-SPELL-01: Bài chính tả thiếu quy trình nghe viết hoặc nhớ viết.");
+      }
+      if (!/soát (lỗi|bài)|sửa lỗi|kiểm tra bài viết|đổi (vở|bài)/i.test(text)) {
+        issues.push("TV-SPELL-02: Bài chính tả thiếu bước soát lỗi hoặc sửa lỗi.");
+      }
+      if (!/từ khó|phân biệt|âm|vần|quy tắc/i.test(text)) {
+        issues.push("TV-SPELL-03: Bài chính tả thiếu phân tích từ khó hoặc bài tập phân biệt.");
+      }
+      break;
+
+    case "composition":
+      if (!/dàn (ý|bài)|lập ý|tìm ý|sắp xếp ý/i.test(text)) {
+        issues.push("TV-WRITE-01: Bài viết thiếu bước tìm ý hoặc lập dàn ý.");
+      }
+      if (!/chỉnh sửa|sửa bài|đọc (lại|soát)|góp ý|tiêu chí viết/i.test(text)) {
+        issues.push("TV-WRITE-02: Bài viết thiếu bước chỉnh sửa hoặc tiêu chí đánh giá bài viết.");
+      }
+      break;
+
+    case "language-knowledge":
+      if (!/ngữ liệu|ví dụ|đoạn (văn|trích)|câu (mẫu|ví dụ)|quan sát/i.test(text)) {
+        issues.push("TV-LANG-01: Luyện từ và câu thiếu ngữ liệu để học sinh khám phá quy tắc.");
+      }
+      if (!/quy tắc|kiến thức|nhận xét|rút ra|kết luận|ghi nhớ/i.test(text)) {
+        issues.push("TV-LANG-02: Luyện từ và câu thiếu bước chốt kiến thức hoặc quy tắc.");
+      }
+      if (!/bài tập|luyện|đặt câu|tìm (từ|câu)|điền|sửa lỗi/i.test(text)) {
+        issues.push("TV-LANG-03: Luyện từ và câu thiếu bài tập luyện nhận diện hoặc sử dụng.");
+      }
+      break;
+
+    case "speaking-listening":
+      if (!/nói (và nghe|trước|theo)|kể (chuyện|lại)|trình bày|trao đổi|chia sẻ/i.test(text)) {
+        issues.push("TV-SPEAK-01: Bài nói-nghe thiếu hoạt động nói hoặc kể chuyện.");
+      }
+      if (!/người nghe|nghe (bạn|và)|nhiệm vụ (nghe|người nghe)|hỏi lại|nhận xét (bạn|phần)/i.test(text)) {
+        issues.push("TV-SPEAK-02: Bài nói-nghe thiếu nhiệm vụ cho người nghe (hỏi lại, nhận xét, ghi chú).");
+      }
+      break;
+
+    case "phonics":
+      if (!/âm|vần|tiếng|chữ/i.test(text)) {
+        issues.push("TV-PHON-01: Bài học vần thiếu âm, vần hoặc tiếng mục tiêu.");
+      }
+      if (!/ghép|phân tích (tiếng|cấu tạo)|đánh vần/i.test(text)) {
+        issues.push("TV-PHON-02: Bài học vần thiếu hoạt động ghép hoặc phân tích cấu tạo tiếng.");
+      }
+      if (!/viết|tập viết|bảng con|vở/i.test(text)) {
+        issues.push("TV-PHON-03: Bài học vần thiếu hoạt động viết chữ/tiếng mới.");
+      }
+      break;
+
+    case "handwriting":
+      if (!/mẫu (chữ|viết)|nét|cỡ chữ|dòng kẻ|điểm đặt bút/i.test(text)) {
+        issues.push("TV-HAND-01: Bài tập viết thiếu mẫu chữ hoặc phân tích nét.");
+      }
+      if (!/viết mẫu|GV viết|làm mẫu/i.test(text)) {
+        issues.push("TV-HAND-02: Bài tập viết thiếu bước GV viết mẫu.");
+      }
+      if (!/luyện viết|tập viết|viết (vào vở|trên bảng|bảng con)/i.test(text)) {
+        issues.push("TV-HAND-03: Bài tập viết thiếu bước HS luyện viết.");
+      }
+      break;
+  }
+
+  return issues;
+}
+
+export function vietnamesePeriodIssues(
+  period: PeriodPlan,
+  blueprintPeriod: VietnamesePeriodBlueprint | undefined,
+  input: LessonInput,
+): string[] {
+  const issues: string[] = [];
+  const activities = period.activities || [];
+  const text = JSON.stringify(period);
+  const lessonType = blueprintPeriod?.lessonType || "mixed";
+
+  // Structural checks (same as general)
+  if (!periodHasRequiredPhases(activities)) {
+    issues.push("TV-STRUCT-01: Thiếu đủ 4 pha Khởi động, Khám phá, Luyện tập, Vận dụng.");
+  }
+  if (!period.outcomes || !hasVietnameseOutcomeGroup(period.outcomes)) {
+    issues.push("TV-STRUCT-02: Yêu cầu cần đạt Tiếng Việt cần 4–6 mục ngắn bắt đầu bằng động từ đo được, kèm năng lực chung/đặc thù/phẩm chất không lặp máy móc.");
+  }
+
+  const totalMinutes = activities.reduce((sum, activity, index) => sum + activityMinutes(activity, index), 0);
+  if (input.duration === 35 && (totalMinutes < 32 || totalMinutes > 33)) {
+    issues.push(`TV-TIME-01: Tổng thời lượng 4 hoạt động là ${totalMinutes} phút; tiết Tiếng Việt 35 phút chỉ nên ghi 32–33 phút để chừa 2–3 phút dự phòng.`);
+  }
+  if (mechanicalVietnameseOutcomePattern.test(outcomeText(period.outcomes))) {
+    issues.push("TV-YCCD-01: Yêu cầu cần đạt còn có câu máy móc hoặc lỗi dấu câu .:; hãy viết bằng động từ quan sát được, bỏ cụm 'thực hiện được qua/sử dụng kiến thức đặc thù'.");
+  }
+  if (hasVietnameseSynonymSemanticIssue(text)) {
+    issues.push("TV-LANG-04: Có nguy cơ gán sai trường nghĩa; ban mai/sáng sớm/bình minh là thời gian buổi sáng, khuân/vác/lôi là hoạt động di chuyển, không phải nhóm từ chỉ âm thanh.");
+  }
+  if (vietnameseDifferentiationTemplatePattern.test(text) || activities.filter((activity) => activity.supportForStudentsNeedingHelp?.length || activity.extensionForEarlyFinishers?.length).length > 2) {
+    issues.push("TV-DIFF-01: Phân hóa đang lặp mẫu hoặc xuất hiện quá nhiều; chỉ giữ ở 1–2 hoạt động trọng tâm và viết theo nhiệm vụ thật.");
+  }
+  if (/lớp\s*([12])|grade\s*([12])/i.test(input.grade) && vietnameseGrade2OverAnalysisPattern.test(text)) {
+    issues.push("TV-AGE-01: Có yêu cầu phân tích/nâng cao quá sức lớp 1–2; chuyển thành nói điều hiểu, chọn chi tiết thích hoặc nêu lí do đơn giản.");
+  }
+  vietnameseDuplicateActivityTexts(activities).slice(0, 2).forEach((index) => {
+    issues.push(`TV-DUP-01 ${activities[index]?.phase || `Hoạt động ${index + 1}`}: Hoạt động gần trùng yêu cầu/sản phẩm với hoạt động trước; cần đổi thành liên hệ, cảm nhận hoặc vận dụng mới.`);
+  });
+
+  // Action pair checks
+  activities.forEach((activity, index) => {
+    const label = `${activity.phase || "Hoạt động"} ${activity.title || index + 1}`;
+    const productCount = (activity.learningProducts || []).filter((product) => product.trim()).length;
+    const criteriaCount = activityCriteriaCount(activity);
+    if (!hasEqualActionPairs(activity)) issues.push(`TV-PAIR-01 ${label}: cặp GV/HS chưa cân bằng.`);
+    if (hasWeaklyPairedActions(activity)) issues.push(`TV-PAIR-02 ${label}: hành động GV/HS chưa ăn khớp.`);
+    if (hasTooManyActionPairs(activity, index)) issues.push(`TV-PAIR-03 ${label}: quá nhiều bước so với thời lượng.`);
+    if (!activity.learningProducts?.length) issues.push(`TV-PAIR-04 ${label}: thiếu sản phẩm học tập.`);
+    if (productCount > 1 || criteriaCount > 2) issues.push(`TV-LOAD-01 ${label}: mỗi hoạt động chỉ nên có 1 sản phẩm chính và tối đa 2 tiêu chí ngắn.`);
+    if (vietnameseSourceTaskMissingAnswer(activity)) issues.push(`TV-ANS-01 ${label}: Bài tập cần từ/cụm/câu/dấu câu/đồ vật cụ thể nhưng expectedAnswer chưa ghi đủ đáp án kiểm chứng được.`);
+  });
+
+  // Type-specific checks
+  const typeIssues = vietnameseTypeIssues(lessonType, text);
+  issues.push(...typeIssues);
+
+  // Universal: must reference textbook content, not just "xem SGK"
+  if (/xem SGK|làm bài trong SGK|theo SGK trang/i.test(text) && !/ngữ liệu|văn bản|bài đọc|đoạn|âm|vần/i.test(text)) {
+    issues.push("TV-UNI-02: Chỉ tham chiếu SGK mà không chép cụ thể ngữ liệu/nhiệm vụ vào giáo án.");
+  }
+
+  return issues;
+}
+
+export function vietnameseLessonIssues(
+  lesson: LessonPlan,
+  input: LessonInput,
+): string[] {
+  const issues: string[] = [];
+  const classification = classifyVietnameseLesson(input, JSON.stringify(lesson));
+
+  // Per-period checks
+  const periods = lesson.periodPlans || [];
+  if (periods.length > 1) {
+    periods.forEach((pp, idx) => {
+      const blueprintPeriod: VietnamesePeriodBlueprint = {
+        periodNumber: idx + 1,
+        lessonType: classification.primaryType,
+      };
+      const periodIssues = vietnamesePeriodIssues(pp, blueprintPeriod, input);
+      for (const issue of periodIssues) {
+        issues.push(`Tiết ${idx + 1}: ${issue}`);
+      }
+    });
+  }
+
+  return issues;
+}
+
 export function buildPedagogyAudit(lesson: LessonPlan, input: LessonInput, repairApplied: boolean): PedagogyAudit {
   const issues = subjectPedagogyIssues(lesson, input);
   const profile = getPedagogyProfile(input.subject);
-  const status: PedagogyAudit["status"] = issues.length ? "needs-review" : repairApplied ? "repaired" : "passed";
+
+  // Add subject classification metadata if applicable
+  let lessonType: string | undefined;
+  let classificationConfidence: "high" | "medium" | "low" | undefined;
+  let periodTypes: string[] | undefined;
+  let checks = profile?.qualityChecks || [];
+
+  if (isVietnameseSubjectName(input.subject)) {
+    const classification = classifyVietnameseLesson(input, JSON.stringify(lesson));
+    lessonType = classification.primaryType;
+    classificationConfidence = classification.confidence;
+    if (lesson.periodPlans && lesson.periodPlans.length > 1) {
+      // For multi-period, all periods get the primary type for now
+      // (blueprint will assign per-period types in Phase B)
+      periodTypes = lesson.periodPlans.map(() => classification.primaryType);
+    }
+  }
+
+  if (isNaturalSocialSubjectName(input.subject)) {
+    const sourceText = naturalSocialSourceInventoryText(lesson.meta?.naturalSocialSourceInventory);
+    const classification = classifyNaturalSocialLesson(input, sourceText);
+    lessonType = classification.primaryType;
+    classificationConfidence = classification.confidence;
+    checks = getNaturalSocialChecklist(classification);
+    if (lesson.periodPlans && lesson.periodPlans.length > 1) {
+      periodTypes = lesson.periodPlans.map((period) =>
+        classifyNaturalSocialLesson({ ...input, lessonTitle: period.focus || input.lessonTitle }, sourceText).primaryType,
+      );
+    }
+  }
+
+  const findings = [
+    ...validateLessonQuality(lesson),
+    ...validateLessonTime(lesson),
+    ...validateLessonContinuity(lesson, input),
+    ...(/^(toán|toan)$/i.test(input.subject.trim()) ? validateMathLesson(lesson, input) : []),
+    ...(isVietnameseSubjectName(input.subject) ? validateVietnameseLesson(lesson, input) : []),
+    ...(isNaturalSocialSubjectName(input.subject) ? validateNaturalSocialLesson(lesson, input) : []),
+    ...(isNaturalSocialSubjectName(input.subject) ? validateNaturalSocialTaskCoverage(lesson, input, lesson.meta?.naturalSocialSourceInventory) : []),
+  ];
+  const hasBlockingFinding = findings.some((finding) => finding.severity === "error");
+  const status: PedagogyAudit["status"] = issues.length || hasBlockingFinding
+    ? "needs-review"
+    : repairApplied
+      ? "repaired"
+      : "passed";
+
   return {
     subject: input.subject,
     grade: input.grade,
     status,
     issues,
-    checks: profile?.qualityChecks || [],
+    checks,
     repairApplied,
     checkedAt: new Date().toISOString(),
+    findings,
+    lessonType,
+    classificationConfidence,
+    periodTypes,
   };
 }
 
@@ -363,6 +697,30 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
   const issues: string[] = [];
   const activities = period.activities || [];
   const text = JSON.stringify(period);
+  const mathTextEntries: Array<[string, string | undefined]> = [
+    ["Trọng tâm tiết", period.focus],
+    ...Object.entries(period.outcomes || {}).flatMap(([group, values]) =>
+      group !== "objectiveMetadata" && Array.isArray(values)
+        ? values.filter((value): value is string => typeof value === "string").map((value, index): [string, string] => [`Yêu cầu ${group} ${index + 1}`, value])
+        : [],
+    ),
+    ...activities.flatMap((activity, activityIndex): Array<[string, string | undefined]> => [
+      [`${activity.phase || "Hoạt động"} ${activityIndex + 1} - mục tiêu`, activity.objective],
+      ...(activity.teacherActions || []).map((value, index): [string, string] => [`${activity.phase} - GV bước ${index + 1}`, value]),
+      ...(activity.studentActions || []).map((value, index): [string, string] => [`${activity.phase} - HS bước ${index + 1}`, value]),
+      ...(activity.learningProducts || []).map((value, index): [string, string] => [`${activity.phase} - sản phẩm ${index + 1}`, value]),
+    ]),
+    ["Bàn giao kiến thức", period.handoff?.learned],
+    ["Cầu nối tiết sau", period.handoff?.nextBridge],
+  ];
+
+  const latexIssues = mathTextEntries.flatMap(([location, value]) => {
+    if (typeof value !== "string" || !value.trim()) return [];
+    return validateMathContent(value, { requireDelimitedFormulas: true }).map((issue) => `${location}: ${issue.message}`);
+  });
+  if (latexIssues.length) {
+    issues.push(`Chuẩn LaTeX chưa đạt: ${latexIssues.slice(0, 8).join(" | ")}${latexIssues.length > 8 ? ` | và ${latexIssues.length - 8} lỗi khác` : ""}`);
+  }
   if (!periodHasRequiredPhases(activities)) issues.push("Thiếu đủ 4 pha Khởi động, Khám phá, Luyện tập, Vận dụng.");
   if (!period.outcomes || !hasDetailedOutcomeGroup(period.outcomes)) issues.push("Yêu cầu cần đạt của tiết còn sơ sài hoặc thiếu nhóm năng lực/phẩm chất.");
   activities.forEach((activity, index) => {
@@ -387,8 +745,8 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
     issues.push("Tiết Toán thiếu lỗi sai thường gặp hoặc bước kiểm tra kết quả/đơn vị.");
   }
   // Kiểm tra Khởi động lộ đáp án bài chính
-  const startup = activities.find(a => phaseKey(`${a.phase} ${a.title}`) === "Khởi động");
-  const explore = activities.find(a => phaseKey(`${a.phase} ${a.title}`) === "Khám phá");
+  const startup = activities.find(a => activityPhaseKey(a) === "Khởi động");
+  const explore = activities.find(a => activityPhaseKey(a) === "Khám phá");
   if (startup && explore) {
     const startupActions = [...(startup.teacherActions || []), ...(startup.studentActions || [])].join(" ");
     const exploreActions = [...(explore.teacherActions || []), ...(explore.studentActions || [])].join(" ");
@@ -404,7 +762,7 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
     issues.push("Tiết Toán thiếu phân hóa: cần có hỗ trợ HS yếu (câu hỏi gợi mở, sơ đồ mẫu) và nhiệm vụ mở rộng cho HS khá.");
   }
   // Kiểm tra Vận dụng có gắn đời sống
-  const application = activities.find(a => phaseKey(`${a.phase} ${a.title}`) === "Vận dụng");
+  const application = activities.find(a => activityPhaseKey(a) === "Vận dụng");
   if (application) {
     const appText = JSON.stringify(application);
     if (!/đời sống|gia đình|lớp học|trường|mua|bán|quãng đường|thời gian|cây|vườn|sân|địa phương|thực tế|hằng ngày|ở nhà/i.test(appText)) {
@@ -412,4 +770,58 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
     }
   }
   return issues;
+}
+
+export function naturalSocialPeriodIssues(
+  period: PeriodPlan,
+  blueprintPeriod: NaturalSocialPeriodBlueprint | undefined,
+  input: LessonInput,
+): string[] {
+  const issues: string[] = [];
+  const activities = period.activities || [];
+  const text = JSON.stringify(period);
+  const lessonType = blueprintPeriod?.lessonType || classifyNaturalSocialLesson(input, text).primaryType;
+
+  if (!periodHasRequiredPhases(activities)) {
+    issues.push("NSXH-STRUCT-01: Thiếu đủ 4 pha Khởi động, Khám phá, Luyện tập, Vận dụng.");
+  }
+  if (!period.outcomes || !hasDetailedOutcomeGroup(period.outcomes)) {
+    issues.push("NSXH-STRUCT-02: Yêu cầu cần đạt của tiết còn sơ sài hoặc thiếu nhóm năng lực/phẩm chất.");
+  }
+
+  activities.forEach((activity, index) => {
+    const label = `${activity.phase || "Hoạt động"} ${activity.title || index + 1}`;
+    if (!hasEqualActionPairs(activity)) issues.push(`${label}: cặp GV/HS chưa cân bằng.`);
+    if (hasWeaklyPairedActions(activity)) issues.push(`${label}: hành động GV/HS chưa ăn khớp.`);
+    if (hasTooManyActionPairs(activity, index)) issues.push(`${label}: quá nhiều bước so với thời lượng.`);
+    if (!activity.learningProducts?.length) issues.push(`${label}: thiếu sản phẩm học tập quan sát được như phiếu, bảng, tranh, thẻ hoặc lời trình bày.`);
+    if (!activity.successCriteria?.length) issues.push(`${label}: thiếu tiêu chí thành công gắn với quan sát, mô tả, phân loại hoặc hành động vận dụng.`);
+  });
+
+  const lesson: LessonPlan = {
+    generalInfo: {
+      subject: "Tự nhiên và Xã hội",
+      grade: input.grade,
+      lessonTitle: input.lessonTitle || period.focus || "Bài học Tự nhiên và Xã hội",
+      book: input.book,
+      periods: 1,
+      duration: input.duration,
+    },
+    outcomes: period.outcomes || {
+      generalCompetencies: [],
+      specificCompetencies: [],
+      qualities: [],
+      knowledgeAndSkills: [],
+    },
+    materials: { teacher: [], students: [] },
+    activities,
+    periodPlans: [{ ...period, activities }],
+    assessment: { criteria: [], evidence: [], comments: [] },
+    adjustments: { suitablePoints: [], pointsToAdjust: [], nextLessonDirection: [] },
+    contextFit: { notes: [] },
+    meta: { style: input.style, modelUsed: "checker", createdAt: new Date().toISOString() },
+  };
+  issues.push(...validateNaturalSocialLesson(lesson, input, lessonType).map((finding) => `${finding.code}: ${finding.message}`));
+
+  return Array.from(new Set(issues));
 }

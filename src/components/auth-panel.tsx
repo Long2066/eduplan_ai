@@ -34,9 +34,12 @@ async function createSession() {
 
 function friendlyAuthError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "");
-  if (/auth\/user-disabled|tài khoản.*khóa|account.*disabled/i.test(message)) {
+  if (/lý do từ quản trị viên/i.test(message)) return message;
+  if (/bạn đang sử dụng quá nhiều tài khoản/i.test(message)) return message;
+  if (/auth\/user-disabled/i.test(message)) {
     return "Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn.";
   }
+  if (/tài khoản.*khóa|account.*disabled/i.test(message)) return message;
   if (/auth\/configuration-not-found/i.test(message)) {
     return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Email/Password và Google.";
   }
@@ -377,7 +380,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           <ul className="relative z-10 mt-8 max-w-[520px] space-y-4 text-base font-medium leading-relaxed text-white/95">
             {[
               "Tải ảnh SGK, AI tự soạn giáo án đầy đủ",
-              "Xem trước khổ A4, xuất Word/PDF nhanh chóng",
+              "Xem trước khổ A4, xuất Word nhanh chóng",
               "Tùy chỉnh linh hoạt, phù hợp từng lớp học",
             ].map((item) => (
               <li key={item} className="flex items-center gap-3">
@@ -401,7 +404,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
               </div>
               <div className="auth-feature-chip">
                 <DocumentIcon />
-                <span>Xuất Word/PDF</span>
+                <span>Xuất Word</span>
               </div>
               <div className="auth-feature-chip">
                 <BotIcon />

@@ -13,8 +13,7 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 *.tsbuildinfo
+.math-export-fixtures/*.pdf
+.math-export-fixtures/*.docx
 .agents
 .codex
-
-.vercel
-.env*

@@ -4,9 +4,10 @@ import type { DecodedIdToken } from "firebase-admin/auth";
 import { getFirebaseAdminAuth, getFirebaseDb } from "@/lib/firebase-admin";
 import { normalizeSubscriptionPlan, type SubscriptionPlan } from "@/lib/model-strategy";
 import { buildSubscriptionStatus, initialSubscriptionFields, type SubscriptionStatus } from "@/lib/subscription-policy";
+import { accountBlockedMessage } from "@/lib/account-block";
 
 export const SESSION_COOKIE_NAME = "eduplan_session";
-export const DEFAULT_FREE_LIMIT = 10;
+export const DEFAULT_FREE_LIMIT = 3;
 export const LESSON_TTL_DAYS = 7;
 
 export type AuthUser = {
@@ -17,6 +18,7 @@ export type AuthUser = {
   emailVerified: boolean;
   disabled: boolean;
   blockedReason: string;
+  blockedReasonDetail: string;
   role: "user" | "admin";
   plan: SubscriptionPlan;
   freeLimit: number;
@@ -37,7 +39,7 @@ export async function verifySessionCookie() {
   const session = await sessionCookie();
   if (!session) return null;
   try {
-    return getFirebaseAdminAuth().verifySessionCookie(session, true);
+    return await getFirebaseAdminAuth().verifySessionCookie(session, true);
   } catch {
     return null;
   }
@@ -54,8 +56,9 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
     displayName: userRecord.displayName || decoded.name || "",
     photoURL: userRecord.photoURL || decoded.picture || "",
     emailVerified: Boolean(userRecord.emailVerified),
-    disabled: Boolean(userRecord.disabled),
+    disabled: false,
     blockedReason: "",
+    blockedReasonDetail: "",
     role: "user",
     plan: "free",
     freeLimit: DEFAULT_FREE_LIMIT,
@@ -66,15 +69,35 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
   };
 
   if (!snapshot.exists) {
+    try {
+      const systemDoc = await db.collection("app_settings").doc("system").get();
+      if (systemDoc.exists) {
+        const systemData = systemDoc.data() || {};
+        const newProfile = {
+          ...baseProfile,
+          freeLimit: DEFAULT_FREE_LIMIT,
+          freeDailyLimit: DEFAULT_FREE_LIMIT,
+          trials: {
+            plusRemaining: 0,
+            proRemaining: 0,
+          },
+        };
+        await ref.set(newProfile);
+        return newProfile;
+      }
+    } catch (e) {
+      console.error("[EduPlan AI] Failed to read system settings for new user initial fields, fallback to default:", e);
+    }
     await ref.set(baseProfile);
     return baseProfile;
   }
 
+  const storedPhotoURL = String(snapshot.get("photoURL") || "");
   await ref.set(
     {
       email: baseProfile.email,
       displayName: baseProfile.displayName || snapshot.get("displayName") || "",
-      photoURL: baseProfile.photoURL || snapshot.get("photoURL") || "",
+      photoURL: storedPhotoURL || baseProfile.photoURL,
       emailVerified: baseProfile.emailVerified,
       disabled: Boolean(userRecord.disabled || snapshot.get("disabled")),
       updatedAt: now,
@@ -104,6 +127,7 @@ export async function currentUser(): Promise<AuthUser | null> {
     emailVerified: Boolean(profile.emailVerified),
     disabled,
     blockedReason: String(profile.blockedReason || ""),
+    blockedReasonDetail: String(profile.blockedReasonDetail || ""),
     role: profile.role === "admin" ? "admin" : "user",
     plan: normalizeSubscriptionPlan(subscription.activePlan),
     freeLimit,
@@ -121,10 +145,7 @@ export async function requireUser() {
     throw error;
   }
   if (user.disabled) {
-    const message = user.blockedReason === "ip_account_limit"
-      ? "Bạn đang sử dụng quá nhiều tài khoản để truy cập, vui lòng chỉ sử dụng 1 tài khoản để truy cập. Trân trọng."
-      : "Tài khoản của bạn bị khóa, vui lòng liên hệ hỗ trợ kĩ thuật 0342 733 640 nếu bạn cho là bị nhầm lẫn.";
-    const error = new Error(message);
+    const error = new Error(accountBlockedMessage(user.blockedReason, user.blockedReasonDetail));
     error.name = "ACCOUNT_DISABLED";
     throw error;
   }

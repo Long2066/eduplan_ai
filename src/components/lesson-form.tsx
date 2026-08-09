@@ -15,6 +15,7 @@ import {
   subjectSupportsBookVolume,
   teachingEnvironmentOptions,
 } from "@/lib/defaults";
+import { assetPreviewUrl, optimizeLessonImage } from "@/lib/client-image-processing";
 import type { FormErrors, LessonInput, UploadedAsset } from "@/types/lesson";
 
 type LessonFormProps = {
@@ -61,6 +62,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   const [advancedDraft, setAdvancedDraft] = useState<LessonInput | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [isOptimizingImages, setIsOptimizingImages] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const uploadBoxRef = useRef<HTMLDivElement | null>(null);
   const advancedInput = advancedDraft || input;
@@ -120,33 +122,23 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
     return file.type === "image/jpeg" || file.type === "image/png" || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".jfif") || name.endsWith(".png");
   }
 
-  function readFileAsDataUrl(file: File) {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-  }
-
   async function createAsset(file: File, index: number, order: number): Promise<UploadedAsset> {
     const fallbackName = `Ảnh dán từ clipboard ${order}`;
-    const dataUrl = await readFileAsDataUrl(file);
+    const dataUrl = await optimizeLessonImage(file);
 
     return {
       id: `${Date.now()}-${index}-${file.name || fallbackName}`,
       name: file.name || fallbackName,
       type: "image",
       order,
-      previewUrl: dataUrl,
       dataUrl,
-      mimeType: file.type || (file.name.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg"),
+      mimeType: "image/jpeg",
     };
   }
 
   async function addFiles(files: FileList | File[]) {
     const selectedFiles = Array.from(files);
-    if (!selectedFiles.length) return;
+    if (!selectedFiles.length || isOptimizingImages) return;
 
     const supportedFiles = selectedFiles.filter(isSupportedImage);
     if (!supportedFiles.length) {
@@ -154,11 +146,30 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
       return;
     }
 
-    setUploadError(supportedFiles.length < selectedFiles.length ? "Đã bỏ qua file không phải JPG/PNG." : "");
-    const lastOrder = input.uploadedAssets.reduce((max, asset, index) => Math.max(max, asset.order ?? index + 1), 0);
-    const assets = await Promise.all(supportedFiles.map((file, index) => createAsset(file, index, lastOrder + index + 1)));
-    if (!assets.length) return;
-    patch({ uploadedAssets: [...input.uploadedAssets, ...assets] });
+    const remainingSlots = Math.max(0, 10 - input.uploadedAssets.length);
+    if (!remainingSlots) {
+      setUploadError("Mỗi lần tạo chỉ được dùng tối đa 10 ảnh SGK.");
+      return;
+    }
+
+    const acceptedFiles = supportedFiles.slice(0, remainingSlots);
+    const warnings: string[] = [];
+    if (supportedFiles.length < selectedFiles.length) warnings.push("Đã bỏ qua file không phải JPG/PNG.");
+    if (acceptedFiles.length < supportedFiles.length) warnings.push("Chỉ giữ tối đa 10 ảnh SGK.");
+    setUploadError(warnings.join(" "));
+    setIsOptimizingImages(true);
+    try {
+      const lastOrder = input.uploadedAssets.reduce((max, asset, index) => Math.max(max, asset.order ?? index + 1), 0);
+      const assets: UploadedAsset[] = [];
+      for (let index = 0; index < acceptedFiles.length; index += 1) {
+        assets.push(await createAsset(acceptedFiles[index], index, lastOrder + index + 1));
+      }
+      if (assets.length) patch({ uploadedAssets: [...input.uploadedAssets, ...assets] });
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Không thể tối ưu ảnh SGK.");
+    } finally {
+      setIsOptimizingImages(false);
+    }
   }
 
   function handleFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -341,9 +352,9 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
                     const displayOrder = asset.order ?? index + 1;
                     return (
                     <div key={asset.id} className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md">
-                      {asset.type === "image" && asset.previewUrl ? (
+                      {asset.type === "image" && assetPreviewUrl(asset) ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={asset.previewUrl} alt={`Ảnh SGK ${displayOrder}: ${asset.name}`} className="h-32 w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
+                        <img src={assetPreviewUrl(asset)} alt={`Ảnh SGK ${displayOrder}: ${asset.name}`} className="h-32 w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
                       ) : (
                         <div className="flex h-32 items-center justify-center bg-surface-50 text-sm font-bold text-slate-400">
                           <span className="rounded-xl bg-white px-3 py-2 shadow-sm">ẢNH</span>
@@ -365,6 +376,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
                   })}
                 </div>
               ) : null}
+              {isOptimizingImages ? <p className="mt-2 text-xs font-semibold text-brand-600">Đang tối ưu ảnh để tải nhanh và tránh lỗi dung lượng...</p> : null}
               <FieldError message={uploadError || (input.uploadedAssets.length ? undefined : errors.uploadedAssets)} />
             </div>
           </FormGroup>
@@ -513,16 +525,16 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
         <button
           type="button"
           onClick={onGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || isOptimizingImages}
           className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-brand-700 via-brand-600 to-brand-700 px-5 py-4 text-base font-extrabold text-white shadow-btn-primary transition-all duration-300 hover:-translate-y-0.5 hover:shadow-btn-hover disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {/* Shimmer effect */}
           <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-[1.5s] group-hover:translate-x-full" />
           <span className="relative flex items-center justify-center gap-3">
-            {isGenerating ? (
+            {isGenerating || isOptimizingImages ? (
               <>
                 <span className="h-5 w-5 animate-spin rounded-full border-[2.5px] border-white/30 border-t-white" />
-                AI đang soạn giáo án...
+                {isGenerating ? "AI đang soạn giáo án..." : "Đang tối ưu ảnh SGK..."}
               </>
             ) : (
               <span className="flex flex-col items-center leading-tight">

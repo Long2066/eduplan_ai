@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { lessonHeadingTitle } from "@/lib/lesson-format";
 import { activityDocumentBlock, gradeLabel, normalizedPeriods } from "@/lib/lesson-document-model";
+import { MathText } from "@/components/math-text";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
+
+type ActivityDisplayMode = { compact: boolean; concise?: boolean };
 
 type LessonPreviewProps = {
   lesson: LessonPlan | null;
@@ -18,9 +21,36 @@ function List({ items }: { items: string[] }) {
   return (
     <ul className="a4-list">
       {items.map((item, index) => (
-        <li key={`${item}-${index}`}>- {item}</li>
+        <li key={`${item}-${index}`}>- <MathText>{item}</MathText></li>
       ))}
     </ul>
+  );
+}
+
+function SectionList({ title, items, className = "" }: { title: string; items: string[]; className?: string }) {
+  if (!items?.length) return null;
+  return (
+    <div className={`a4-section ${className}`.trim()}>
+      <h2>{title}</h2>
+      <ul className="a4-list">
+        {items.map((item, index) => (
+          <li key={`${title}-${index}`}>- <MathText>{item}</MathText></li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ActivityDetailLines({ details }: { details: ReturnType<typeof activityDocumentBlock>["details"] }) {
+  if (!details.length) return null;
+  return (
+    <div className="activity-detail-list">
+      {details.map((detail) => (
+        <p key={`${detail.label}-${detail.text}`} className={`activity-detail activity-detail-${detail.tone}`}>
+          <strong>{detail.label}:</strong> <MathText>{detail.text}</MathText>
+        </p>
+      ))}
+    </div>
   );
 }
 
@@ -33,8 +63,8 @@ function A4Section({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-function ActivityRow({ activity, index }: { activity: LessonActivity; index: number }) {
-  const block = activityDocumentBlock(activity, index);
+function ActivityRow({ activity, index, displayMode }: { activity: LessonActivity; index: number; displayMode: ActivityDisplayMode }) {
+  const block = activityDocumentBlock(activity, index, displayMode);
   const hasActionPairs = block.actionPairs.length > 0;
 
   return (
@@ -42,14 +72,13 @@ function ActivityRow({ activity, index }: { activity: LessonActivity; index: num
       <tr className={hasActionPairs ? "activity-heading-row" : "activity-heading-row activity-end-row"}>
         <td className="activity-heading-cell">
           <p className="activity-title">
-            {block.heading}
+            <MathText>{block.heading}</MathText>
           </p>
-          <p>
-            <strong>* Mục tiêu:</strong> <em>{block.objective}</em>
-          </p>
-          <p>
-            <strong>* Sản phẩm/đánh giá:</strong> <em>{block.products}</em>
-          </p>
+          <p><strong>* Mục tiêu:</strong> <em><MathText>{block.objective}</MathText></em></p>
+          {block.products ? (
+            <p className="learning-product"><strong>* Sản phẩm/đánh giá:</strong> <em><MathText>{block.products}</MathText></em></p>
+          ) : null}
+          <ActivityDetailLines details={block.details} />
           <p>
             <strong className="blue-italic">* Cách tiến hành:</strong>
           </p>
@@ -62,10 +91,10 @@ function ActivityRow({ activity, index }: { activity: LessonActivity; index: num
           className={`paired-action-row ${pairIndex === block.actionPairs.length - 1 ? "activity-end-row" : ""}`}
         >
           <td>
-            <p style={{ whiteSpace: "pre-wrap" }}>- {pair.teacher}</p>
+            <p style={{ whiteSpace: "pre-wrap" }}>- <MathText>{pair.teacher}</MathText></p>
           </td>
           <td>
-            <p style={{ whiteSpace: "pre-wrap" }}>- {pair.student}</p>
+            <p style={{ whiteSpace: "pre-wrap" }}>- <MathText>{pair.student}</MathText></p>
           </td>
         </tr>
       ))}
@@ -73,7 +102,7 @@ function ActivityRow({ activity, index }: { activity: LessonActivity; index: num
   );
 }
 
-function ActivityTable({ activities }: { activities: LessonActivity[] }) {
+function ActivityTable({ activities, displayMode }: { activities: LessonActivity[]; displayMode: ActivityDisplayMode }) {
   return (
     <table className="lesson-table">
       <thead>
@@ -84,7 +113,7 @@ function ActivityTable({ activities }: { activities: LessonActivity[] }) {
       </thead>
       <tbody>
         {activities.map((activity, index) => (
-          <ActivityRow key={`${activity.phase}-${activity.title}-${index}`} activity={activity} index={index} />
+          <ActivityRow key={`${activity.phase}-${activity.title}-${index}`} activity={activity} index={index} displayMode={displayMode} />
         ))}
       </tbody>
     </table>
@@ -93,6 +122,11 @@ function ActivityTable({ activities }: { activities: LessonActivity[] }) {
 
 function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: PeriodPlan }) {
   const outcomes = period.outcomes || lesson.outcomes;
+  const compact = lesson.meta?.plan === "free";
+  const displayMode = {
+    compact,
+    concise: true,
+  };
 
   return (
     <article className="a4-page period-lesson">
@@ -144,7 +178,7 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
       </A4Section>
 
       <A4Section title="III. TIẾN TRÌNH DẠY HỌC">
-        <ActivityTable activities={period.activities} />
+        <ActivityTable activities={period.activities} displayMode={displayMode} />
       </A4Section>
 
       <A4Section title="IV. ĐIỀU CHỈNH SAU BÀI DẠY">

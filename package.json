@@ -10,24 +10,33 @@
     "build:electron": "electron-builder --projectDir electron --config ../electron-builder.json --win nsis",
     "build:electron:dir": "electron-builder --projectDir electron --config ../electron-builder.json --win dir",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "migrate:pro-to-plus": "node --env-file=.env.local scripts/migrate-pro-to-plus.mjs",
+    "migrate:pro-to-plus:apply": "node --env-file=.env.local scripts/migrate-pro-to-plus.mjs --apply",
+    "verify:math-exports": "vite-node --config vitest.config.ts .math-export-fixtures/verify-math-exports.ts"
   },
   "dependencies": {
-    "@react-pdf/renderer": "^4.5.1",
     "docx": "^9.6.1",
     "firebase": "^12.14.0",
     "firebase-admin": "^13.10.0",
+    "jsonrepair": "^3.15.0",
+    "jszip": "^3.10.1",
+    "katex": "^0.18.1",
+    "mathml2omml": "^0.5.0",
     "next": "^15.3.0",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@types/katex": "^0.16.7",
     "@types/node": "^22.14.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
     "concurrently": "^10.0.3",
-    "cross-env": "^10.1.0",
     "electron": "^42.5.0",
     "electron-builder": "^26.15.3",
     "eslint": "^9.24.0",
@@ -35,6 +44,7 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
     "wait-on": "^9.0.10"
   }
 }

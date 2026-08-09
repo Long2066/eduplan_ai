@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 
 import { createHash } from "crypto";
 import { buildSubscriptionStatus } from "@/lib/subscription-policy";
@@ -50,7 +50,6 @@ export async function enforceFreeTrialIpLimit(request: Request, uid: string) {
       await profileRef.set({ disabled: true, blockedReason: "ip_account_limit", blockedAt: now, lastLoginIpHash: ipHash, updatedAt: now }, { merge: true });
       await accessRef.set({ uid, ipHash, status: "blocked", firstSeenAt: now, lastSeenAt: now }, { merge: true });
       await db.collection("securityEvents").add({ uid, type: "ip_account_limit", ipHash, relatedUids: activeFreeTrialAccounts.map((snapshot) => snapshot.id), createdAt: now });
-      await auth.updateUser(uid, { disabled: true });
       await auth.revokeRefreshTokens(uid);
       throw new Error(IP_ACCOUNT_LIMIT_MESSAGE);
     }

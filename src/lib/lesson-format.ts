@@ -35,9 +35,21 @@ export function phaseKey(value: string) {
   return "";
 }
 
+export function activityPhaseKey(activity: { phase?: string; title?: string }) {
+  const explicitPhase = phaseKey(activity.phase || "");
+  return explicitPhase || phaseKey(activity.title || "");
+}
+
+export function canonicalizeOrderedActivityPhases(activities: LessonActivity[]) {
+  if (activities.length < requiredActivityPhases.length) return activities;
+  return activities.map((activity, index) => index < requiredActivityPhases.length
+    ? { ...activity, phase: requiredActivityPhases[index] }
+    : activity);
+}
+
 export function activityMinutes(activity: LessonActivity, index: number) {
   if (activity.durationMinutes && Number.isFinite(activity.durationMinutes)) return activity.durationMinutes;
-  const key = phaseKey(`${activity.phase} ${activity.title}`);
+  const key = activityPhaseKey(activity);
   if (key === "Khởi động") return 5;
   if (key === "Khám phá") return 15;
   if (key === "Luyện tập") return 10;
@@ -55,6 +67,20 @@ function cleanActionText(value: string) {
   return trimmed
     .replace(/^[-–—•\s]+/, "")
     .replace(/\s+/g, " ");
+}
+
+const internalActivityMetadataPattern = /^(học liệu\/đầu vào|học liệu|đầu vào|cách tổ chức|tiêu chí thành công|đáp án dự kiến|lỗi thường gặp|phản hồi của gv|hỗ trợ hs cần giúp đỡ|mở rộng cho hs hoàn thành sớm)\s*[:：-]/i;
+
+function cleanRenderableActionText(value: string) {
+  return cleanActionText(value)
+    .replace(/^(?:\*+\s*)?cách tiến hành\s*[:：-]\s*/i, "")
+    .trim();
+}
+
+function renderableActionArray(value: unknown) {
+  return safeStringArray(value)
+    .map(cleanRenderableActionText)
+    .filter((item) => item && !internalActivityMetadataPattern.test(item));
 }
 
 export function normalizeActionActor(value: string | undefined, actor: "GV" | "HS", fallback: string) {
@@ -91,7 +117,7 @@ function studentFallbackForTeacherAction(teacherAction: string, stepNumber: numb
 
 export function safeStringArray(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item || "").trim()).filter(Boolean);
+    return value.flatMap((item) => safeStringArray(item)).map((item) => item.trim()).filter(Boolean);
   }
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -104,12 +130,18 @@ export function safeStringArray(value: unknown): string[] {
     }
     return [trimmed];
   }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return [String(value)];
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).flatMap((item) => safeStringArray(item));
+  }
   return [];
 }
 
 export function pairedActivityActions(activity: LessonActivity) {
-  const teacherActions = safeStringArray(activity.teacherActions);
-  const studentActions = safeStringArray(activity.studentActions);
+  const teacherActions = renderableActionArray(activity.teacherActions);
+  const studentActions = renderableActionArray(activity.studentActions);
   const size = Math.max(teacherActions.length, studentActions.length, 1);
 
   return Array.from({ length: size }, (_, index) => {

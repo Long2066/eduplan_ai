@@ -6,7 +6,9 @@ import { getStorage } from "firebase-admin/storage";
 
 const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || "unihubhg-tnu";
 const firebaseDatabaseId = process.env.FIREBASE_DATABASE_ID || "(default)";
-const firebaseStorageBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "";
+const firebaseStorageBucket = process.env.FIREBASE_STORAGE_BUCKET
+  || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  || (firebaseProjectId ? `${firebaseProjectId}.firebasestorage.app` : "");
 
 function firebasePrivateKey() {
   const rawKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -33,7 +35,7 @@ export function getFirebaseAdminApp() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = firebasePrivateKey();
   if (!clientEmail || !privateKey) {
-    throw new Error("Thiếu FIREBASE_CLIENT_EMAIL hoặc FIREBASE_PRIVATE_KEY trong .env.local.");
+    throw new Error("Máy chủ chưa cấu hình đầy đủ Firebase Admin.");
   }
 
   return initializeApp({
@@ -56,7 +58,7 @@ export function getFirebaseAdminAuth() {
 
 export function getFirebaseStorageBucket() {
   if (!firebaseStorageBucket) {
-    throw new Error("Thiếu FIREBASE_STORAGE_BUCKET trong .env.local.");
+    throw new Error("Máy chủ chưa cấu hình Firebase Storage bucket.");
   }
   return getStorage(getFirebaseAdminApp()).bucket(firebaseStorageBucket);
 }

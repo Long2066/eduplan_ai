@@ -13,8 +13,10 @@ import {
   VerticalAlign,
   WidthType,
 } from "docx";
-import { lessonHeadingTitle } from "@/lib/lesson-format";
+import { docxMathParts, injectMathIntoDocx } from "@/lib/docx-math";
+import { lessonHeadingTitle, safeStringArray } from "@/lib/lesson-format";
 import { activityDocumentBlock, gradeLabel, normalizedPeriods } from "@/lib/lesson-document-model";
+import type { ActivityDocumentOptions } from "@/lib/lesson-document-model";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
 
 const BLUE = "1F4E79";
@@ -43,31 +45,43 @@ function paragraph(
   options: { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingAfter?: number } = {},
 ) {
   return new Paragraph({
-    children: typeof children === "string" ? [text(children)] : children,
+    children: typeof children === "string" ? mathRuns(children) : children,
     alignment: options.alignment || AlignmentType.JUSTIFIED,
     spacing: { after: options.spacingAfter ?? 60 },
   });
+}
+
+function mathRuns(
+  content: string,
+  options: { bold?: boolean; italic?: boolean; color?: string; size?: number; breakFirst?: boolean } = {},
+) {
+  return docxMathParts(content).map((part, index) =>
+    new TextRun({
+      text: part.type === "text" ? part.value : part.marker,
+      font: "Times New Roman",
+      size: options.size || 28,
+      bold: options.bold,
+      italics: options.italic,
+      color: options.color || BLACK,
+      break: options.breakFirst && index === 0 ? 1 : undefined,
+    }),
+  );
 }
 
 function paragraphWithBreaks(
   content: string,
   options: { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; spacingAfter?: number; bold?: boolean; italic?: boolean; color?: string; size?: number } = {},
 ) {
-  const lines = content.split("\n");
-  const runs = lines.map((line, idx) => new TextRun({
-    text: line,
-    font: "Times New Roman",
-    size: options.size || 28,
-    bold: options.bold,
-    italics: options.italic,
-    color: options.color || BLACK,
-    break: idx > 0 ? 1 : undefined,
-  }));
-
   return new Paragraph({
-    children: runs,
+    children: content.split("\n").flatMap((line, idx) => mathRuns(line, {
+      size: options.size,
+      bold: options.bold,
+      italic: options.italic,
+      color: options.color,
+      breakFirst: idx > 0,
+    })),
     alignment: options.alignment || AlignmentType.JUSTIFIED,
-    spacing: { after: options.spacingAfter ?? 60 },
+    spacing: { after: options.spacingAfter ?? 50 },
   });
 }
 
@@ -79,8 +93,8 @@ function subTitle(title: string) {
   return paragraph([text(title, { bold: true })], { spacingAfter: 40 });
 }
 
-function dashList(items: string[]) {
-  return items.map((item) => paragraph([text(`- ${item}`)], { spacingAfter: 25 }));
+function dashList(items: unknown) {
+  return safeStringArray(items).map((item) => paragraph([text("- "), ...mathRuns(item)], { spacingAfter: 25 }));
 }
 
 function blankLine() {
@@ -103,22 +117,52 @@ function cell(children: (Paragraph | Table)[], options: { header?: boolean; topB
   });
 }
 
-function activityCellTeacher(activity: LessonActivity, index: number) {
-  const block = activityDocumentBlock(activity, index);
+function activityCellTeacher(activity: LessonActivity, index: number, displayOptions: ActivityDocumentOptions = {}) {
+  const block = activityDocumentBlock(activity, index, displayOptions);
   return [
-    paragraph([text(block.heading, { bold: true })], { spacingAfter: 50 }),
-    paragraph([text("* Mục tiêu: ", { bold: true }), text(block.objective, { italic: true })], { spacingAfter: 50 }),
-    paragraph([text("* Sản phẩm/đánh giá: ", { bold: true }), text(block.products, { italic: true })], { spacingAfter: 50 }),
-    paragraph([text("* Cách tiến hành:", { bold: true, italic: true, color: BRIGHT_BLUE })], { spacingAfter: 50 }),
+    paragraph(mathRuns(block.heading, { bold: true }), { spacingAfter: 50 }),
+    metadataParagraph("* Mục tiêu", block.objective),
+    ...(block.products
+      ? [metadataParagraph("* Sản phẩm/đánh giá", block.products, "1F4E79")]
+      : []),
+    ...activityDetailParagraphs(block),
+    new Paragraph({
+      children: [text("* Cách tiến hành:", { bold: true, italic: true, color: BRIGHT_BLUE })],
+      spacing: { after: 50 },
+    }),
   ];
 }
 
-function activitiesTable(activities: LessonActivity[]) {
+function metadataParagraph(
+  label: string,
+  value: string,
+  color = "263746",
+) {
+  return new Paragraph({
+    spacing: { after: 45 },
+    children: [
+      text(`${label}: `, { bold: true, color }),
+      ...mathRuns(value, { color }),
+    ],
+  });
+}
+
+function activityDetailParagraphs(block: ReturnType<typeof activityDocumentBlock>) {
+  const colors = {
+    neutral: "263746",
+    success: "1E5A45",
+    support: "7A4D12",
+    extension: "604289",
+  } as const;
+  return block.details.map((detail) => metadataParagraph(detail.label, detail.text, colors[detail.tone]));
+}
+
+function activitiesTable(activities: LessonActivity[], displayOptions: ActivityDocumentOptions = {}) {
   const activityRows = activities.flatMap((activity, index) => {
-    const block = activityDocumentBlock(activity, index);
+    const block = activityDocumentBlock(activity, index, displayOptions);
     const rows = [
       new TableRow({
-        children: [cell(activityCellTeacher(activity, index), { topBorder: false, bottomBorder: false }), cell([paragraph("")], { topBorder: false, bottomBorder: false })],
+        children: [cell(activityCellTeacher(activity, index, displayOptions), { topBorder: false, bottomBorder: false }), cell([paragraph("")], { topBorder: false, bottomBorder: false })],
       }),
       ...block.actionPairs.map(
         (pair, pairIndex) =>
@@ -161,6 +205,11 @@ function pageBreak() {
 
 function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
   const outcomes = period.outcomes || lesson.outcomes;
+  const compact = lesson.meta?.plan === "free";
+  const displayOptions: ActivityDocumentOptions = {
+    compact,
+    concise: true,
+  };
 
   return [
     paragraph([text("TRƯỜNG: ", { bold: true }), text("................................")], { alignment: AlignmentType.LEFT, spacingAfter: 60 }),
@@ -216,7 +265,7 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
     ...dashList(lesson.materials.students),
 
     sectionTitle("III. TIẾN TRÌNH DẠY HỌC"),
-    activitiesTable(period.activities),
+    activitiesTable(period.activities, displayOptions),
 
     sectionTitle("IV. ĐIỀU CHỈNH SAU BÀI DẠY"),
     blankLine(),
@@ -247,7 +296,8 @@ export function buildLessonDocxDocument(lesson: LessonPlan) {
 
 export async function exportLessonToDocx(lesson: LessonPlan, fileName: string) {
   const doc = buildLessonDocxDocument(lesson);
-  const blob = await Packer.toBlob(doc);
+  const packedBlob = await Packer.toBlob(doc);
+  const blob = await injectMathIntoDocx(packedBlob);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

@@ -28,10 +28,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nội dung góp ý tối đa 5000 ký tự." }, { status: 400 });
     }
 
-    await getFirebaseDb().collection("feedback").add({
+    const db = getFirebaseDb();
+
+    await db.collection("feedback").add({
       category,
       message,
       status: "new",
+      priority: "medium",
       userId: user.uid,
       userEmail: user.email,
       userName: user.displayName,
