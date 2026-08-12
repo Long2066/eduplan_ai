@@ -68,7 +68,6 @@ export const PLAN_CATALOG: Record<SubscriptionPlan, PlanCatalogItem> = {
     description: "Phù hợp với giáo viên thường xuyên soạn bài và muốn có giáo án rõ ràng, tự nhiên, bám sát yêu cầu mà vẫn tiết kiệm chi phí.",
     benefits: ["Sử dụng model AI cao cấp.", "Nội dung mạch lạc và ổn định hơn gói Miễn phí.", "Bám sát mục tiêu, hoạt động và đánh giá.", "Diễn đạt tự nhiên, giúp giảm thời gian chỉnh sửa.", "Quyền sử dụng trong 30 ngày.", "Soạn tối đa 5 giáo án với 50 tín dụng.", "Đầy đủ công cụ lưu và xuất giáo án."],
     cta: "Nâng cấp Trả phí – 59.000đ",
-    hint: "Chỉ khoảng 11.800đ cho một giáo án mới.",
   },
 };
 
