@@ -26,6 +26,17 @@ export type PlanCatalogItem = {
 };
 
 export const FREE_DAILY_LIMIT = 3;
+export const PAID_TRIAL_DAILY_CREDITS = 10;
+
+export type SubscriptionSettings = {
+  freeDailyLimit: number;
+  paidTrialDailyCredits: number;
+};
+
+export const DEFAULT_SUBSCRIPTION_SETTINGS: SubscriptionSettings = {
+  freeDailyLimit: FREE_DAILY_LIMIT,
+  paidTrialDailyCredits: PAID_TRIAL_DAILY_CREDITS,
+};
 
 export const PLAN_CATALOG: Record<SubscriptionPlan, PlanCatalogItem> = {
   free: {
@@ -62,7 +73,7 @@ export const PLAN_CATALOG: Record<SubscriptionPlan, PlanCatalogItem> = {
 };
 
 export type PlanCard = PlanCatalogItem & { state: PlanCardState; selectable: boolean; active: boolean; reason: string; remaining: number; expiresAt: string | null; paid: boolean };
-export type SubscriptionStatus = { activePlan: SubscriptionPlan; planStatus: PlanStatus; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; dayKey: string; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; proRemaining: number } };
+export type SubscriptionStatus = { activePlan: SubscriptionPlan; planStatus: PlanStatus; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; dayKey: string; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
 export type UsageReservation = { operationId: string; uid: string; plan: SubscriptionPlan; kind: UsageKind; source: "free" | "trial" | "paid"; amount: number };
 export type UsageMetadata = { userEmail?: string; subject?: string };
 export type UsageTelemetry = Record<string, unknown>;
@@ -82,6 +93,17 @@ export function nextVietnamMidnight(date = new Date()) {
   return new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + 1, -7));
 }
 function numberValue(value: unknown, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback; }
+function boundedSetting(value: unknown, fallback: number) { return Math.min(1000, Math.floor(numberValue(value, fallback))); }
+export function normalizeSubscriptionSettings(data: DocumentData = {}): SubscriptionSettings {
+  return {
+    freeDailyLimit: boundedSetting(data.defaultFreeLimit, FREE_DAILY_LIMIT),
+    paidTrialDailyCredits: boundedSetting(data.paidTrialDailyCredits, PAID_TRIAL_DAILY_CREDITS),
+  };
+}
+export async function getSubscriptionSettings() {
+  const snapshot = await getFirebaseDb().collection("app_settings").doc("system").get();
+  return normalizeSubscriptionSettings(snapshot.data() || {});
+}
 function dateValue(value: unknown): Date | null {
   if (value instanceof Date) return value;
   if (value instanceof Timestamp) return value.toDate();
@@ -89,28 +111,31 @@ function dateValue(value: unknown): Date | null {
   if (typeof value === "string" || typeof value === "number") { const date = new Date(value); return Number.isFinite(date.getTime()) ? date : null; }
   return null;
 }
-function normalizedSnapshot(data: DocumentData, now: Date) {
+function normalizedSnapshot(data: DocumentData, now: Date, settings: SubscriptionSettings) {
   const activePlan = normalizeSubscriptionPlan(data.activePlan ?? data.plan);
   const paidPlan = normalizeSubscriptionPlan(data.paidPlan ?? (data.planStatus === "paid" ? activePlan : "free"));
   const expiresAt = dateValue(data.planExpiresAt);
   // Ownership is an invariant of `paidPlan + planExpiresAt`. Credits and the
   // currently selected model must never downgrade or erase this entitlement.
   const hasPaidEntitlement = paidPlan !== "free" && Boolean(expiresAt && expiresAt > now);
-  const plusTrial = numberValue(data.trials?.plusRemaining, 0) + numberValue(data.trials?.proRemaining, 0);
-  const activeTrialRemaining = activePlan === "plus" ? plusTrial : 0;
+  const today = vietnamDayKey(now);
+  const paidTrialDayKey = String(data.paidTrialDailyDayKey || "");
+  const paidTrialUsed = paidTrialDayKey === today ? numberValue(data.paidTrialDailyUsed, 0) : 0;
+  const paidTrialRemaining = Math.max(0, settings.paidTrialDailyCredits - paidTrialUsed);
   const usesPaidEntitlement = activePlan === paidPlan && hasPaidEntitlement;
-  const trial = activePlan !== "free" && !usesPaidEntitlement && activeTrialRemaining > 0;
   const expired = activePlan !== "free" && activePlan === paidPlan && !hasPaidEntitlement;
-  return { activePlan, paidPlan, hasPaidEntitlement, planStatus: (usesPaidEntitlement ? "paid" : trial ? "trial" : expired ? "expired" : "free") as PlanStatus, dayKey: String(data.freeDailyDayKey || ""), freeLimit: FREE_DAILY_LIMIT, freeUsed: numberValue(data.freeDailyUsed, 0), packageCredits: numberValue(data.packageCredits, 0), topupCredits: numberValue(data.topupCredits, 0), plusTrial, expiresAt };
+  const trial = activePlan === "plus" && !usesPaidEntitlement && !expired && settings.paidTrialDailyCredits > 0;
+  return { activePlan, paidPlan, hasPaidEntitlement, planStatus: (usesPaidEntitlement ? "paid" : trial ? "trial" : expired ? "expired" : "free") as PlanStatus, dayKey: String(data.freeDailyDayKey || ""), freeLimit: settings.freeDailyLimit, freeUsed: numberValue(data.freeDailyUsed, 0), paidTrialUsed, paidTrialRemaining, paidTrialLimit: settings.paidTrialDailyCredits, packageCredits: numberValue(data.packageCredits, 0), topupCredits: numberValue(data.topupCredits, 0), expiresAt };
 }
 export function initialSubscriptionFields(_isNewAccount = true) {
-  return { activePlan: "free", paidPlan: "free", planStatus: "free", freeDailyLimit: FREE_DAILY_LIMIT, freeDailyUsed: 0, freeDailyDayKey: vietnamDayKey(), packageCredits: 0, topupCredits: 0, creditsExpireAt: null, planStartedAt: null, planExpiresAt: null, trials: { plusRemaining: 0, proRemaining: 0 } };
+  return { activePlan: "free", paidPlan: "free", planStatus: "free", freeDailyLimit: FREE_DAILY_LIMIT, freeDailyUsed: 0, freeDailyDayKey: vietnamDayKey(), paidTrialDailyLimit: PAID_TRIAL_DAILY_CREDITS, paidTrialDailyUsed: 0, paidTrialDailyDayKey: vietnamDayKey(), packageCredits: 0, topupCredits: 0, creditsExpireAt: null, planStartedAt: null, planExpiresAt: null, trials: { plusRemaining: 0, proRemaining: 0 } };
 }
-export function buildSubscriptionStatus(data: DocumentData, now = new Date()): SubscriptionStatus {
-  const snapshot = normalizedSnapshot(data, now);
+export function buildSubscriptionStatus(data: DocumentData, now = new Date(), settings = DEFAULT_SUBSCRIPTION_SETTINGS): SubscriptionStatus {
+  const snapshot = normalizedSnapshot(data, now, settings);
   const today = vietnamDayKey(now);
   const freeUsed = snapshot.dayKey === today ? snapshot.freeUsed : 0;
   const freeRemaining = Math.max(0, snapshot.freeLimit - freeUsed);
+  const resetAt = nextVietnamMidnight(now).toISOString();
   // Keep the owned balance visible even while Free is selected. Reaching zero
   // only blocks new generations; ownership continues until plan expiry.
   const packageCredits = snapshot.hasPaidEntitlement ? snapshot.packageCredits : 0;
@@ -122,35 +147,37 @@ export function buildSubscriptionStatus(data: DocumentData, now = new Date()): S
       const active = snapshot.activePlan === "free";
       return { ...catalog, active, paid: false, remaining: freeRemaining, expiresAt: null, selectable: available, state: active ? "active" : available ? "available" : "exhausted", reason: available ? `Còn ${freeRemaining}/${snapshot.freeLimit} lượt hôm nay` : "Đã hết lượt hôm nay, tự mở lại lúc 00:00" };
     }
-    const trialRemaining = snapshot.plusTrial;
+    const trialRemaining = snapshot.paidTrialRemaining;
     const ownsPaidPlan = catalog.id === snapshot.paidPlan && snapshot.hasPaidEntitlement;
     if (ownsPaidPlan) {
       const active = snapshot.activePlan === catalog.id;
       const enoughCredits = totalCredits >= catalog.generationCost;
       return { ...catalog, active, paid: true, remaining: totalCredits, expiresAt: snapshot.expiresAt?.toISOString() || null, selectable: true, state: active ? "active" : "available", reason: enoughCredits ? `Còn ${totalCredits} tín dụng` : "Gói vẫn còn hạn · Đã hết tín dụng" };
     }
-    if (trialRemaining > 0) {
-      const active = snapshot.activePlan === catalog.id && snapshot.planStatus === "trial";
-      return { ...catalog, active, paid: false, remaining: trialRemaining, expiresAt: null, selectable: true, state: active ? "active" : "trial_available", reason: `Còn ${trialRemaining} lượt trải nghiệm` };
-    }
     const expired = catalog.id === snapshot.paidPlan && !snapshot.hasPaidEntitlement && Boolean(snapshot.expiresAt);
-    return { ...catalog, active: false, paid: false, remaining: 0, expiresAt: snapshot.expiresAt?.toISOString() || null, selectable: false, state: expired ? "expired" : "purchase_required", reason: expired ? "Gói đã hết hạn, vui lòng gia hạn" : "Nâng cấp để mở khóa model AI cao cấp" };
+    if (expired) {
+      return { ...catalog, active: false, paid: false, remaining: 0, expiresAt: snapshot.expiresAt?.toISOString() || null, selectable: false, state: "expired", reason: "Gói đã hết hạn, vui lòng gia hạn" };
+    }
+    if (snapshot.paidTrialLimit > 0) {
+      const active = snapshot.activePlan === catalog.id && snapshot.planStatus === "trial";
+      const selectable = trialRemaining >= catalog.generationCost;
+      return { ...catalog, active, paid: false, remaining: trialRemaining, expiresAt: null, selectable, state: active ? "active" : selectable ? "trial_available" : "exhausted", reason: selectable ? `Còn ${trialRemaining}/${snapshot.paidTrialLimit} tín dụng trải nghiệm hôm nay` : "Đã hết tín dụng trải nghiệm, tự mở lại lúc 00:00" };
+    }
+    return { ...catalog, active: false, paid: false, remaining: 0, expiresAt: snapshot.expiresAt?.toISOString() || null, selectable: false, state: "purchase_required", reason: "Nâng cấp để mở khóa model AI cao cấp" };
   });
-  return { activePlan: snapshot.activePlan, planStatus: snapshot.planStatus, cards, free: { used: freeUsed, limit: snapshot.freeLimit, remaining: freeRemaining, dayKey: today, resetAt: nextVietnamMidnight(now).toISOString() }, credits: { package: packageCredits, topup: topupCredits, total: totalCredits, expiresAt: snapshot.expiresAt?.toISOString() || null }, trials: { plusRemaining: snapshot.plusTrial, proRemaining: 0 } };
+  return { activePlan: snapshot.activePlan, planStatus: snapshot.planStatus, cards, free: { used: freeUsed, limit: snapshot.freeLimit, remaining: freeRemaining, dayKey: today, resetAt }, credits: { package: packageCredits, topup: topupCredits, total: totalCredits, expiresAt: snapshot.expiresAt?.toISOString() || null }, trials: { plusRemaining: snapshot.paidTrialRemaining, plusUsed: snapshot.paidTrialUsed, plusLimit: snapshot.paidTrialLimit, resetAt, proRemaining: 0 } };
 }
-export async function getSubscriptionStatus(uid: string) { const snapshot = await getFirebaseDb().collection("users").doc(uid).get(); return buildSubscriptionStatus(snapshot.data() || initialSubscriptionFields(false)); }
+export async function getSubscriptionStatus(uid: string) { const db = getFirebaseDb(); const [snapshot, settings] = await Promise.all([db.collection("users").doc(uid).get(), getSubscriptionSettings()]); return buildSubscriptionStatus(snapshot.data() || initialSubscriptionFields(false), new Date(), settings); }
 function operationDocId(uid: string, key: string, kind: UsageKind) { return createHash("sha256").update(`${uid}:${kind}:${key}`).digest("hex"); }
 function ledgerRef(operationId: string, suffix: string) { return getFirebaseDb().collection("entitlementLedger").doc(`${operationId}_${suffix}`); }
 
 function applyReservationRefund(update: DocumentData, data: DocumentData, operation: DocumentData) {
   const source = operation.source as UsageReservation["source"];
-  const plan = normalizeSubscriptionPlan(operation.plan);
   const breakdown = operation.breakdown || {};
   if (source === "free" && data.freeDailyDayKey === vietnamDayKey()) {
     update.freeDailyUsed = Math.max(0, numberValue(update.freeDailyUsed ?? data.freeDailyUsed) - 1);
-  } else if (source === "trial") {
-    const field = `trials.${plan}Remaining`;
-    update[field] = numberValue(update[field] ?? data.trials?.[`${plan}Remaining`]) + 1;
+  } else if (source === "trial" && data.paidTrialDailyDayKey === vietnamDayKey()) {
+    update.paidTrialDailyUsed = Math.max(0, numberValue(update.paidTrialDailyUsed ?? data.paidTrialDailyUsed) - numberValue(operation.amount));
   } else if (source === "paid") {
     update.packageCredits = numberValue(update.packageCredits ?? data.packageCredits) + numberValue(breakdown.packageTaken);
     update.topupCredits = numberValue(update.topupCredits ?? data.topupCredits) + numberValue(breakdown.topupTaken);
@@ -196,9 +223,11 @@ export async function reserveUsage(uid: string, kind: UsageKind, idempotencyKey?
     const existing = await tx.get(operationRef);
     if (existing.exists) { const op = existing.data() || {}; if (op.status === "reserved" || op.status === "committed") return { operationId, uid, plan: normalizeSubscriptionPlan(op.plan), kind, source: op.source, amount: numberValue(op.amount) } as UsageReservation; throw new SubscriptionPolicyError("Yêu cầu này đã kết thúc và không thể dùng lại.", "IDEMPOTENCY_CONFLICT"); }
     const userSnapshot = await tx.get(userRef); if (!userSnapshot.exists) throw new SubscriptionPolicyError("Không tìm thấy hồ sơ người dùng.", "PROFILE_NOT_FOUND", 404);
-    const data = userSnapshot.data() || {}; const status = buildSubscriptionStatus(data); const plan = status.activePlan; let source: UsageReservation["source"]; let amount = 1; let breakdown: { packageTaken: number; topupTaken: number } | null = null; const update: DocumentData = { updatedAt: new Date() }; let before = 0;
-    if (plan === "free") { if (status.free.remaining < 1) throw new SubscriptionPolicyError(`Bạn đã hết ${FREE_DAILY_LIMIT} lượt miễn phí hôm nay. Lượt sẽ tự mở lại lúc 00:00.`, "FREE_DAILY_EXHAUSTED"); source = "free"; before = status.free.remaining; update.freeDailyDayKey = status.free.dayKey; update.freeDailyUsed = status.free.used + 1; }
-    else if (status.planStatus === "trial") { const remaining = status.trials.plusRemaining; if (remaining < 1) throw new SubscriptionPolicyError("Bạn đã hết lượt trải nghiệm của gói này.", "TRIAL_EXHAUSTED"); source = "trial"; before = remaining; update["trials.plusRemaining"] = remaining - 1; update["trials.proRemaining"] = 0; }
+    const settingsSnapshot = await tx.get(db.collection("app_settings").doc("system"));
+    const settings = normalizeSubscriptionSettings(settingsSnapshot.data() || {});
+    const data = userSnapshot.data() || {}; const status = buildSubscriptionStatus(data, new Date(), settings); const plan = status.activePlan; let source: UsageReservation["source"]; let amount = 1; let breakdown: { packageTaken: number; topupTaken: number } | null = null; const update: DocumentData = { updatedAt: new Date() }; let before = 0;
+    if (plan === "free") { if (status.free.remaining < 1) throw new SubscriptionPolicyError(`Bạn đã hết ${status.free.limit} lượt miễn phí hôm nay. Lượt sẽ tự mở lại lúc 00:00.`, "FREE_DAILY_EXHAUSTED"); source = "free"; before = status.free.remaining; update.freeDailyDayKey = status.free.dayKey; update.freeDailyUsed = status.free.used + 1; }
+    else if (status.planStatus === "trial") { amount = PLAN_CATALOG[plan].generationCost; const remaining = status.trials.plusRemaining; if (remaining < amount) throw new SubscriptionPolicyError("Bạn đã hết tín dụng trải nghiệm gói Trả phí hôm nay. Tín dụng sẽ tự mở lại lúc 00:00.", "TRIAL_EXHAUSTED"); source = "trial"; before = remaining; update.paidTrialDailyDayKey = status.free.dayKey; update.paidTrialDailyUsed = status.trials.plusUsed + amount; }
     else if (status.planStatus === "paid") { source = "paid"; amount = PLAN_CATALOG[plan].generationCost; if (status.credits.total < amount) throw new SubscriptionPolicyError(`Bạn cần ${amount} tín dụng nhưng hiện chỉ còn ${status.credits.total}.`, "INSUFFICIENT_CREDITS"); const packageTaken = Math.min(status.credits.package, amount); const topupTaken = amount - packageTaken; breakdown = { packageTaken, topupTaken }; before = status.credits.total; update.packageCredits = status.credits.package - packageTaken; update.topupCredits = status.credits.topup - topupTaken; }
     else throw new SubscriptionPolicyError("Gói đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng.", "PLAN_EXPIRED");
     const reservation: UsageReservation = { operationId, uid, plan, kind, source, amount }; const now = new Date(); tx.update(userRef, update); tx.create(operationRef, { ...reservation, status: "reserved", keyHash: createHash("sha256").update(key).digest("hex"), breakdown, userEmail: String(metadata.userEmail || "").slice(0, 320), subject: String(metadata.subject || "").slice(0, 120), reservedAt: now, expiresAt: new Date(now.getTime() + 30 * 60 * 1000) }); tx.create(ledgerRef(operationId, "reserve"), { uid, operationId, type: "reserve", kind, plan, source, amount, before, after: before - amount, actor: "system", reason: `${kind}_reserved`, createdAt: now }); return reservation;
@@ -214,7 +243,7 @@ export async function releaseUsage(reservation: UsageReservation, reason = "oper
 }
 export async function activatePlan(uid: string, requestedPlan: unknown) {
   const plan = normalizeSubscriptionPlan(requestedPlan); const db = getFirebaseDb(); const userRef = db.collection("users").doc(uid);
-  await db.runTransaction(async (tx) => { const snapshot = await tx.get(userRef); if (!snapshot.exists) throw new SubscriptionPolicyError("Không tìm thấy hồ sơ người dùng.", "PROFILE_NOT_FOUND", 404); const status = buildSubscriptionStatus(snapshot.data() || {}); const card = status.cards.find((item) => item.id === plan); if (!card?.selectable) throw new SubscriptionPolicyError(card?.reason || "Gói này chưa khả dụng.", "PLAN_NOT_AVAILABLE"); const planStatus: PlanStatus = plan === "free" ? "free" : card.paid ? "paid" : "trial"; const now = new Date();
+  await db.runTransaction(async (tx) => { const snapshot = await tx.get(userRef); if (!snapshot.exists) throw new SubscriptionPolicyError("Không tìm thấy hồ sơ người dùng.", "PROFILE_NOT_FOUND", 404); const settingsSnapshot = await tx.get(db.collection("app_settings").doc("system")); const status = buildSubscriptionStatus(snapshot.data() || {}, new Date(), normalizeSubscriptionSettings(settingsSnapshot.data() || {})); const card = status.cards.find((item) => item.id === plan); if (!card?.selectable) throw new SubscriptionPolicyError(card?.reason || "Gói này chưa khả dụng.", "PLAN_NOT_AVAILABLE"); const planStatus: PlanStatus = plan === "free" ? "free" : card.paid ? "paid" : "trial"; const now = new Date();
     // Selecting a model is intentionally isolated from paidPlan, credits and
     // expiry fields. Those entitlement fields may only change in grant,
     // purchase, explicit admin revoke, or credit accounting transactions.

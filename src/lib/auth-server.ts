@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { getFirebaseAdminAuth, getFirebaseDb } from "@/lib/firebase-admin";
 import { normalizeSubscriptionPlan, type SubscriptionPlan } from "@/lib/model-strategy";
-import { buildSubscriptionStatus, initialSubscriptionFields, type SubscriptionStatus } from "@/lib/subscription-policy";
+import { buildSubscriptionStatus, getSubscriptionSettings, initialSubscriptionFields, normalizeSubscriptionSettings, type SubscriptionStatus } from "@/lib/subscription-policy";
 import { accountBlockedMessage } from "@/lib/account-block";
 
 export const SESSION_COOKIE_NAME = "eduplan_session";
@@ -73,10 +73,12 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
       const systemDoc = await db.collection("app_settings").doc("system").get();
       if (systemDoc.exists) {
         const systemData = systemDoc.data() || {};
+        const settings = normalizeSubscriptionSettings(systemData);
         const newProfile = {
           ...baseProfile,
-          freeLimit: DEFAULT_FREE_LIMIT,
-          freeDailyLimit: DEFAULT_FREE_LIMIT,
+          freeLimit: settings.freeDailyLimit,
+          freeDailyLimit: settings.freeDailyLimit,
+          paidTrialDailyLimit: settings.paidTrialDailyCredits,
           trials: {
             plusRemaining: 0,
             proRemaining: 0,
@@ -113,7 +115,7 @@ export async function currentUser(): Promise<AuthUser | null> {
   const decoded = await verifySessionCookie();
   if (!decoded) return null;
   const profile = await ensureUserProfile(decoded);
-  const subscription = buildSubscriptionStatus(profile);
+  const subscription = buildSubscriptionStatus(profile, new Date(), await getSubscriptionSettings());
   const disabled = Boolean(profile.disabled);
   const freeLimit = subscription.free.limit;
   const usedGenerations = subscription.free.used;
@@ -151,5 +153,3 @@ export async function requireUser() {
   }
   return user;
 }
-
-

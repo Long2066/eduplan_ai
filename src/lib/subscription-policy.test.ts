@@ -5,6 +5,7 @@ import { buildSubscriptionStatus } from "./subscription-policy";
 const NOW = new Date("2026-07-26T03:00:00.000Z");
 const FUTURE = new Date("2026-08-25T03:00:00.000Z");
 const PAST = new Date("2026-07-25T03:00:00.000Z");
+const SETTINGS = { freeDailyLimit: 3, paidTrialDailyCredits: 10 };
 
 function paidProfile(plan: "plus" | "pro", options: {
   activePlan?: "free" | "plus" | "pro";
@@ -113,6 +114,54 @@ describe("paid subscription ownership invariants", () => {
 
     expect(status.free.remaining).toBe(0);
     expect(card(status, "free")).toMatchObject({ active: true, selectable: false, state: "active" });
+  });
+
+  it("uses the configured Free daily quota instead of stale profile fields", () => {
+    const status = buildSubscriptionStatus({
+      activePlan: "free",
+      freeLimit: 99,
+      freeDailyDayKey: "2026-07-26",
+      freeDailyUsed: 2,
+    }, NOW, { ...SETTINGS, freeDailyLimit: 5 });
+
+    expect(status.free).toMatchObject({ limit: 5, used: 2, remaining: 3 });
+  });
+
+  it("exposes a daily paid-trial credit balance for users without a paid entitlement", () => {
+    const status = buildSubscriptionStatus({
+      activePlan: "free",
+      paidPlan: "free",
+      paidTrialDailyDayKey: "2026-07-26",
+      paidTrialDailyUsed: 0,
+    }, NOW, SETTINGS);
+
+    expect(status.trials).toMatchObject({ plusLimit: 10, plusUsed: 0, plusRemaining: 10 });
+    expect(card(status, "plus")).toMatchObject({ paid: false, selectable: true, state: "trial_available", remaining: 10 });
+  });
+
+  it("resets the paid-trial balance on the next Vietnam day", () => {
+    const status = buildSubscriptionStatus({
+      activePlan: "plus",
+      paidPlan: "free",
+      paidTrialDailyDayKey: "2026-07-25",
+      paidTrialDailyUsed: 10,
+    }, NOW, SETTINGS);
+
+    expect(status.planStatus).toBe("trial");
+    expect(status.trials).toMatchObject({ plusUsed: 0, plusRemaining: 10 });
+    expect(card(status, "plus")).toMatchObject({ active: true, state: "active", remaining: 10 });
+  });
+
+  it("keeps an Admin-granted paid entitlement ahead of daily trial credits", () => {
+    const status = buildSubscriptionStatus({
+      ...paidProfile("plus", { packageCredits: 40 }),
+      paidTrialDailyDayKey: "2026-07-26",
+      paidTrialDailyUsed: 10,
+    }, NOW, SETTINGS);
+
+    expect(status.planStatus).toBe("paid");
+    expect(status.credits.total).toBe(40);
+    expect(card(status, "plus")).toMatchObject({ paid: true, active: true, remaining: 40 });
   });
 
   it("does not mutate entitlement source data while calculating status", () => {
