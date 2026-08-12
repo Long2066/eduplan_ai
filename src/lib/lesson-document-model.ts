@@ -1,4 +1,4 @@
-import { activityMinutes, pairedActivityActions, safeStringArray } from "@/lib/lesson-format";
+import { activityMinutes, canonicalLessonTitle, pairedActivityActions, safeStringArray } from "@/lib/lesson-format";
 import type { LessonActivity, LessonActivityErrorFeedback, LessonPlan, PeriodPlan } from "@/types/lesson";
 
 export type ActivityDocumentDetail = {
@@ -27,6 +27,30 @@ export function gradeLabel(grade: string) {
 export function normalizedPeriods(lesson: LessonPlan): PeriodPlan[] {
   if (lesson.periodPlans?.length) return lesson.periodPlans;
   return [{ periodNumber: 1, focus: "Tiến trình dạy học", activities: lesson.activities }];
+}
+
+export type LessonDocumentHeading = {
+  documentTitle: string;
+  schoolLabel: string;
+  grade: string;
+  durationMinutes: number;
+  subject: string;
+  lessonTitle: string;
+  periodLabel: string;
+  dateLabel: string;
+};
+
+export function lessonDocumentHeading(lesson: LessonPlan, period: PeriodPlan): LessonDocumentHeading {
+  return {
+    documentTitle: "KẾ HOẠCH BÀI DẠY",
+    schoolLabel: "TRƯỜNG:",
+    grade: gradeLabel(lesson.generalInfo.grade),
+    durationMinutes: lesson.generalInfo.duration,
+    subject: lesson.generalInfo.subject,
+    lessonTitle: canonicalLessonTitle(lesson.generalInfo.lessonTitle),
+    periodLabel: `(TIẾT ${period.periodNumber})`,
+    dateLabel: "Ngày ........ tháng ........ năm ........",
+  };
 }
 
 function clean(value?: string) {

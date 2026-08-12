@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { lessonHeadingTitle } from "@/lib/lesson-format";
-import { activityDocumentBlock, gradeLabel, normalizedPeriods } from "@/lib/lesson-document-model";
+import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import { MathText } from "@/components/math-text";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
 
@@ -15,7 +15,6 @@ type LessonPreviewProps = {
 };
 
 const blank = "................................";
-const dateBlank = "........";
 
 function List({ items }: { items: string[] }) {
   return (
@@ -122,6 +121,7 @@ function ActivityTable({ activities, displayMode }: { activities: LessonActivity
 
 function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: PeriodPlan }) {
   const outcomes = period.outcomes || lesson.outcomes;
+  const heading = lessonDocumentHeading(lesson, period);
   const compact = lesson.meta?.plan === "free";
   const displayMode = {
     compact,
@@ -131,24 +131,24 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
   return (
     <article className="a4-page period-lesson">
       <header className="lesson-heading avoid-break">
+        <h1>{heading.documentTitle}</h1>
         <div className="admin-grid">
           <p>
-            <strong>TRƯỜNG:</strong> {blank}
+            <strong>{heading.schoolLabel}</strong> {blank}
           </p>
           <p>
-            <strong>Lớp:</strong> {lesson.generalInfo.grade} <strong>Sĩ số:</strong> {blank} <strong>Thời lượng:</strong> {lesson.generalInfo.duration} phút
+            <strong>Lớp:</strong> {heading.grade} <strong>Sĩ số:</strong> {blank} <strong>Thời lượng:</strong> {heading.durationMinutes} phút
           </p>
           <p>
-            <strong>Người dạy:</strong> {blank} <strong>Môn:</strong> {lesson.generalInfo.subject}
+            <strong>Người dạy:</strong> {blank} <strong>Môn:</strong> {heading.subject}
           </p>
         </div>
-        <h1>GIÁO ÁN MÔN {lesson.generalInfo.subject.toUpperCase()} {gradeLabel(lesson.generalInfo.grade).toUpperCase()}</h1>
         <h3>
-          {lessonHeadingTitle(lesson.generalInfo.lessonTitle)}
+          {lessonHeadingTitle(heading.lessonTitle)}
           <br />
-          <span>(TIẾT {period.periodNumber})</span>
+          <span>{heading.periodLabel}</span>
         </h3>
-        <p className="date-line">Ngày {dateBlank} tháng {dateBlank} năm {dateBlank}</p>
+        <p className="date-line">{heading.dateLabel}</p>
       </header>
 
       <A4Section title="I. YÊU CẦU CẦN ĐẠT">

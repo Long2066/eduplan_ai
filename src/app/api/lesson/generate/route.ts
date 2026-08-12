@@ -32,6 +32,7 @@ import { buildOpenAiResponsesJsonRequest, usesOpenAiResponsesApi, type OpenAiJso
 import { buildOpenAiOcrRequest } from "@/lib/openai-ocr-request";
 import { normalizeAiUsage, summarizeGenerationCalls, type GenerationCallMetric } from "@/lib/generation-telemetry";
 import { validateLessonImagePayload } from "@/lib/lesson-image-payload";
+import { ensureLessonDigitalCompetencies } from "@/lib/digital-competency";
 import { commitUsage, releaseUsage, reserveUsage, subscriptionErrorResponse, type UsageReservation } from "@/lib/subscription-policy";
 import {
   activityMinutes,
@@ -2922,7 +2923,7 @@ function normalizeLesson(input: LessonInput, lesson: LessonPlan, model: string):
     generalInfo: {
       subject: lesson.generalInfo?.subject || input.subject,
       grade: lesson.generalInfo?.grade || input.grade,
-      lessonTitle: lesson.generalInfo?.lessonTitle || input.lessonTitle || "Bài học",
+      lessonTitle: title,
       book: lesson.generalInfo?.book || bookContext(input),
       periods: Math.max(1, Number(input.periods || lesson.generalInfo?.periods || 1)),
       duration: Number(lesson.generalInfo?.duration || input.duration || 35),
@@ -2961,7 +2962,8 @@ function normalizeLesson(input: LessonInput, lesson: LessonPlan, model: string):
     },
   };
 
-  return isMathSubject(input) ? normalizeMathContentDeep(normalizedLesson) : normalizedLesson;
+  const subjectNormalizedLesson = isMathSubject(input) ? normalizeMathContentDeep(normalizedLesson) : normalizedLesson;
+  return ensureLessonDigitalCompetencies(input, subjectNormalizedLesson);
 }
 
 function lessonQualityFindings(lesson: LessonPlan, input: LessonInput) {
@@ -3216,6 +3218,10 @@ async function repairDefaultLessonByFindings(
     const repairedLesson = extractJson<LessonPlan>(repaired.content);
     const candidate = normalizeLesson(input, {
       ...repairedLesson,
+      generalInfo: {
+        ...repairedLesson.generalInfo,
+        lessonTitle: lesson.generalInfo.lessonTitle,
+      },
       meta: {
         ...repairedLesson.meta,
         continuityPlan: lesson.meta?.continuityPlan,
@@ -3340,7 +3346,14 @@ async function generateLessonWithStrategy(input: LessonInput, ocrText: string, s
         { role: "system", content: "Bạn chỉ trả JSON hợp lệ theo schema LessonPlan. Nhiệm vụ là sửa giáo án sơ sài thành giáo án chi tiết, sinh động, bám CTGDPT 2018." },
         { role: "user", content: buildSubjectRepairPrompt(lesson, input, ocrText, subjectPedagogyRepairGuidance(lesson, input)) },
       ]);
-      const repairedLesson = normalizeLesson(input, extractJson(repaired.content), repaired.model);
+      const repairedRaw = extractJson<LessonPlan>(repaired.content);
+      const repairedLesson = normalizeLesson(input, {
+        ...repairedRaw,
+        generalInfo: {
+          ...repairedRaw.generalInfo,
+          lessonTitle: originalLesson.generalInfo.lessonTitle,
+        },
+      }, repaired.model);
       if (hasStructuralIssues(repairedLesson, input) || isMissingPeriods(repairedLesson, input.periods)) lesson = originalLesson;
       else { lesson = repairedLesson; repairApplied = true; }
     } catch (repairError) {

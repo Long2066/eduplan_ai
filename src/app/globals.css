@@ -234,7 +234,7 @@ textarea {
 }
 
 .lesson-heading h1 {
-  margin: 12pt 0 8pt;
+  margin: 0 0 6pt;
   color: #1f4e79;
   font-size: 18pt;
   font-weight: 700;
@@ -265,6 +265,7 @@ textarea {
 .admin-grid {
   display: grid;
   gap: 2pt;
+  margin-bottom: 7pt;
 }
 
 .a4-section {

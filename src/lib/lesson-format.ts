@@ -2,28 +2,12 @@ import type { LessonActivity } from "@/types/lesson";
 
 export const requiredActivityPhases = ["Khởi động", "Khám phá", "Luyện tập", "Vận dụng"] as const;
 
+export function canonicalLessonTitle(title: string) {
+  return (title || "").replace(/\s+/g, " ").trim() || "BÀI HỌC";
+}
+
 export function lessonHeadingTitle(title: string) {
-  let cleaned = (title || "").trim().replace(/\s+/g, " ");
-  if (!cleaned) return "BÀI: BÀI HỌC";
-
-  // Strip common subject/book metadata prefixes ending with ':'
-  const metadataRegex = /^(?:toán|tiếng việt|tiếng anh|khoa học|lịch sử|địa lí|đạo đức|mĩ thuật|âm nhạc|công nghệ|tin học|tự nhiên và xã hội|hoạt động trải nghiệm|lớp\s*\d+|tập\s*(?:một|hai|1|2)|kết nối tri thức|chân trời sáng tạo|cánh diều)\s*.*?:/i;
-  cleaned = cleaned.replace(metadataRegex, "").trim();
-
-  const normalized = cleaned;
-
-  const existingLesson = normalized.match(/^bài\s*[:.]?\s*(\d+)\s*[:.]?\s*(.+)$/i);
-  if (existingLesson) return `BÀI ${existingLesson[1]}. ${existingLesson[2]}`.toUpperCase();
-
-  const numberedOnly = normalized.match(/^(\d+)\s*[:.]?\s*(.+)$/);
-  if (numberedOnly) return `BÀI ${numberedOnly[1]}. ${numberedOnly[2]}`.toUpperCase();
-
-  if (/^(chủ đề|ôn tập|luyện tập|thực hành|bài đọc|tiết)\b/i.test(normalized)) {
-    return normalized.toUpperCase();
-  }
-
-  const noDuplicatedPrefix = normalized.replace(/^bài\s*[:.]?\s*/i, "").trim();
-  return `BÀI: ${noDuplicatedPrefix}`.toUpperCase();
+  return canonicalLessonTitle(title).toLocaleUpperCase("vi");
 }
 
 export function phaseKey(value: string) {

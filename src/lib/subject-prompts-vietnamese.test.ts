@@ -67,8 +67,9 @@ describe("buildVietnameseBlueprintPrompt", () => {
     const enabledPrompt = buildVietnameseBlueprintPrompt(enabled, "Đọc bài", classification);
     const disabledPrompt = buildVietnameseBlueprintPrompt({ ...enabled, enableDigitalCompetency: false }, "Đọc bài", classification);
     expect(enabledPrompt).toContain('"digitalCompetencies": string[]');
-    expect(enabledPrompt).toContain("Chỉ đưa năng lực số khi học sinh trực tiếp thao tác");
-    expect(enabledPrompt).toContain("trả về mảng rỗng");
+    expect(enabledPrompt).toContain("Học sinh phải trực tiếp thao tác");
+    expect(enabledPrompt).toContain("không trả về mảng rỗng");
+    expect(enabledPrompt).toContain("Thông tư 02/2025/TT-BGDĐT");
     expect(disabledPrompt).not.toContain('"digitalCompetencies": string[]');
   });
 

@@ -304,8 +304,8 @@ Yêu cầu output:
 - Với mỗi activity, chỉ cung cấp dữ liệu sạch: phase, title, objective, durationMinutes, teacherActions, studentActions, learningProducts. Renderer sẽ tự đặt "* Mục tiêu", "* Sản phẩm/đánh giá", "* Cách tiến hành".
 - Tuyệt đối không được dùng từ "OCR" trong bất kỳ nội dung nào của giáo án trả về. Khi cần nhắc nguồn học liệu, dùng "ảnh SGK", "tranh trong SGK", "tình huống/tranh trang ..." hoặc "trang sách đã quan sát".
 - Nếu trong nội dung trích xuất có số trang SGK, phải gọi đúng là "tranh/ảnh/tình huống trang ...". Nếu không thấy số trang, dùng "tranh/ảnh trong SGK"; không viết "theo OCR".
-- Nếu user để trống tên bài, hãy tự nhận diện đầy đủ số bài và tên bài từ ảnh SGK/trang sách. Ví dụ phải ghi "Bài 9. Chăm sóc và giúp đỡ em nhỏ" nếu ảnh thể hiện Bài 9; không được bỏ số bài khi ảnh có số bài.
-- Nếu user có nhập tên bài nhưng thiếu số bài, hãy bổ sung số bài từ ảnh SGK nếu nhận diện được.
+- lessonTitle phải chép đúng số bài, tên bài và dấu phân cách thể hiện trên ảnh SGK/trang sách; chỉ chuẩn hóa khoảng trắng, không tự đổi tên hoặc thêm/bỏ từ. Ví dụ ảnh ghi "Bài 9. Chăm sóc và giúp đỡ em nhỏ" thì phải giữ đúng cấu trúc đó.
+- Nếu tên user nhập khác với tiêu đề đọc rõ trên ảnh SGK, ưu tiên tiêu đề trên ảnh SGK. Nếu ảnh không đủ rõ mới dùng tên user nhập hoặc suy luận theo lựa chọn của user.
 - Mỗi tiết bắt buộc có đúng và đủ 4 hoạt động chính theo thứ tự: 1. Khởi động, 2. Khám phá, 3. Luyện tập, 4. Vận dụng. Không được thiếu bất kỳ phần nào, bất kể môn học hoặc số tiết.
 - Nếu số tiết lớn hơn 1, bắt buộc tạo thêm "periodPlans" đủ đúng ${input.periods} tiết. Mỗi tiết trong periodPlans phải có periodNumber, focus, outcomes và activities riêng; mỗi tiết đều có đủ 4 phần Khởi động, Khám phá, Luyện tập, Vận dụng phù hợp trọng tâm tiết đó. Không chia kiểu tiết 1 chỉ Khám phá, tiết 2 chỉ Luyện tập.
 - Mỗi periodPlan là một giáo án tiết hoàn chỉnh khi render: bắt đầu từ BÀI: ... (TIẾT X), sau đó có đủ I. Yêu cầu cần đạt, II. Thiết bị dạy học và học liệu, III. Tiến trình dạy học, IV. Điều chỉnh sau bài dạy.
@@ -415,8 +415,8 @@ ${subjectPedagogyRepairGuidanceStr}
 
 export function digitalCompetencyInstruction(input: LessonInput) {
   if (!input.enableDigitalCompetency) return "";
-  return `\nTÍCH HỢP NĂNG LỰC SỐ (Theo Thông tư 02/2026/TT-BGDĐT Bậc 1 - Tiểu học):
-Vì người dùng bật tùy chọn tích hợp Năng lực số, bạn bắt buộc phải chọn 1-2 năng lực số Bậc 1 phù hợp nhất từ Khung năng lực số người học cấp Tiểu học dưới đây để đưa vào mảng "digitalCompetencies" trong "outcomes" (nếu không chọn được năng lực nào phù hợp thì trả về mảng rỗng).
+  return `\nTÍCH HỢP NĂNG LỰC SỐ (Theo Thông tư 02/2025/TT-BGDĐT Bậc 1 - Tiểu học):
+Vì người dùng bật tùy chọn tích hợp Năng lực số, bạn bắt buộc phải chọn 1-2 năng lực số Bậc 1 phù hợp nhất từ Khung năng lực số người học cấp Tiểu học dưới đây để đưa vào mảng "digitalCompetencies" trong "outcomes". Không tự tạo mã mới và không trả về mảng rỗng.
 Các năng lực số Bậc 1 có thể chọn:
 - 1.1. Duyệt, tìm kiếm và lọc: Nhận biết nhu cầu, tìm kiếm và truy cập dữ liệu/nội dung số đơn giản dưới sự hướng dẫn.
 - 1.2. Đánh giá: Phát hiện độ tin cậy và chính xác của nguồn dữ liệu ở mức cơ bản dưới sự hướng dẫn.
@@ -443,7 +443,7 @@ Các năng lực số Bậc 1 có thể chọn:
 - 6.2. Sử dụng AI: Nhận diện công cụ AI đơn giản; thực hiện thao tác cơ bản để dùng công cụ AI dưới sự hướng dẫn.
 - 6.3. Đánh giá AI: Nhận diện yếu tố cơ bản của hệ thống AI cần đánh giá dưới sự hướng dẫn.
 
-Mỗi năng lực số lựa chọn phải được viết cụ thể gắn với hoạt động của bài học. Chỉ đưa năng lực số khi học sinh trực tiếp thao tác với thiết bị, phần mềm, học liệu số hoặc tạo/chia sẻ sản phẩm số. Việc GV trình chiếu ảnh, GV mở video, GV dùng máy chiếu hoặc HS chỉ quan sát màn chiếu không đủ căn cứ; khi không có thao tác số của học sinh thì trả về mảng rỗng. Định dạng chuỗi trong mảng: "Năng lực số ([Mã năng lực]): [Yêu cầu cụ thể]". Ví dụ: "Năng lực số (4.1): Nhận biết cách tắt máy tính đúng cách để bảo vệ thiết bị khỏi bị hỏng hóc."`;
+Mỗi năng lực số lựa chọn phải được viết cụ thể gắn với hoạt động của bài học. Học sinh phải trực tiếp thao tác với thiết bị, phần mềm, học liệu số hoặc tạo/chia sẻ sản phẩm số; đồng thời teacherActions/studentActions, học liệu hoặc sản phẩm học tập phải thể hiện thao tác tương ứng. Việc GV trình chiếu ảnh, GV mở video, GV dùng máy chiếu hoặc HS chỉ quan sát màn chiếu không đủ căn cứ. Định dạng chuỗi trong mảng: "Năng lực số ([Mã năng lực]): [Yêu cầu cụ thể]". Ví dụ: "Năng lực số (4.1): Nhận biết cách tắt máy tính đúng cách để bảo vệ thiết bị khỏi bị hỏng hóc."`;
 }
 
 export function buildMathBlueprintPrompt(input: LessonInput, ocrText: string) {
@@ -492,7 +492,7 @@ Nội dung trích xuất từ ảnh SGK user upload:
 ${promptOcrContext(ocrText)}
 
 Yêu cầu blueprint:
-- Nhận diện đầy đủ số bài và tên bài nếu ảnh SGK có thể hiện.
+- Nhận diện và chép đúng số bài, tên bài, dấu phân cách từ ảnh SGK vào lessonTitle; chỉ chuẩn hóa khoảng trắng. Nếu tên user nhập khác tiêu đề đọc rõ trên ảnh, ưu tiên ảnh SGK.
 - Chỉ trả JSON hợp lệ, không Markdown.
 - Không dùng từ "OCR"; dùng "ảnh SGK", "tranh trong SGK" hoặc "trang sách".
 - periodPlans phải đủ đúng ${input.periods} tiết; mỗi tiết có 4 pha theo thứ tự: Khởi động, Khám phá, Luyện tập, Vận dụng.
@@ -845,7 +845,7 @@ ${promptOcrContext(ocrText, ocrContextLimit)}
 ${sourceInventoryContext}
 
 Yêu cầu blueprint:
-- Nhận diện đầy đủ số bài và tên bài từ ảnh SGK nếu có.
+- Nhận diện và chép đúng số bài, tên bài, dấu phân cách từ ảnh SGK vào lessonTitle; chỉ chuẩn hóa khoảng trắng. Nếu tên user nhập khác tiêu đề đọc rõ trên ảnh, ưu tiên ảnh SGK.
 - Trước khi chia tiết, lập sourceInventory dùng chung cho mọi bài TNXH: đầy đủ tranh/hình, câu hỏi SGK, quy trình/sắp xếp, nhiệm vụ thực hành/tạo sản phẩm, tình huống giao tiếp, phân loại, liên hệ bản thân và lưu ý an toàn nếu có.
 - Nếu đã có SourceInventory SGK đã lưu, phải tái dùng id/trang/tên cụ thể/nơi sống/môi trường sống từ đó; không tự đổi id hoặc viết lại thành thông tin mơ hồ.
 - Mỗi item trong sourceInventory phải có id ổn định: visualId hoặc taskId và page/số trang nếu ảnh SGK có. Không được bỏ qua tranh/câu hỏi/quy trình chỉ vì khó tổ chức.
@@ -1292,7 +1292,7 @@ Nội dung ảnh SGK:
 ${promptOcrContext(ocrText)}
 
 Yêu cầu blueprint:
-- Nhận diện đầy đủ số bài và tên bài từ ảnh SGK nếu có.
+- Nhận diện và chép đúng số bài, tên bài, dấu phân cách từ ảnh SGK vào lessonTitle; chỉ chuẩn hóa khoảng trắng. Nếu tên user nhập khác tiêu đề đọc rõ trên ảnh, ưu tiên ảnh SGK.
 - Chỉ trả JSON hợp lệ, không Markdown.
 - periods phải đủ đúng ${input.periods} tiết.
 - Mỗi tiết có: lessonType, focus, objectives, sourceEvidence, targetSkills, continuityIn/Out, activities 4 pha.

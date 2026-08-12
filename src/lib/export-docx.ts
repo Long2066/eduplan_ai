@@ -15,7 +15,7 @@ import {
 } from "docx";
 import { docxMathParts, injectMathIntoDocx } from "@/lib/docx-math";
 import { lessonHeadingTitle, safeStringArray } from "@/lib/lesson-format";
-import { activityDocumentBlock, gradeLabel, normalizedPeriods } from "@/lib/lesson-document-model";
+import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import type { ActivityDocumentOptions } from "@/lib/lesson-document-model";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
 
@@ -205,6 +205,7 @@ function pageBreak() {
 
 function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
   const outcomes = period.outcomes || lesson.outcomes;
+  const heading = lessonDocumentHeading(lesson, period);
   const compact = lesson.meta?.plan === "free";
   const displayOptions: ActivityDocumentOptions = {
     compact,
@@ -212,32 +213,32 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
   };
 
   return [
-    paragraph([text("TRƯỜNG: ", { bold: true }), text("................................")], { alignment: AlignmentType.LEFT, spacingAfter: 60 }),
-    paragraph(
-      [
-        text("Lớp: ", { bold: true }),
-        text(`${lesson.generalInfo.grade} `),
-        text("Sĩ số: ", { bold: true }),
-        text("............................. "),
-        text("Thời lượng: ", { bold: true }),
-        text(`${lesson.generalInfo.duration} phút`),
-      ],
-      { alignment: AlignmentType.LEFT, spacingAfter: 60 },
-    ),
-    paragraph([text("Người dạy: ", { bold: true }), text("............................. "), text("Môn: ", { bold: true }), text(lesson.generalInfo.subject)], {
-      alignment: AlignmentType.LEFT,
-      spacingAfter: 140,
-    }),
-    paragraph([text(`GIÁO ÁN MÔN ${lesson.generalInfo.subject.toUpperCase()} ${gradeLabel(lesson.generalInfo.grade).toUpperCase()}`, { bold: true, color: BLUE, size: 36 })], {
+    paragraph([text(heading.documentTitle, { bold: true, color: BLUE, size: 36 })], {
       alignment: AlignmentType.CENTER,
       spacingAfter: 90,
     }),
-    paragraph([text(lessonHeadingTitle(lesson.generalInfo.lessonTitle), { bold: true, color: BRIGHT_BLUE, size: 34 })], {
+    paragraph([text(`${heading.schoolLabel} `, { bold: true }), text("................................")], { alignment: AlignmentType.LEFT, spacingAfter: 60 }),
+    paragraph(
+      [
+        text("Lớp: ", { bold: true }),
+        text(`${heading.grade} `),
+        text("Sĩ số: ", { bold: true }),
+        text("............................. "),
+        text("Thời lượng: ", { bold: true }),
+        text(`${heading.durationMinutes} phút`),
+      ],
+      { alignment: AlignmentType.LEFT, spacingAfter: 60 },
+    ),
+    paragraph([text("Người dạy: ", { bold: true }), text("............................. "), text("Môn: ", { bold: true }), text(heading.subject)], {
+      alignment: AlignmentType.LEFT,
+      spacingAfter: 90,
+    }),
+    paragraph([text(lessonHeadingTitle(heading.lessonTitle), { bold: true, color: BRIGHT_BLUE, size: 34 })], {
       alignment: AlignmentType.CENTER,
       spacingAfter: 20,
     }),
-    paragraph([text(`(TIẾT ${period.periodNumber})`, { bold: true, color: RED, size: 34 })], { alignment: AlignmentType.CENTER, spacingAfter: 70 }),
-    paragraph([text("Ngày ........ tháng ........ năm ........", { italic: true })], {
+    paragraph([text(heading.periodLabel, { bold: true, color: RED, size: 34 })], { alignment: AlignmentType.CENTER, spacingAfter: 70 }),
+    paragraph([text(heading.dateLabel, { italic: true })], {
       alignment: AlignmentType.RIGHT,
       spacingAfter: 120,
     }),
