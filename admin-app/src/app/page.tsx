@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
+import { SecurityView } from "@/components/security-view";
 import { getFirebaseClientAuth, googleAuthProvider } from "@/lib/firebase-client";
+import type { SecurityDashboardData } from "@/lib/security";
+import type { SecurityEventReviewStatus } from "@shared/security-contract";
 
 type AdminUser = {
   uid: string;
@@ -181,6 +184,7 @@ type FeedbackItem = {
 const tabs = [
   { id: "dashboard", label: "Tổng quan" },
   { id: "users", label: "Người dùng" },
+  { id: "security", label: "Bảo mật" },
   { id: "lessons", label: "Giáo án" },
   { id: "payments", label: "Thanh toán" },
   { id: "feedback", label: "Góp ý" },
@@ -348,6 +352,8 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [security, setSecurity] = useState<SecurityDashboardData | null>(null);
+  const [securityWindow, setSecurityWindow] = useState(7);
   const [system, setSystem] = useState<SystemSettings>({
     defaultFreeLimit: 3,
     paidTrialDailyCredits: 10,
@@ -405,6 +411,11 @@ export default function AdminPage() {
 
   async function loadDashboard() {
     setDashboard(await api<Dashboard>("/api/admin/dashboard"));
+  }
+
+  async function loadSecurity(windowDays = securityWindow) {
+    const result = await api<SecurityDashboardData>(`/api/admin/security?window=${encodeURIComponent(windowDays)}`);
+    setSecurity(result);
   }
 
   async function loadSystem() {
@@ -482,6 +493,7 @@ export default function AdminPage() {
     setLoadingTab(true);
     try {
       if (nextTab === "dashboard") await loadDashboard();
+      if (nextTab === "security") await loadSecurity();
       if (nextTab === "settings") await loadSystem();
       if (nextTab === "users") await loadUsers();
       if (nextTab === "lessons") await loadLessons();
@@ -578,6 +590,79 @@ export default function AdminPage() {
     const auth = await getFirebaseClientAuth();
     await signOut(auth).catch(() => undefined);
     setAdmin(null);
+  }
+
+  async function refreshSecurity(windowDays = securityWindow) {
+    setError("");
+    setLoadingTab(true);
+    try {
+      await loadSecurity(windowDays);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Không thể tải dữ liệu bảo mật.");
+    } finally {
+      setLoadingTab(false);
+    }
+  }
+
+  function changeSecurityWindow(windowDays: number) {
+    setSecurityWindow(windowDays);
+    void refreshSecurity(windowDays);
+  }
+
+  async function reviewSecurityEvent(eventId: string, status: SecurityEventReviewStatus, note: string) {
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/security/events/${encodeURIComponent(eventId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, note }),
+      });
+      setMessage(status === "dismissed" ? "Đã đánh dấu sự kiện là false positive." : "Đã ghi nhận sự kiện được xử lý.");
+      await loadSecurity();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể cập nhật sự kiện bảo mật.");
+    }
+  }
+
+  async function setSecurityIpOverride(uid: string, enabled: boolean) {
+    const confirmed = window.confirm(enabled
+      ? "Cho phép tài khoản này bỏ qua giới hạn tài khoản theo IP? Chỉ bật sau khi đã xác minh trường hợp hợp lệ."
+      : "Thu hồi ngoại lệ giới hạn IP của tài khoản này?");
+    if (!confirmed) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${encodeURIComponent(uid)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ipLimitOverride: enabled, source: "security_console" }),
+      });
+      setMessage(enabled ? "Đã bật ngoại lệ giới hạn IP." : "Đã thu hồi ngoại lệ giới hạn IP.");
+      await loadSecurity();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể cập nhật ngoại lệ IP.");
+    }
+  }
+
+  async function setSecurityBlocked(uid: string, blocked: boolean, reason: string) {
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${encodeURIComponent(uid)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          disabled: blocked,
+          blockedReasonDetail: blocked ? reason : undefined,
+          source: "security_console",
+        }),
+      });
+      setMessage(blocked ? "Đã khóa tài khoản và thu hồi phiên đăng nhập." : "Đã mở khóa tài khoản.");
+      await Promise.all([
+        loadSecurity(),
+        loadDashboard().catch(() => undefined),
+      ]);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể cập nhật trạng thái khóa tài khoản.");
+    }
   }
 
   async function saveSystem() {
@@ -1006,6 +1091,7 @@ export default function AdminPage() {
               <span>{item.label}</span>
               {item.id === "feedback" && dashboard?.feedbackNew ? <span className="nav-badge">{dashboard.feedbackNew}</span> : null}
               {item.id === "users" && dashboard?.lowQuotaUsers ? <span className="nav-badge subtle">{dashboard.lowQuotaUsers}</span> : null}
+              {item.id === "security" && security?.summary.openEvents ? <span className="nav-badge">{security.summary.openEvents}</span> : null}
             </button>
           ))}
         </nav>
@@ -1032,6 +1118,19 @@ export default function AdminPage() {
 
         {tab === "dashboard" && dashboard ? (
           <DashboardView dashboard={dashboard} />
+        ) : null}
+
+        {tab === "security" ? (
+          <SecurityView
+            data={security}
+            loading={loadingTab}
+            windowDays={securityWindow}
+            onWindowChange={changeSecurityWindow}
+            onRefresh={() => refreshSecurity()}
+            onReviewEvent={reviewSecurityEvent}
+            onSetIpOverride={setSecurityIpOverride}
+            onSetBlocked={setSecurityBlocked}
+          />
         ) : null}
 
         {tab === "support" ? (
