@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "crypto";
 import { Timestamp, type DocumentData } from "firebase-admin/firestore";
 import { getFirebaseDb } from "@/lib/firebase-admin";
 import { normalizeSubscriptionPlan, type SubscriptionPlan } from "@/lib/model-strategy";
+import type { GenerationSecurityContext } from "@shared/security-contract";
 
 export type UsageKind = "generate";
 export type PlanStatus = "free" | "trial" | "paid" | "expired";
@@ -74,7 +75,12 @@ export const PLAN_CATALOG: Record<SubscriptionPlan, PlanCatalogItem> = {
 export type PlanCard = PlanCatalogItem & { state: PlanCardState; selectable: boolean; active: boolean; reason: string; remaining: number; expiresAt: string | null; paid: boolean };
 export type SubscriptionStatus = { activePlan: SubscriptionPlan; planStatus: PlanStatus; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; dayKey: string; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
 export type UsageReservation = { operationId: string; uid: string; plan: SubscriptionPlan; kind: UsageKind; source: "free" | "trial" | "paid"; amount: number };
-export type UsageMetadata = { userEmail?: string; subject?: string };
+export type UsageMetadata = {
+  userEmail?: string;
+  subject?: string;
+  reservationTtlMs?: number;
+  security?: GenerationSecurityContext;
+};
 export type UsageTelemetry = Record<string, unknown>;
 
 export class SubscriptionPolicyError extends Error {
@@ -92,6 +98,13 @@ export function nextVietnamMidnight(date = new Date()) {
   return new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + 1, -7));
 }
 function numberValue(value: unknown, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback; }
+function reservationTtlMs(metadata: UsageMetadata) {
+  const fallback = 30 * 60 * 1000;
+  const configured = Number(metadata.reservationTtlMs || fallback);
+  return Number.isFinite(configured)
+    ? Math.min(30 * 24 * 60 * 60 * 1000, Math.max(5 * 60 * 1000, Math.floor(configured)))
+    : fallback;
+}
 function boundedSetting(value: unknown, fallback: number) { return Math.min(1000, Math.floor(numberValue(value, fallback))); }
 export function normalizeSubscriptionSettings(data: DocumentData = {}): SubscriptionSettings {
   return {
@@ -229,7 +242,7 @@ export async function reserveUsage(uid: string, kind: UsageKind, idempotencyKey?
     else if (status.planStatus === "trial") { amount = PLAN_CATALOG[plan].generationCost; const remaining = status.trials.plusRemaining; if (remaining < amount) throw new SubscriptionPolicyError("Bạn đã hết tín dụng trải nghiệm gói Trả phí hôm nay. Tín dụng sẽ tự mở lại lúc 00:00.", "TRIAL_EXHAUSTED"); source = "trial"; before = remaining; update.paidTrialDailyDayKey = status.free.dayKey; update.paidTrialDailyUsed = status.trials.plusUsed + amount; }
     else if (status.planStatus === "paid") { source = "paid"; amount = PLAN_CATALOG[plan].generationCost; if (status.credits.total < amount) throw new SubscriptionPolicyError(`Bạn cần ${amount} tín dụng nhưng hiện chỉ còn ${status.credits.total}.`, "INSUFFICIENT_CREDITS"); const packageTaken = Math.min(status.credits.package, amount); const topupTaken = amount - packageTaken; breakdown = { packageTaken, topupTaken }; before = status.credits.total; update.packageCredits = status.credits.package - packageTaken; update.topupCredits = status.credits.topup - topupTaken; }
     else throw new SubscriptionPolicyError("Gói đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng.", "PLAN_EXPIRED");
-    const reservation: UsageReservation = { operationId, uid, plan, kind, source, amount }; const now = new Date(); tx.update(userRef, update); tx.create(operationRef, { ...reservation, status: "reserved", keyHash: createHash("sha256").update(key).digest("hex"), breakdown, userEmail: String(metadata.userEmail || "").slice(0, 320), subject: String(metadata.subject || "").slice(0, 120), reservedAt: now, expiresAt: new Date(now.getTime() + 30 * 60 * 1000) }); tx.create(ledgerRef(operationId, "reserve"), { uid, operationId, type: "reserve", kind, plan, source, amount, before, after: before - amount, actor: "system", reason: `${kind}_reserved`, createdAt: now }); return reservation;
+    const reservation: UsageReservation = { operationId, uid, plan, kind, source, amount }; const now = new Date(); tx.update(userRef, update); tx.create(operationRef, { ...reservation, status: "reserved", keyHash: createHash("sha256").update(key).digest("hex"), breakdown, userEmail: String(metadata.userEmail || "").slice(0, 320), subject: String(metadata.subject || "").slice(0, 120), security: metadata.security || null, securitySchemaVersion: metadata.security?.schemaVersion || null, reservedAt: now, expiresAt: new Date(now.getTime() + reservationTtlMs(metadata)) }); tx.create(ledgerRef(operationId, "reserve"), { uid, operationId, type: "reserve", kind, plan, source, amount, before, after: before - amount, actor: "system", reason: `${kind}_reserved`, createdAt: now }); return reservation;
   });
 }
 export async function commitUsage(reservation: UsageReservation, lessonId?: string, telemetry: UsageTelemetry = {}) {

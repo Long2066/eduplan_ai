@@ -213,6 +213,21 @@ export const naturalSocialLessonTypeProfiles: Record<NaturalSocialLessonType, Na
   },
 };
 
+const classificationSignalPatterns: Partial<Record<NaturalSocialLessonType, RegExp>> = {
+  family: /\b(gia dinh|nguoi than|ong ba|bo me|cha me|anh chi em|ngoi nha|nha o|phong khach|phong ngu|phong bep|viec nha)\b/i,
+  school: /\b(truong hoc|truong em|lop hoc|ban be|thay co|co giao|noi quy|san truong|phong hoc|hoat dong o truong)\b/i,
+  "local-community": /\b(dia phuong|cong dong|noi em song|que huong|lang xom|duong pho|noi cong cong|nghe nghiep)\b/i,
+  "plants-animals": /\b(cay|cay trong|cay xanh|cay hoa|bong hoa|la cay|than cay|re cay|qua cua cay|hat giong|con vat|dong vat|vat nuoi|thu cung|moi truong song|cham soc cay|bao ve dong vat)\b/i,
+  "human-health": /\b(co quan van dong|bo xuong|he co|xuong|khop|co bap|co the|bo phan co the|giac quan|suc khoe|ve sinh|rua tay|an uong|dinh duong|an toan|benh|phong tranh|van dong|nghi ngoi)\b/i,
+  "earth-sky": /\b(thoi tiet|bau troi|mat troi|mat trang|ngay dem|trai dat|phuong huong|mua gio|troi mua|troi nang|gio manh)\b/i,
+};
+
+function patternHitCount(pattern: RegExp | undefined, value: string) {
+  if (!pattern) return 0;
+  const flags = Array.from(new Set((pattern.flags + "g").split(""))).join("");
+  return Array.from(value.matchAll(new RegExp(pattern.source, flags))).length;
+}
+
 export const naturalSocialTopicFocusProfiles: Record<NaturalSocialTopicFocus, NaturalSocialLessonTypeProfile> = {
   "home-environment": {
     label: "Ngôi nhà, địa chỉ, các phòng và đồ dùng",
@@ -321,14 +336,27 @@ export function naturalSocialSourceInventoryText(sourceInventory?: NaturalSocial
 }
 
 export function classifyNaturalSocialLesson(input: LessonInput, sourceText = ""): NaturalSocialClassification {
-  const rawText = `${input.lessonTitle || ""} ${input.subject || ""} ${input.specialRequest || ""} ${sourceText || ""}`;
-  const text = normalizeNaturalSocialText(rawText);
+  const titleText = normalizeNaturalSocialText(`${input.lessonTitle || ""} ${input.specialRequest || ""}`);
+  const normalizedSourceText = normalizeNaturalSocialText(sourceText || "");
+  const text = normalizeNaturalSocialText(`${titleText} ${input.subject || ""} ${normalizedSourceText}`);
   const entries = Object.entries(naturalSocialLessonTypeProfiles)
     .filter(([type]) => type !== "mixed") as Array<[NaturalSocialLessonType, NaturalSocialLessonTypeProfile]>;
 
-  const matches = entries
-    .map(([type, profile]) => ({ type, profile, matched: profile.keywordPattern.test(text) }))
-    .filter((item) => item.matched);
+  const scoredMatches = entries
+    .map(([type, profile], index) => ({
+      type,
+      profile,
+      index,
+      score: patternHitCount(classificationSignalPatterns[type], titleText) * 4
+        + patternHitCount(classificationSignalPatterns[type], normalizedSourceText),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.index - right.index);
+  const matches = scoredMatches.length
+    ? scoredMatches
+    : entries
+      .map(([type, profile], index) => ({ type, profile, index, score: profile.keywordPattern.test(text) ? 1 : 0 }))
+      .filter((item) => item.score > 0);
 
   const primaryType = matches[0]?.type || "mixed";
   const topicFocus = primaryType === "family" ? familyTopicFocus(input, sourceText) : undefined;

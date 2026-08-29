@@ -9,8 +9,24 @@ const categoryLabels: Record<string, string> = {
   bug: "Báo lỗi",
   improvement: "Góp ý cải thiện",
   feature: "Yêu cầu tính năng",
+  "vietnamese-pilot": "Pilot Tiếng Việt",
   other: "Khác",
 };
+
+const pilotCriteria = [
+  ["classification", "Đúng kiểu bài"],
+  ["source-fidelity", "Đúng ngữ liệu"],
+  ["measurable-outcomes", "Mục tiêu đo được"],
+  ["pedagogy-sequence", "Đúng chuỗi dạy học"],
+  ["responses-and-support", "Phản hồi và sửa lỗi"],
+  ["time-fit", "Dạy được 35 phút"],
+  ["period-continuity", "Nối tiết không lặp"],
+  ["preview-and-word", "Preview và Word"],
+] as const;
+
+function pilotRatingLabel(value: unknown) {
+  return value === "pass" ? "Đạt" : value === "needs-work" ? "Cần chỉnh" : "Chưa đánh giá";
+}
 
 const statusLabels: Record<string, string> = {
   new: "Mới",
@@ -49,20 +65,41 @@ export async function GET() {
       .limit(2000)
       .get();
     const feedback = snapshot.docs.map(serializeFeedback);
-    const headers = ["STT", "Thời gian", "Họ tên", "Email", "Loại góp ý", "Trạng thái", "Mức độ", "Ghi chú admin", "Nội dung", "URL trang gửi", "User Agent"];
-    const rows = feedback.map((item, index) => [
-      index + 1,
-      formatDate(item.createdAt),
-      item.userName,
-      item.userEmail,
-      categoryLabels[item.category] || item.category,
-      statusLabels[item.status] || item.status,
-      priorityLabels[item.priority] || item.priority,
-      item.adminNote,
-      item.message,
-      item.pageUrl,
-      item.userAgent,
-    ]);
+    const headers = [
+      "STT", "Thời gian", "Họ tên", "Email", "Loại góp ý", "Trạng thái", "Mức độ", "Ghi chú admin", "Nội dung", "URL trang gửi", "User Agent",
+      "Pilot Lesson ID", "Lớp", "Bài", "Bộ sách", "Số tiết", "Kiểu bài", "Confidence", "Audit", "Điểm pilot", "Có thể dùng để dạy",
+      ...pilotCriteria.map(([, label]) => label),
+    ];
+    const rows = feedback.map((item, index) => {
+      const pilot = item.pilot as {
+        lessonId?: string; grade?: string; lessonTitle?: string; book?: string; periods?: number; teachable?: boolean | null;
+        ratings?: Record<string, unknown>; summary?: { scorePercent?: number }; audit?: { lessonType?: string; classificationConfidence?: string; status?: string };
+      } | null;
+      return [
+        index + 1,
+        formatDate(item.createdAt),
+        item.userName,
+        item.userEmail,
+        categoryLabels[item.category] || item.category,
+        statusLabels[item.status] || item.status,
+        priorityLabels[item.priority] || item.priority,
+        item.adminNote,
+        item.message,
+        item.pageUrl,
+        item.userAgent,
+        pilot?.lessonId || "",
+        pilot?.grade || "",
+        pilot?.lessonTitle || "",
+        pilot?.book || "",
+        pilot?.periods || "",
+        pilot?.audit?.lessonType || "",
+        pilot?.audit?.classificationConfidence || "",
+        pilot?.audit?.status || "",
+        pilot ? `${Number(pilot.summary?.scorePercent || 0)}%` : "",
+        pilot ? (pilot.teachable === true ? "Có" : pilot.teachable === false ? "Chưa" : "Chưa đánh giá") : "",
+        ...pilotCriteria.map(([id]) => pilot ? pilotRatingLabel(pilot.ratings?.[id]) : ""),
+      ];
+    });
 
     const workbook = `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>

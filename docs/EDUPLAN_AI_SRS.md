@@ -1,5 +1,7 @@
 # EduPlan AI - Software Requirements Specification
 
+> Luu y: tai lieu nay la SRS/ban thiet ke cu. Code hien tai da lech o mot so diem lon: OCR dang chay bang OpenAI server-side, khong con Gemini key tren UI, route refine/PDF cu da go bo, va app da co Firebase Auth/Firestore/Admin/Payment. Khi tiep tuc phat trien, uu tien doc `docs/PROJECT_MEMORY.md` va `docs/NEXT_STEPS.md`.
+
 ## 1. Tong Quan
 
 EduPlan AI la web app ho tro giao vien tao ke hoach bai day theo tinh than Cong van 2345/BGDDT-GDTH. He thong cho phep giao vien nhap thong tin bai hoc, tai anh SGK/PDF scan, xu ly OCR, sinh giao an bang AI, xem truoc tren web, chinh sua va xuat file DOCX/PDF voi dinh dang dep, on dinh.

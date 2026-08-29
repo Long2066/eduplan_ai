@@ -10,18 +10,20 @@ function serializePayment(doc: FirebaseFirestore.QueryDocumentSnapshot) {
   return {
     id: doc.id,
     uid: String(data.uid || ""),
+    provider: String(data.provider || "bank_transfer"),
+    orderCode: Number(data.orderCode || 0) || null,
+    paymentLinkId: String(data.paymentLinkId || ""),
     purchaseType: String(data.purchaseType || ""),
-    targetPlan: String(data.targetPlan || ""),
+    targetPlan: data.targetPlan === "pro" ? "plus" : String(data.targetPlan || ""),
     amountVnd: Number(data.amountVnd || 0),
     credits: Number(data.credits || 0),
     senderName: String(data.senderName || ""),
     transferContent: String(data.transferContent || ""),
-    status: String(data.status || "awaiting_proof"),
+    status: String(data.status || "awaiting_payment"),
     approvalMode: String(data.approvalMode || ""),
     safeReason: String(data.safeReason || ""),
     checks: Array.isArray(data.checks) ? data.checks : [],
-    ocr: data.ocr || null,
-    storagePath: String(data.storagePath || ""),
+    payos: data.payos || null,
     createdAt: toIso(data.createdAt),
     approvedAt: toIso(data.approvedAt),
     updatedAt: toIso(data.updatedAt),
@@ -60,10 +62,13 @@ export async function PATCH(request: Request) {
         tx.update(paymentRef, { status: "rejected", approvalMode: "manual", approvedBy: admin.email, safeReason: "Admin đã từ chối giao dịch sau khi đối soát.", updatedAt: now });
         return;
       }
+      if (String(data.status || "") !== "pending_review") {
+        throw new Error("Giao dịch chưa có dữ liệu đối soát để duyệt thủ công.");
+      }
       const userRef = db.collection("users").doc(String(data.uid));
       const user = await tx.get(userRef);
       if (!user.exists) throw new Error("Không tìm thấy người dùng nhận quyền lợi.");
-      const targetPlan = data.targetPlan === "pro" ? "pro" : "plus";
+      const targetPlan = "plus";
       const credits = Number(data.credits || 0);
       if (data.purchaseType === "package") {
         const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60_000);
@@ -71,13 +76,23 @@ export async function PATCH(request: Request) {
       } else {
         const userData = user.data() || {};
         const expires = userData.planExpiresAt?.toDate?.();
-        if (userData.paidPlan !== targetPlan || !expires || expires <= now) throw new Error("Gói của user đã đổi hoặc hết hạn; không thể cộng top-up.");
+        const paidPlan = userData.paidPlan === "pro" ? "plus" : userData.paidPlan;
+        if (paidPlan !== targetPlan || !expires || expires <= now) throw new Error("Gói của user đã đổi hoặc hết hạn; không thể cộng top-up.");
         tx.update(userRef, { topupCredits: Number(userData.topupCredits || 0) + credits, updatedAt: now });
       }
       const ledgerRef = db.collection("entitlementLedger").doc();
       tx.create(ledgerRef, { uid: data.uid, paymentId: paymentRef.id, type: "grant", plan: targetPlan, source: data.purchaseType, amount: credits, actor: admin.email, reason: `${data.purchaseType}_manual_approved`, createdAt: now });
       tx.update(paymentRef, { status: "approved", approvalMode: "manual", approvedAt: now, approvedBy: admin.email, approvedLedgerId: ledgerRef.id, safeReason: "Admin đã duyệt và quyền lợi đã được cộng.", updatedAt: now });
     });
+    const payment = await paymentRef.get();
+    const uid = String(payment.get("uid") || "");
+    if (uid) {
+      const activeRef = db.collection("paymentActiveCheckouts").doc(uid);
+      await db.runTransaction(async (tx) => {
+        const active = await tx.get(activeRef);
+        if (active.exists && active.get("paymentId") === body.paymentId) tx.delete(activeRef);
+      }).catch(() => undefined);
+    }
     await writeAuditLog(admin, `payment.${body.action}`, { paymentId: body.paymentId });
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -7,6 +7,7 @@ import { sendEmailVerification, signOut, updatePassword } from "firebase/auth";
 import { getEmailActionSettings, getFirebaseClientAuth, hasFirebaseClientConfig } from "@/lib/firebase-client";
 import { optimizeAvatarImage } from "@/lib/client-image-processing";
 import { formatPaymentCountdown, isTerminalPaymentStatus, paymentStorageKey } from "@/lib/payment-ui";
+import { lessonValidationStatusShortLabel } from "@/lib/lesson-validation-status";
 import type { LessonPlan } from "@/types/lesson";
 
 export type PlanId = "free" | "plus";
@@ -14,7 +15,7 @@ type PlanCard = { id: PlanId; name: string; badge: string; title: string; priceV
 type SubscriptionStatus = { activePlan: PlanId; planStatus: string; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
 
 export type AppUser = { uid: string; email: string; displayName: string; photoURL: string; emailVerified: boolean; disabled: boolean; blockedReason: string; blockedReasonDetail: string; role: "user" | "admin"; plan: string; freeLimit: number; usedGenerations: number; remainingGenerations: number; subscription: SubscriptionStatus };
-type LessonHistoryItem = { id: string; title: string; subject: string; grade: string; periods: number; updatedAt: string; expiresAt: string };
+type LessonHistoryItem = { id: string; title: string; subject: string; grade: string; periods: number; validationStatus?: "passed" | "needs_adjustment"; validationLabel?: string; freeDraft?: boolean; updatedAt: string; expiresAt: string };
 type Payment = { id: string; provider: "payos" | "bank_transfer"; purchaseType: "package" | "topup"; targetPlan: PlanId; amountVnd: number; credits: number; orderCode: number | null; paymentLinkId: string; checkoutUrl: string; qrCode: string; transferContent: string; senderName: string; status: string; safeReason: string; createdAt: string | null; expiresAt: string | null; bank: { bankName: string; accountName: string; accountNumber: string; qrImageUrl: string; configured: boolean } };
 type UserMenuProps = { user: AppUser; onUserChange: () => Promise<void> | void; onOpenLesson: (lesson: LessonPlan, lessonId: string) => void };
 
@@ -240,9 +241,9 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
             {!PAYMENT_UI_COMING_SOON && payment ? <button type="button" className={`active-payment-strip status-${payment.status}`} onClick={() => setPaymentModalOpen(true)}><span><b>{payment.purchaseType === 'package' ? `Gói ${planLabel(payment.targetPlan)}` : `${payment.credits} tín dụng`}</b><small>{payment.safeReason}</small></span><strong>{paymentStatusLabel(payment.status)} →</strong></button> : null}
           </section> : null}
 
-          {tab === "history" ? <section className="history-grid">{lessons.length ? lessons.map((item) => <article key={item.id} className="history-card"><div><p>{item.title}</p><span>{item.subject} · {item.grade} · {item.periods} tiết</span><small>{daysLeft(item.expiresAt)}</small></div><div><button id={`open-lesson-${item.id}`} className="btn-primary" onClick={() => handleOpenLesson(item.id)}>Mở</button><button id={`delete-lesson-${item.id}`} className="btn-ghost text-red-600" onClick={() => handleDeleteLesson(item.id)}>Xóa</button></div></article>) : <div className="account-empty">Chưa có giáo án nào trong lịch sử.</div>}</section> : null}
+          {tab === "history" ? <section className="history-grid">{lessons.length ? lessons.map((item) => <article key={item.id} className="history-card"><div><p>{item.title}</p><span>{item.subject} · {item.grade} · {item.periods} tiết</span><small>{daysLeft(item.expiresAt)}</small></div><div className="history-card-actions"><span className={`history-validation-badge ${item.validationStatus === "needs_adjustment" ? "needs-adjustment" : "passed"}`}>{lessonValidationStatusShortLabel(item.validationStatus)}</span><button id={`open-lesson-${item.id}`} className="btn-primary" onClick={() => handleOpenLesson(item.id)}>Mở</button><button id={`delete-lesson-${item.id}`} className="btn-ghost text-red-600" onClick={() => handleDeleteLesson(item.id)}>Xóa</button></div></article>) : <div className="account-empty">Chưa có giáo án nào trong lịch sử.</div>}</section> : null}
         </main>
-        <footer className="account-footer"><p>Tín dụng chỉ trừ sau khi AI tạo giáo án thành công.</p><button id="account-logout" className="btn-secondary" onClick={handleLogout}>Đăng xuất</button></footer>
+        <footer className="account-footer"><p>Tín dụng chỉ trừ sau khi AI lưu được giáo án hoặc bản nháp có thể chỉnh sửa.</p><button id="account-logout" className="btn-secondary" onClick={handleLogout}>Đăng xuất</button></footer>
       </div>
       {payment && paymentModalOpen && typeof document !== "undefined" ? createPortal(<div className="payos-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPaymentModalOpen(false); }}>
         <section className="payos-modal" role="dialog" aria-modal="true" aria-labelledby="payos-modal-title" onMouseDown={(event) => event.stopPropagation()}>

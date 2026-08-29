@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "smoke:staged": "node scripts/smoke-staged-generation.mjs",
     "migrate:pro-to-plus": "node --env-file=.env.local scripts/migrate-pro-to-plus.mjs",
     "migrate:pro-to-plus:apply": "node --env-file=.env.local scripts/migrate-pro-to-plus.mjs --apply",
     "verify:math-exports": "vite-node --config vitest.config.ts .math-export-fixtures/verify-math-exports.ts"

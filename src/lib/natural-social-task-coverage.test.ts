@@ -203,6 +203,56 @@ describe("validateNaturalSocialTaskCoverage", () => {
     expect(normalized?.practiceTasks?.[0].taskId).toBe("practice-1");
   });
 
+  it("uses explicit visual bindings instead of matching unrelated words across SGK pages", () => {
+    const sourceInventory: NaturalSocialSourceInventory = {
+      visuals: [
+        { visualId: "visual-p78-skeleton", label: "Bộ xương", specificName: "Bộ xương người", page: "78", required: true },
+        { visualId: "visual-p79-spine", label: "Cúi gập người", specificName: "Cử động cúi gập người", page: "79", required: true },
+        { visualId: "visual-p80-arm", label: "Co và duỗi tay", specificName: "Cơ cánh tay khi co và duỗi", page: "80", required: true },
+        { visualId: "visual-p81-hoa", label: "Hoa đau chân", specificName: "Hoa", page: "81", required: true },
+      ],
+    };
+    const periodPlans = [
+      period(1, [
+        activity({
+          phase: "Khám phá",
+          sourceVisualIds: ["visual-p78-skeleton"],
+          teacherActions: ["GV tổ chức hoạt động quan sát Bộ xương người ở trang 78 rồi cho HS co, duỗi tay nhẹ."],
+          studentActions: ["HS hoàn thành quan sát, chỉ xương và nói về cơ thể người."],
+        }),
+        activity({
+          phase: "Luyện tập",
+          sourceVisualIds: ["visual-p79-spine"],
+          teacherActions: ["GV cho HS quan sát Cử động cúi gập người ở trang 79."],
+          studentActions: ["HS cúi nhẹ, chỉ khớp và hoàn thành lời mô tả."],
+        }),
+      ]),
+      period(2, [
+        activity({
+          phase: "Khám phá",
+          sourceVisualIds: ["visual-p80-arm"],
+          teacherActions: ["GV cho HS quan sát Cơ cánh tay khi co và duỗi ở trang 80."],
+          studentActions: ["HS co, duỗi tay và mô tả thay đổi."],
+        }),
+        activity({
+          phase: "Vận dụng",
+          sourceVisualIds: ["visual-p81-hoa"],
+          teacherActions: ["GV nêu tình huống Hoa đau chân ở trang 81."],
+          studentActions: ["HS chọn cách hỗ trợ Hoa an toàn."],
+        }),
+      ]),
+    ];
+    const candidate = completeLesson({
+      generalInfo: { ...completeLesson().generalInfo, periods: 2 },
+      activities: periodPlans.flatMap((item) => item.activities),
+      periodPlans,
+    });
+
+    const findings = validateNaturalSocialTaskCoverage(candidate, input, sourceInventory);
+
+    expect(findings.filter((finding) => finding.code === "NSXH-COVERAGE-12")).toEqual([]);
+  });
+
   it("bắt sai trang, rút tên loài cụ thể, thiếu nơi sống và lặp phân loại ở bài động vật", () => {
     const sourceInventory: NaturalSocialSourceInventory = {
       visuals: [

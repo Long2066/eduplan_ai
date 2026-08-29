@@ -5,7 +5,7 @@ export type GenerationCallMetric = {
   provider: "openai" | "openrouter";
   model: string;
   fallbackUsed: boolean;
-  outcome: "success" | "http_error" | "network_error" | "invalid_output";
+  outcome: "success" | "http_error" | "network_error" | "timeout" | "invalid_output";
   elapsedMs: number;
   httpStatus?: number;
   inputTokens: number;

@@ -249,7 +249,15 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
 
             <div>
               <Label>Tên bài</Label>
-              <input className="input-field" value={input.lessonTitle} onChange={(event) => patch({ lessonTitle: event.target.value })} placeholder="Tự nhận diện nếu để trống" />
+              <input
+                className="input-field"
+                value={input.lessonTitle}
+                onChange={(event) => patch({ lessonTitle: event.target.value })}
+                placeholder="Ví dụ: Bài 2. Ô nhiễm, xói mòn đất và bảo vệ môi trường đất"
+              />
+              <p className="mt-1 text-[11px] leading-4 text-slate-400">
+                Có ảnh SGK: có thể để trống để OCR nhận diện. Không có ảnh: cần nhập tên bài cụ thể.
+              </p>
               <FieldError message={errors.lessonTitle} />
             </div>
 
@@ -302,7 +310,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
           </FormGroup>
 
           {/* ── GROUP 2: Nội dung đầu vào ── */}
-          <FormGroup step="2" title="Nội dung đầu vào" description="Upload hoặc dán ảnh SGK định dạng JPG/PNG để AI lấy nội dung bài học và yêu cầu cần đạt.">
+          <FormGroup step="2" title="Nội dung đầu vào" description="Có thể upload/dán ảnh SGK để AI đọc đúng nội dung; nếu không có ảnh, hãy nhập Tên bài cụ thể ở trên.">
             <div
               className={`rounded-2xl border-2 border-dashed p-4 outline-none transition-all duration-300 focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50 ${
                 isDragActive
@@ -315,7 +323,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
               onPaste={handlePaste}
               tabIndex={0}
             >
-              <Label required>Ảnh SGK bài học</Label>
+              <Label>Ảnh SGK bài học (không bắt buộc nếu đã nhập Tên bài)</Label>
               <div ref={uploadBoxRef} className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm" tabIndex={0}>
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-sm font-bold text-brand-600">
                   {isDragActive ? "Thả" : "SGK"}
@@ -387,7 +395,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
             <span>
               <strong className="text-slate-800">Cho phép AI tự suy luận phần còn thiếu</strong>
               <br />
-              <span className="text-slate-500">Nếu OCR không có yêu cầu cần đạt hoặc tên bài để trống, AI sẽ suy luận theo ảnh SGK, môn, lớp và bộ sách.</span>
+              <span className="text-slate-500">Nếu OCR không có yêu cầu cần đạt, AI sẽ suy luận phần đó theo nội dung ảnh SGK, môn, lớp và bộ sách; tên bài vẫn phải được nhận diện rõ hoặc do bạn nhập.</span>
             </span>
           </label>
 

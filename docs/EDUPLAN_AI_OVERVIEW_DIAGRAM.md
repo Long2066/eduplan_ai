@@ -1,5 +1,7 @@
 # So Do Tong Quan EduPlan AI
 
+> Luu y: so do nay la tai lieu tong quan cu. Code hien tai da lech o mot so diem lon: OCR dang chay bang OpenAI server-side, khong con Gemini key tren UI, route refine/PDF cu da go bo, va app da co Firebase Auth/Firestore/Admin/Payment. Khi can ban do hien tai, doc `docs/PROJECT_MEMORY.md` va doi chieu code.
+
 File nay mo ta cau truc tong quan cua cong cu EduPlan AI. Co the xem truc tiep tren GitHub/Markdown viewer co ho tro Mermaid.
 
 ## 1. So Do Tong Quan De Hieu

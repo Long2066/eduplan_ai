@@ -1,4 +1,5 @@
 import { getPedagogyProfile, gradeBandFor } from "./pedagogy-profiles";
+import { buildPhaseQualityPromptBlock } from "./lesson-phase-quality";
 import { getNaturalSocialPedagogyProfile } from "./natural-social-pedagogy";
 import { formatNaturalSocialStartupPromptBlock, selectNaturalSocialStartup } from "./natural-social-startup";
 import { classifyVietnameseLesson, vietnameseLessonTypeProfiles } from "./vietnamese-pedagogy";
@@ -125,6 +126,27 @@ export function learningContextGuidance(input: LessonInput) {
 
 function formatGuidanceList(items: string[]) {
   return items.map((item) => `- ${item}`).join("\n");
+}
+
+function globalPhaseQualityGuidance(scope: "blueprint" | "period" | "repair") {
+  const scopeRule = scope === "blueprint"
+    ? "Trong blueprint, mỗi hoạt động phải nêu rõ vai trò pha, nguồn/chứng cứ, sản phẩm và handoffToNext để bước sinh tiết không bị viết thành mẫu rỗng."
+    : scope === "repair"
+      ? "Khi sửa, nếu tên pha đúng nhưng nội dung sai bản chất, phải viết lại toàn bộ pha đó theo chuẩn dưới đây; không chỉ thêm một câu cảnh báo."
+      : "Khi sinh tiết, mọi activity phải thể hiện đúng vai trò pha trong teacherActions/studentActions, learningProducts, successCriteria và handoff.";
+
+  return `${buildPhaseQualityPromptBlock()}
+
+YÊU CẦU ĐỒNG BỘ GIAI ĐOẠN 2:
+- Áp dụng cho mọi môn, mọi bài, mọi tiết, cả miễn phí và trả phí.
+- ${scopeRule}
+- Khám phá phải là nơi HS hình thành điều mới từ nguồn/chứng cứ/nhiệm vụ: quan sát, thao tác, đọc ngữ liệu, thử nghiệm, điều tra, so sánh, phân loại, mô hình hóa hoặc giải quyết vấn đề. Không viết thành GV giảng lại hoặc HS làm phiếu cho có.
+- Khám phá của các tiết trong cùng bài phải khác nhau rõ về tình huống, học liệu, cách tổ chức hoặc sản phẩm phát hiện; không lặp máy móc "quan sát tranh - thảo luận - trình bày" nếu không có phát hiện mới.
+- Sáng tạo trong Khám phá phải bám mục tiêu và nguồn bài học: tạo cách đi vào kiến thức mới hấp dẫn, không thêm trò chơi/học liệu làm lệch YCCĐ.
+- Luyện tập chỉ luyện chính kiến thức/kĩ năng vừa được Khám phá chốt; nếu nhiệm vụ đang dạy kiến thức mới hoặc lệch mục tiêu, phải chuyển/sửa pha.
+- Vận dụng phải đưa kiến thức/kĩ năng vào bối cảnh thật hoặc gần thật của học sinh, có hành động/sản phẩm kiểm chứng được; không chỉ nhắc lại kiến thức, dặn dò chung hoặc viết "em sẽ cố gắng".
+- Nếu thời lượng Vận dụng ngắn, vẫn phải có ứng dụng thật ở mức nhỏ: xử lí tình huống, nêu giải pháp, tạo ví dụ đời sống, lập kế hoạch nhanh, lời khuyên, checklist, bài toán/thao tác/đoạn nói ngắn gắn thực tế.
+- Với bài nhiều tiết, mỗi tiết phải có một hành trình học riêng: Khởi động mở đúng trọng tâm tiết, Khám phá tạo phát hiện mới, Luyện tập củng cố phát hiện đó, Vận dụng dùng phát hiện đó trong đời sống.`;
 }
 
 // ─── MATH-SPECIFIC GUIDANCE ───
@@ -264,6 +286,9 @@ Nhiệm vụ: Từ thông tin form và nội dung trích xuất từ ảnh SGK u
 Khung định hướng bắt buộc:
 ${curriculumGuidance}
 
+Chuẩn chất lượng 4 pha bắt buộc:
+${globalPhaseQualityGuidance("period")}
+
 Luật thiết kế Khởi động bắt buộc:
 ${startupGuidance}
 
@@ -370,6 +395,9 @@ function buildDefaultRepairPrompt(lesson: LessonPlan, input: LessonInput, ocrTex
 Khung định hướng CTGDPT 2018:
 ${curriculumGuidance}
 
+Chuẩn chất lượng 4 pha bắt buộc:
+${globalPhaseQualityGuidance("repair")}
+
 Luật thiết kế Khởi động:
 ${startupGuidance}
 
@@ -459,6 +487,9 @@ Mục tiêu của bước này:
 Khung định hướng:
 ${curriculumGuidance}
 ${digitalCompetencyInstruction(input)}
+
+Chuẩn chất lượng 4 pha:
+${globalPhaseQualityGuidance("blueprint")}
 
 Logic sư phạm môn Toán:
 ${pedagogyProfileGuidance(input)}
@@ -567,6 +598,9 @@ Quy tắc quan trọng:
 - Vận dụng 3-5 phút chỉ yêu cầu nêu cách làm, đặt đề nhanh, giải một bước trọng tâm hoặc giao hoàn thiện ở nhà.
 ${creativeMode ? "- Có ít nhất một điểm nhấn sáng tạo vừa sức, nhưng không làm loãng logic toán." : "- Ưu tiên thực tế, dễ dạy, không thêm hoạt động cầu kỳ nếu không cần."}
 
+Chuẩn chất lượng 4 pha:
+${globalPhaseQualityGuidance("period")}
+
 Quy tắc ghi nội dung và công thức Toán:
 ${mathTranscribeGuidance}
 
@@ -625,6 +659,10 @@ Yêu cầu sửa:
 - Rút số bước nếu quá dài: Khởi động 2-3 cặp, Khám phá 4-6 cặp, Luyện tập 3-4 cặp, Vận dụng 2-3 cặp.
 - Không dùng từ "OCR".
 - Sửa toàn bộ lỗi LaTeX được liệt kê, giữ nguyên ý nghĩa toán học và đáp án đúng.
+
+Chuẩn chất lượng 4 pha khi sửa:
+${globalPhaseQualityGuidance("repair")}
+
 ${mathLatexPolicy}
 - Cá nhân hóa theo bối cảnh: ${JSON.stringify({ grade: input.grade, environment: input.teachingEnvironment, facilities: input.facilities, locality: localityContext(input), style: input.style })}
 ${digitalCompetencyInstruction(input)}
@@ -805,6 +843,9 @@ Khung CTGDPT 2018:
 ${curriculumGuidance}
 ${digitalCompetencyInstruction(input)}
 
+Chuẩn chất lượng 4 pha:
+${globalPhaseQualityGuidance("blueprint")}
+
 Logic sư phạm TNXH:
 ${pedagogyProfileGuidance(input)}
 
@@ -980,6 +1021,9 @@ Quy tắc quan trọng:
 - Chỉ điền supportForStudentsNeedingHelp/extensionForEarlyFinishers ở Khám phá và Luyện tập; hoạt động còn lại để mảng rỗng nếu không cần.
 ${creativeMode ? "- Có ít nhất một điểm nhấn sáng tạo vừa sức: thẻ quan sát, trạm khám phá, phóng viên nhí, góc hành động hoặc mini thử thách an toàn." : "- Ưu tiên thực tế, dễ dạy, học liệu dễ chuẩn bị."}
 
+Chuẩn chất lượng 4 pha:
+${globalPhaseQualityGuidance("period")}
+
 Chủ đề tiết này: ${profile?.label || period.lessonType || "mixed"}
 ${profile ? `Chuỗi dạy học nên giữ:
 ${profile.inquirySequence.map((step, index) => `${index + 1}. ${step}`).join("\n")}
@@ -1110,6 +1154,10 @@ Yêu cầu sửa:
 - Không bịa dữ liệu địa phương; dùng ví dụ mở nếu chưa có nguồn.
 - Rút số bước nếu quá dài: Khởi động 2-3 cặp, Khám phá 4-6 cặp, Luyện tập 3-4 cặp, Vận dụng 2-3 cặp.
 - Không dùng từ "OCR".
+
+Chuẩn chất lượng 4 pha khi sửa:
+${globalPhaseQualityGuidance("repair")}
+
 ${profile ? `- Chủ đề: ${profile.label}. Giữ chuỗi: ${profile.inquirySequence.join(" → ")}.` : ""}
 ${digitalCompetencyInstruction(input)}
 - Cá nhân hóa: ${JSON.stringify({ grade: input.grade, environment: input.teachingEnvironment, facilities: input.facilities, locality: localityContext(input), style: input.style })}
@@ -1239,6 +1287,9 @@ ${vietnameseStrictGuidance}
 Khung CTGDPT 2018:
 ${curriculumGuidance}
 ${digitalCompetencyInstruction(input)}
+
+Chuẩn chất lượng 4 pha:
+${globalPhaseQualityGuidance("blueprint")}
 
 Logic sư phạm Tiếng Việt:
 ${pedagogyProfileGuidance(input)}
@@ -1408,6 +1459,9 @@ ${typeProfile ? `- Lỗi thường gặp kiểu bài này:
 ${typeProfile.commonErrors.map(e => `  + ${e}`).join("\n")}` : ""}
 ${creativeMode ? "- Có ít nhất một điểm nhấn sáng tạo phù hợp bản chất môn, không làm loãng kĩ năng trọng tâm." : "- Ưu tiên thực tế, dễ dạy."}
 
+Chuẩn chất lượng 4 pha:
+${globalPhaseQualityGuidance("period")}
+
 Gợi ý cân thời lượng trong 35 phút:
 - Đọc thành tiếng lớp 2–3: 10–14 phút cho phần luyện đọc.
 - Nghe-viết: 10–13 phút cho phần viết chính; giảm chuẩn bị/kiểm tra chéo nếu cần.
@@ -1520,6 +1574,10 @@ Yêu cầu sửa:
 - Tiêu chí phải theo đúng sản phẩm: đọc, trả lời, chính tả, âm/vần, nói hoặc viết; không dùng cùng một tiêu chí cho mọi nhiệm vụ.
 - Nếu lỗi liên quan học liệu/đáp án, phải chép rõ từ/cụm/câu/tên đồ vật/đáp án cụ thể từ sourceInventory hoặc ảnh SGK. Nếu chưa chắc, không bịa và không dùng các cụm "cần GV xác minh", "OCR chưa rõ", "kiểm tra lại SGK"; dùng ghi chú trung tính "Ghi chú chuẩn bị: GV đối chiếu ảnh SGK trước giờ dạy." khi thật sự cần.
 - Với lớp 1–2, bỏ yêu cầu phân tích sâu hiệu quả nghệ thuật/nhịp/phép lặp nếu không có trong SGK.
+
+Chuẩn chất lượng 4 pha khi sửa:
+${globalPhaseQualityGuidance("repair")}
+
 ${typeProfile ? `- Kiểu bài: ${typeProfile.label}. Không thêm ${typeProfile.checkerNotRequired.join(", ")} nếu không phải trọng tâm.` : ""}
 ${digitalCompetencyInstruction(input)}
 - Cá nhân hóa: ${JSON.stringify({ grade: input.grade, environment: input.teachingEnvironment, facilities: input.facilities, locality: localityContext(input), style: input.style })}

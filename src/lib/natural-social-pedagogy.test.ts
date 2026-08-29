@@ -19,6 +19,21 @@ describe("natural social pedagogy classifier", () => {
     expect(classification.confidence).toBe("high");
   });
 
+  it("does not confuse a character named Hoa or arm wrestling with plants and animals", () => {
+    const input = makeInput({
+      subject: "Tự nhiên và Xã hội",
+      grade: "Lớp 2",
+      lessonTitle: "Tìm hiểu cơ quan vận động",
+    });
+    const classification = classifyNaturalSocialLesson(
+      input,
+      "Quan sát bộ xương, hệ cơ và khớp. Thực hiện co duỗi tay. Hoa bị đau chân sau khi vận động; trò chơi vật tay phải bảo đảm an toàn.",
+    );
+
+    expect(classification.primaryType).toBe("human-health");
+    expect(classification.secondaryTypes).not.toContain("plants-animals");
+  });
+
   it("recognizes plants and animals from source text", () => {
     const input = makeInput({
       subject: "Tự nhiên và Xã hội",

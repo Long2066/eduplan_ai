@@ -26,19 +26,22 @@ export async function PATCH(request: Request, context: RouteContext) {
       freeLimit?: number;
       usedGenerations?: number;
       disabled?: boolean;
+      blockedReasonDetail?: string;
       emailVerified?: boolean;
       ipLimitOverride?: boolean;
       grantPlan?: "plus" | "pro";
       grantCredits?: number;
       revokePlan?: boolean;
       deductCredits?: number;
+      source?: "security_console";
     };
 
     /* ── Manual plan grant ── */
     if (body.grantPlan === "plus" || body.grantPlan === "pro") {
       const db = getFirebaseDb();
-      const plan = body.grantPlan;
-      const credits = plan === "pro" ? 50 : 50;
+      // Legacy Admin clients may still submit "pro" during rollout.
+      const plan = "plus";
+      const credits = 50;
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60_000);
       const userRef = db.collection("users").doc(uid);
@@ -86,7 +89,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         const paidPlan = String(data.paidPlan || "");
         const expires = data.planExpiresAt?.toDate?.();
         if (!paidPlan || paidPlan === "free" || !expires || expires <= new Date()) {
-          throw new Error("User chưa có gói Plus/Pro còn hạn. Hãy kích hoạt gói trước khi cộng tín dụng.");
+          throw new Error("User chưa có gói trả phí còn hạn. Hãy kích hoạt gói trước khi cộng tín dụng.");
         }
         tx.update(userRef, {
           topupCredits: Number(data.topupCredits || 0) + amount,
@@ -184,25 +187,63 @@ export async function PATCH(request: Request, context: RouteContext) {
     };
     if (typeof body.displayName === "string") update.displayName = body.displayName.trim();
     if (body.role === "user" || body.role === "admin") update.role = body.role;
-    if (Number.isFinite(Number(body.freeLimit))) update.freeLimit = Math.max(0, Number(body.freeLimit));
-    if (Number.isFinite(Number(body.usedGenerations))) update.usedGenerations = Math.max(0, Number(body.usedGenerations));
     if (typeof body.disabled === "boolean") {
-      update.disabled = body.disabled;
-      if (!body.disabled) update.blockedReason = "";
+      if (body.disabled && uid === admin.uid) {
+        return NextResponse.json({ error: "Không thể tự khóa chính tài khoản admin đang đăng nhập." }, { status: 400 });
+      }
+      if (body.disabled) {
+        const reasonDetail = typeof body.blockedReasonDetail === "string"
+          ? body.blockedReasonDetail.replace(/\s+/g, " ").trim().slice(0, 500)
+          : "";
+        if (!reasonDetail) {
+          return NextResponse.json({ error: "Vui lòng nhập lý do khóa tài khoản." }, { status: 400 });
+        }
+        update.disabled = true;
+        update.blockedReason = "admin_manual";
+        update.blockedReasonDetail = reasonDetail;
+        update.blockedAt = FieldValue.serverTimestamp();
+        update.blockedByUid = admin.uid;
+        update.blockedByEmail = admin.email;
+        update.presenceState = "offline";
+      } else {
+        update.disabled = false;
+        update.blockedReason = "";
+        update.blockedReasonDetail = "";
+        update.blockedAt = null;
+        update.blockedByUid = "";
+        update.blockedByEmail = "";
+      }
     }
     if (typeof body.emailVerified === "boolean") update.emailVerified = body.emailVerified;
     if (typeof body.ipLimitOverride === "boolean") update.ipLimitOverride = body.ipLimitOverride;
 
     await getFirebaseDb().collection("users").doc(uid).set(update, { merge: true });
-    if (typeof body.displayName === "string" || typeof body.disabled === "boolean" || typeof body.emailVerified === "boolean") {
+    if (typeof body.displayName === "string" || typeof body.emailVerified === "boolean") {
       await getFirebaseAdminAuth().updateUser(uid, {
         displayName: typeof body.displayName === "string" ? body.displayName.trim() : undefined,
-        disabled: typeof body.disabled === "boolean" ? body.disabled : undefined,
         emailVerified: typeof body.emailVerified === "boolean" ? body.emailVerified : undefined,
       });
     }
-    if (body.disabled === true) await getFirebaseAdminAuth().revokeRefreshTokens(uid);
-    await writeAuditLog(admin, "UPDATE_USER", { targetUid: uid, fields: Object.keys(update) });
+    if (typeof body.disabled === "boolean") {
+      const authRecord = await getFirebaseAdminAuth().getUser(uid);
+      if (authRecord.disabled) {
+        await getFirebaseAdminAuth().updateUser(uid, { disabled: false });
+      }
+      await getFirebaseAdminAuth().revokeRefreshTokens(uid);
+      await writeAuditLog(admin, body.disabled ? "user.block" : "user.unblock", {
+        targetUid: uid,
+        reason: body.disabled ? update.blockedReasonDetail : "",
+        source: body.source || "users_console",
+      });
+    } else if (typeof body.ipLimitOverride === "boolean") {
+      await writeAuditLog(admin, "security.ip_limit_override", {
+        targetUid: uid,
+        enabled: body.ipLimitOverride,
+        source: body.source || "users_console",
+      });
+    } else {
+      await writeAuditLog(admin, "UPDATE_USER", { targetUid: uid, fields: Object.keys(update) });
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     const { message, status } = adminError(error, "Không thể cập nhật user.");

@@ -17,3 +17,9 @@ pnpm-debug.log*
 .math-export-fixtures/*.docx
 .agents
 .codex
+
+# Tài liệu nguồn/bàn giao cục bộ, không phải runtime assets.
+/HANDOFF_ANTIGRAVITY.md
+/Giới thiệu EduPlan AI/
+/HƯỚNG DẪN SỬ DỤNG/
+/VĂN BẢN PHÁP LÝ/

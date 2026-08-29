@@ -253,6 +253,20 @@ describe("validateNaturalSocialLesson", () => {
     expect(findings.some((finding) => finding.code === "NSXH-QUALITY-15")).toBe(true);
   });
 
+  it("allows transferable observation outcomes that mention pictures generically", () => {
+    const input = makeInput({ subject: "Tự nhiên và Xã hội", grade: "Lớp 2", lessonTitle: "Cơ quan vận động" });
+    const candidate = lesson({
+      outcomes: {
+        ...lesson().outcomes,
+        knowledgeAndSkills: ["Nêu được cảm xúc phù hợp với nét mặt quan sát được trong tranh."],
+      },
+    });
+
+    const findings = validateNaturalSocialLesson(candidate, input);
+
+    expect(findings.some((finding) => finding.code === "NSXH-QUALITY-15")).toBe(false);
+  });
+
   it("flags chores and safety injected into a home-environment lesson when SGK does not require them", () => {
     const input = makeInput({ subject: "Tự nhiên và Xã hội", grade: "Lớp 1", lessonTitle: "Ngôi nhà của em" });
     const candidate = lesson({

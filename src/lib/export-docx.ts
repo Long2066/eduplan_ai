@@ -15,7 +15,9 @@ import {
 } from "docx";
 import { docxMathParts, injectMathIntoDocx } from "@/lib/docx-math";
 import { lessonHeadingTitle, safeStringArray } from "@/lib/lesson-format";
+import { assertSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
+import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
 import type { ActivityDocumentOptions } from "@/lib/lesson-document-model";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
 
@@ -213,6 +215,12 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
   };
 
   return [
+    ...(lessonNeedsAdjustment(lesson)
+      ? [paragraph([text(lessonValidationLabel(lesson), { bold: true, color: RED })], {
+          alignment: AlignmentType.CENTER,
+          spacingAfter: 80,
+        })]
+      : []),
     paragraph([text(heading.documentTitle, { bold: true, color: BLUE, size: 36 })], {
       alignment: AlignmentType.CENTER,
       spacingAfter: 90,
@@ -277,8 +285,20 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
 }
 
 export function buildLessonDocxDocument(lesson: LessonPlan) {
-  const periods = normalizedPeriods(lesson);
-  const children = periods.flatMap((period, index) => (index === 0 ? periodChildren(lesson, period) : [pageBreak(), ...periodChildren(lesson, period)]));
+  const lessonTitle = assertSpecificLessonTitle(
+    lesson.generalInfo?.lessonTitle,
+    lesson.generalInfo?.subject,
+  );
+  const documentLesson: LessonPlan = {
+    ...lesson,
+    generalInfo: { ...lesson.generalInfo, lessonTitle },
+  };
+  const periods = normalizedPeriods(documentLesson);
+  const children = periods.flatMap((period, index) => (
+    index === 0
+      ? periodChildren(documentLesson, period)
+      : [pageBreak(), ...periodChildren(documentLesson, period)]
+  ));
 
   return new Document({
     sections: [

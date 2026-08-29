@@ -1,5 +1,6 @@
 export type SelectOrAuto = "auto" | string;
 export type LessonStyle = "Cơ bản" | "Dạy thật trên lớp" | "Sáng tạo, sinh động";
+export type LessonValidationStatus = "passed" | "needs_adjustment";
 
 export type LessonInput = {
   subject: string;
@@ -187,6 +188,11 @@ export type LessonPlan = {
     createdAt: string;
     plan?: "free" | "plus";
     lessonId?: string;
+    validationStatus?: LessonValidationStatus;
+    validationLabel?: string;
+    validationCheckedAt?: string;
+    validationBlockingCodes?: string[];
+    freeDraft?: boolean;
     vietnameseSourceInventory?: VietnameseSourceInventory;
     naturalSocialSourceInventory?: NaturalSocialSourceInventory;
     continuityPlan?: LessonContinuityPlan;

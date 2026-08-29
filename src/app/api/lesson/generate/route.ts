@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { AsyncLocalStorage } from "node:async_hooks";
 
 // Force load .env.local to override host system environment variables
 try {
@@ -28,10 +27,49 @@ import { NextResponse } from "next/server";
 import { lessonExpiresAt, requireUser } from "@/lib/auth-server";
 import { getFirebaseDb } from "@/lib/firebase-admin";
 import { getPlanModelStrategy, type AiGenerationResult, type AiStageStrategy, type PlanModelStrategy } from "@/lib/model-strategy";
-import { buildOpenAiResponsesJsonRequest, usesOpenAiResponsesApi, type OpenAiJsonMessage } from "@/lib/openai-json-request";
+import {
+  buildOpenAiResponsesJsonRequest,
+  describeOpenAiResponsesEmptyOutput,
+  extractOpenAiResponsesText,
+  inspectOpenAiResponsesOutput,
+  usesOpenAiResponsesApi,
+  type OpenAiJsonMessage,
+} from "@/lib/openai-json-request";
 import { buildOpenAiOcrRequest } from "@/lib/openai-ocr-request";
 import { normalizeAiUsage, summarizeGenerationCalls, type GenerationCallMetric } from "@/lib/generation-telemetry";
+import {
+  OPENAI_TRANSIENT_RETRIES,
+  normalizeOpenAiError,
+  normalizeOpenAiFetchError,
+  waitForAiRetry as wait,
+} from "@/lib/generation/ai-json-client";
+import {
+  isMathSubject,
+  isNaturalSocialSubject,
+  isVietnameseSubject,
+} from "@/lib/generation/subject-routing";
+import {
+  GENERATION_SAVE_RESERVE_MS,
+  GenerationTimeoutError,
+  abortSignalForRequest,
+  canStartAiRepair,
+  currentGenerationContext,
+  recordGenerationCall,
+  remainingGenerationMs,
+  withGenerationDeadline,
+  type GenerationContext,
+} from "@/lib/generation/runtime";
 import { validateLessonImagePayload } from "@/lib/lesson-image-payload";
+import {
+  LESSON_TITLE_REQUIRED_MESSAGE,
+  LessonTitleResolutionError,
+  assertSpecificLessonTitle,
+  isSpecificLessonTitle,
+  requireResolvedLessonTitle,
+  resolveLessonTitle,
+} from "@/lib/lesson-title";
+import { generationInputFingerprint } from "@/lib/generation/job-input";
+import { generationSecurityContext } from "@/lib/security-context";
 import { ensureLessonDigitalCompetencies } from "@/lib/digital-competency";
 import { commitUsage, releaseUsage, reserveUsage, subscriptionErrorResponse, type UsageReservation } from "@/lib/subscription-policy";
 import {
@@ -98,7 +136,6 @@ import {
   classifyNaturalSocialLesson,
   getNaturalSocialChecklist,
   getNaturalSocialPedagogyProfile,
-  isNaturalSocialSubjectName,
   isNaturalSocialTopicFocus,
   naturalSocialLessonTypeProfiles,
   naturalSocialSourceInventoryText,
@@ -190,44 +227,25 @@ type GenerateResponse = {
   };
 };
 
-const OPENAI_TRANSIENT_RETRIES = 2;
+const MIN_PERIOD_REPAIR_BUDGET_MS = Number(process.env.MIN_PERIOD_REPAIR_BUDGET_MS || 70000);
+const MIN_QUALITY_REPAIR_BUDGET_MS = Number(process.env.MIN_QUALITY_REPAIR_BUDGET_MS || 85000);
+const OPENAI_REQUEST_TIMEOUT_MS = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 120000);
+const MIN_FALLBACK_BUDGET_MS = 25000;
+
 function positiveEnvNumber(value: string | undefined, fallback: number, minimum: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= minimum ? Math.floor(parsed) : fallback;
 }
+
 const OPENAI_OCR_BATCH_SIZE = Number(process.env.OPENAI_OCR_BATCH_SIZE || 3);
 const OPENAI_OCR_MODEL = (process.env.OPENAI_OCR_MODEL || "gpt-5.6-luna").trim();
 const OPENAI_OCR_FALLBACK_MODEL = (process.env.OPENAI_OCR_FALLBACK_MODEL || "gpt-4o-mini").trim();
-const OPENAI_OCR_REASONING_EFFORT = ["none", "minimal", "low", "medium", "high"].includes(String(process.env.OPENAI_OCR_REASONING_EFFORT))
+const OPENAI_OCR_REASONING_EFFORT = ["none", "minimal", "low", "medium", "high"]
+  .includes(String(process.env.OPENAI_OCR_REASONING_EFFORT))
   ? String(process.env.OPENAI_OCR_REASONING_EFFORT)
   : "none";
 const OPENAI_OCR_MAX_OUTPUT_TOKENS = positiveEnvNumber(process.env.OPENAI_OCR_MAX_OUTPUT_TOKENS, 12_000, 1_000);
 const OPENAI_OCR_REQUEST_TIMEOUT_MS = positiveEnvNumber(process.env.OPENAI_OCR_REQUEST_TIMEOUT_MS, 60_000, 10_000);
-const OPENAI_REQUEST_TIMEOUT_MS = Number(process.env.OPENAI_REQUEST_TIMEOUT_MS || 120000);
-const GENERATION_SOFT_TIMEOUT_MS = Math.min(280000, Number(process.env.GENERATION_SOFT_TIMEOUT_MS || 270000));
-const GENERATION_SAVE_RESERVE_MS = 12000;
-const MIN_FALLBACK_BUDGET_MS = 25000;
-const MIN_PERIOD_REPAIR_BUDGET_MS = Number(process.env.MIN_PERIOD_REPAIR_BUDGET_MS || 70000);
-const MIN_QUALITY_REPAIR_BUDGET_MS = Number(process.env.MIN_QUALITY_REPAIR_BUDGET_MS || 85000);
-
-type GenerationContext = {
-  requestId: string;
-  startedAt: number;
-  deadlineAt: number;
-  controller: AbortController;
-  fallbackModels: Set<string>;
-  calls: GenerationCallMetric[];
-};
-
-const generationContextStore = new AsyncLocalStorage<GenerationContext>();
-
-function currentGenerationContext() {
-  return generationContextStore.getStore();
-}
-
-function recordGenerationCall(metric: GenerationCallMetric) {
-  currentGenerationContext()?.calls.push(metric);
-}
 
 function readOpenRouterTimeoutMs(stage: AiStageStrategy["stage"]) {
   return openRouterRequestTimeoutMs(stage);
@@ -237,140 +255,30 @@ function readOpenRouterRetries() {
   return openRouterTransientRetries();
 }
 
-function remainingGenerationMs() {
-  return currentGenerationContext() ? currentGenerationContext()!.deadlineAt - Date.now() : Number.POSITIVE_INFINITY;
-}
-
-function hasGenerationBudget(minWorkMs: number) {
-  return remainingGenerationMs() - GENERATION_SAVE_RESERVE_MS >= minWorkMs;
-}
-
-function canStartAiRepair(scope: string, minWorkMs: number, details: Record<string, unknown> = {}) {
-  if (hasGenerationBudget(minWorkMs)) return true;
-  console.info("[EduPlan AI] AI repair skipped by time budget", {
-    requestId: currentGenerationContext()?.requestId,
-    scope,
-    remainingMs: Math.max(0, Math.round(remainingGenerationMs())),
-    requiredWorkMs: minWorkMs,
-    saveReserveMs: GENERATION_SAVE_RESERVE_MS,
-    ...details,
-  });
-  return false;
-}
-
-function abortSignalForRequest(controller: AbortController) {
-  const signal = currentGenerationContext()?.controller.signal;
-  if (!signal) return controller.signal;
-  if (signal.aborted) controller.abort();
-  else signal.addEventListener("abort", () => controller.abort(), { once: true });
-  return controller.signal;
-}
-
 function parseDataUrl(dataUrl: string) {
   const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
   if (!match) return null;
   return { mimeType: match[1], data: match[2] };
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-class GenerationTimeoutError extends Error {
-  constructor() {
-    super("Quá trình tạo giáo án vượt thời gian xử lý an toàn. Lượt sử dụng đã được hoàn lại; vui lòng thử lại.");
-    this.name = "GENERATION_TIMEOUT";
-  }
-}
-
-async function withGenerationDeadline<T>(
-  requestId: string,
-  operation: () => Promise<T>,
-  onContext?: (context: GenerationContext) => void,
-): Promise<T> {
-  const controller = new AbortController();
-  const context: GenerationContext = {
-    requestId,
-    startedAt: Date.now(),
-    deadlineAt: Date.now() + GENERATION_SOFT_TIMEOUT_MS,
-    controller,
-    fallbackModels: new Set<string>(),
-    calls: [],
-  };
-  onContext?.(context);
-  return generationContextStore.run(context, async () => {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<never>((_, reject) => {
-      timeout = setTimeout(() => {
-        controller.abort();
-        reject(new GenerationTimeoutError());
-      }, GENERATION_SOFT_TIMEOUT_MS);
-    });
-    try {
-      return await Promise.race([operation(), deadline]);
-    } finally {
-      controller.abort();
-      if (timeout) clearTimeout(timeout);
-    }
-  });
-}
-
-function normalizeOpenAiError(raw: string, status?: number) {
-  console.error("[EduPlan AI] OpenAI API error response:", { status, raw });
-  if (status && status >= 500) {
-    return "OpenAI đang lỗi tạm thời hoặc quá tải (5xx/Cloudflare). App đã thử lại tự động; vui lòng bấm tạo lại sau ít phút nếu lỗi còn xảy ra.";
-  }
-  if (/rate.?limit|429/i.test(raw)) {
-    return "OpenAI đang bị giới hạn tốc độ/quota. Hãy chờ một lát rồi thử lại hoặc kiểm tra billing/quota của OpenAI key.";
-  }
-  if (/invalid_api_key|incorrect api key|401|Unauthorized/i.test(raw)) {
-    return "OpenAI API key trong .env.local không hợp lệ hoặc không có quyền truy cập model hiện tại.";
-  }
-  if (/insufficient_quota/i.test(raw)) {
-    return "OpenAI key đã hết quota hoặc chưa bật billing. Hãy kiểm tra tài khoản OpenAI.";
-  }
-  if (/<html|<!DOCTYPE html|cloudflare/i.test(raw)) {
-    return "OpenAI trả về trang lỗi HTML từ Cloudflare. Đây thường là lỗi dịch vụ tạm thời, không phải lỗi nội dung giáo án.";
-  }
-  return raw || `OpenAI failed with ${status || "unknown status"}`;
-}
-
-function normalizeOpenAiFetchError(error: unknown, model: string, timeoutMs = OPENAI_REQUEST_TIMEOUT_MS) {
-  const message = error instanceof Error ? error.message : String(error || "fetch failed");
-  if (/abort|timeout|timed out/i.test(message)) {
-    return `AI xử lý quá lâu và đã hết thời gian chờ (${Math.round(timeoutMs / 1000)} giây) với model ${model}. Hệ thống sẽ thử tuyến dự phòng nếu có.`;
-  }
-  if (/fetch failed|network|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket|terminated/i.test(message)) {
-    return `Không kết nối ổn định tới nhà cung cấp AI khi gọi model ${model}. Hãy thử lại sau ít phút.`;
-  }
-  return message;
-}
-
 type OpenAiMessage = OpenAiJsonMessage;
-type OpenAiJsonRequest = {
-  model: string;
-  temperature: number;
-  messages: OpenAiMessage[];
-};
 
 type GenerateLessonOptions = {
   vietnameseSourceInventory?: VietnameseLessonBlueprint["sourceInventory"];
   naturalSocialSourceInventory?: NaturalSocialSourceInventory;
 };
 
-function extractResponsesText(data: unknown) {
-  const response = data as {
-    output_text?: string;
-    output?: Array<{ content?: Array<{ text?: string; type?: string }> }>;
-  };
-  if (response.output_text) return response.output_text;
-  return response.output?.flatMap((item) => item.content || []).map((part) => part.text || "").join("\n").trim() || "";
-}
-
 async function fetchAiJsonContent(strategy: AiStageStrategy, messages: OpenAiMessage[]): Promise<AiGenerationResult> {
   const attempts: AiStageStrategy[] = [strategy];
   if (strategy.fallbackModel && strategy.fallbackProvider && (strategy.fallbackModel !== strategy.model || strategy.fallbackProvider !== strategy.provider)) {
-    attempts.push({ ...strategy, provider: strategy.fallbackProvider, model: strategy.fallbackModel });
+    attempts.push({
+      ...strategy,
+      provider: strategy.fallbackProvider,
+      model: strategy.fallbackModel,
+      reasoningEffort: strategy.fallbackReasoningEffort ?? strategy.reasoningEffort,
+      timeoutMs: strategy.fallbackTimeoutMs ?? strategy.timeoutMs,
+      maxOutputTokens: strategy.fallbackMaxOutputTokens ?? strategy.maxOutputTokens,
+    });
   }
   let primaryMessage = "AI không phản hồi.";
   let lastMessage = primaryMessage;
@@ -403,7 +311,11 @@ async function fetchAiJsonContent(strategy: AiStageStrategy, messages: OpenAiMes
             messages,
           };
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+      let requestTimedOut = false;
+      const timeout = setTimeout(() => {
+        requestTimedOut = true;
+        controller.abort();
+      }, requestTimeoutMs);
       const startedAt = Date.now();
       try {
         const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` };
@@ -415,7 +327,7 @@ async function fetchAiJsonContent(strategy: AiStageStrategy, messages: OpenAiMes
         const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(requestBody), signal: abortSignalForRequest(controller) });
         if (response.ok) {
           const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }>; usage?: Record<string, unknown> };
-          const content = useResponsesApi ? extractResponsesText(data) : data.choices?.[0]?.message?.content || "";
+          const content = useResponsesApi ? extractOpenAiResponsesText(data) : data.choices?.[0]?.message?.content || "";
           if (content) {
             try {
               extractAiJsonValue<unknown>(content);
@@ -431,7 +343,16 @@ async function fetchAiJsonContent(strategy: AiStageStrategy, messages: OpenAiMes
             }
           }
           recordGenerationCall({ scope: selected.stage, provider: selected.provider, model: selected.model, fallbackUsed, outcome: "invalid_output", elapsedMs: Date.now() - startedAt, ...normalizeAiUsage(data) });
-          lastMessage = "AI không trả về nội dung giáo án.";
+          lastMessage = useResponsesApi
+            ? describeOpenAiResponsesEmptyOutput(data, selected.maxOutputTokens)
+            : "AI không trả về nội dung giáo án.";
+          console.warn("[EduPlan AI] Empty AI response triggers fallback", {
+            requestId: currentGenerationContext()?.requestId,
+            stage: selected.stage,
+            model: selected.model,
+            maxOutputTokens: selected.maxOutputTokens,
+            ...(useResponsesApi ? inspectOpenAiResponsesOutput(data) : {}),
+          });
           break;
         }
         const text = await response.text();
@@ -446,8 +367,9 @@ async function fetchAiJsonContent(strategy: AiStageStrategy, messages: OpenAiMes
         }
         break;
       } catch (error) {
-        recordGenerationCall({ scope: selected.stage, provider: selected.provider, model: selected.model, fallbackUsed, outcome: "network_error", elapsedMs: Date.now() - startedAt, inputTokens: 0, outputTokens: 0, totalTokens: 0 });
-        if (currentGenerationContext()?.controller.signal.aborted) throw new GenerationTimeoutError();
+        const generationTimedOut = Boolean(currentGenerationContext()?.controller.signal.aborted);
+        recordGenerationCall({ scope: selected.stage, provider: selected.provider, model: selected.model, fallbackUsed, outcome: requestTimedOut || generationTimedOut ? "timeout" : "network_error", elapsedMs: Date.now() - startedAt, inputTokens: 0, outputTokens: 0, totalTokens: 0 });
+        if (generationTimedOut) throw new GenerationTimeoutError();
         lastMessage = normalizeOpenAiFetchError(error, selected.model, requestTimeoutMs);
         const retryable = selected.provider !== "openrouter" || isOpenRouterTransientError(error);
         if (retryable && attempt < maxRetries && remainingGenerationMs() > requestTimeoutMs + GENERATION_SAVE_RESERVE_MS) {
@@ -532,7 +454,11 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
       if (remainingForOcr < (fallbackUsed ? 10_000 : 5_000)) throw new GenerationTimeoutError();
       const requestTimeoutMs = Math.max(1_000, Math.min(OPENAI_OCR_REQUEST_TIMEOUT_MS, remainingForOcr));
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+      let requestTimedOut = false;
+      const timeout = setTimeout(() => {
+        requestTimedOut = true;
+        controller.abort();
+      }, requestTimeoutMs);
       const startedAt = Date.now();
 
       try {
@@ -549,7 +475,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
         if (response.ok) {
           const data = await response.json();
           const text = useResponsesApi
-            ? extractResponsesText(data).trim()
+            ? extractOpenAiResponsesText(data).trim()
             : (data.choices?.[0]?.message?.content || "").trim();
           if (text.length >= 20) {
             recordGenerationCall({ scope: "ocr", provider: "openai", model, fallbackUsed, outcome: "success", elapsedMs: Date.now() - startedAt, ...normalizeAiUsage(data) });
@@ -569,8 +495,9 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
         }
         break;
       } catch (error) {
-        recordGenerationCall({ scope: "ocr", provider: "openai", model, fallbackUsed, outcome: "network_error", elapsedMs: Date.now() - startedAt, inputTokens: 0, outputTokens: 0, totalTokens: 0 });
-        if (currentGenerationContext()?.controller.signal.aborted) throw new GenerationTimeoutError();
+        const generationTimedOut = Boolean(currentGenerationContext()?.controller.signal.aborted);
+        recordGenerationCall({ scope: "ocr", provider: "openai", model, fallbackUsed, outcome: requestTimedOut || generationTimedOut ? "timeout" : "network_error", elapsedMs: Date.now() - startedAt, inputTokens: 0, outputTokens: 0, totalTokens: 0 });
+        if (generationTimedOut) throw new GenerationTimeoutError();
         lastMessage = normalizeOpenAiFetchError(error, model, requestTimeoutMs);
         if (attempt < maxRetries) {
           await wait(700 * (attempt + 1));
@@ -697,18 +624,6 @@ async function runOpenAiOcr(input: LessonInput) {
 }
 
 
-function isMathSubject(input: LessonInput) {
-  return /^(toán|toan)$/i.test((input.subject || "").trim());
-}
-
-function isVietnameseSubject(input: LessonInput) {
-  return isVietnameseSubjectName(input.subject);
-}
-
-function isNaturalSocialSubject(input: LessonInput) {
-  return isNaturalSocialSubjectName(input.subject);
-}
-
 function promptOcrContext(ocrText: string, maxLength = 15000) {
   const text = (ocrText || "").trim();
   if (text.length <= maxLength) return text;
@@ -743,7 +658,7 @@ function findActivityBlueprint(period: MathPeriodBlueprint, phase: string, index
 function normalizeMathBlueprint(input: LessonInput, rawBlueprint: MathLessonBlueprint): MathLessonBlueprint {
   const expectedPeriods = Math.max(1, Number(input.periods || 1));
   const rawPeriods = Array.isArray(rawBlueprint.periods) ? rawBlueprint.periods : [];
-  const lessonTitle = rawBlueprint.lessonTitle?.trim() || input.lessonTitle || "Bài học Toán";
+  const lessonTitle = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const periods = Array.from({ length: expectedPeriods }, (_, index) => {
     const periodNumber = index + 1;
     const rawPeriod = rawPeriods.find((period) => Number(period.periodNumber) === periodNumber) || rawPeriods[index] || {};
@@ -836,7 +751,7 @@ function normalizeMathPeriodChunk(
   rawChunk: MathPeriodChunk,
 ): MathPeriodChunk {
   const periodNumber = Number(rawChunk.periodNumber || periodBlueprint.periodNumber || 1);
-  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Toán";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const rawActivities = Array.isArray(rawChunk.activities) ? rawChunk.activities : [];
   const activities = requiredActivityPhases.map((phase, index) => {
     const activityBlueprint = findActivityBlueprint(periodBlueprint, phase, index);
@@ -899,7 +814,7 @@ async function repairMathPeriodWithModel(input: LessonInput, strategy: AiStageSt
 }
 
 function buildMathLessonFromChunks(input: LessonInput, blueprint: MathLessonBlueprint, chunks: MathPeriodChunk[], model: string): LessonPlan {
-  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Toán";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const orderedChunks = chunks.slice().sort((left, right) => Number(left.periodNumber || 0) - Number(right.periodNumber || 0)).map((chunk, index) => ({ ...chunk, periodNumber: Number(chunk.periodNumber || index + 1), outcomes: normalizeOutcomes(chunk.outcomes || blueprint.outcomes, `${title} - tiết ${Number(chunk.periodNumber || index + 1)}`), activities: (chunk.activities || []).map(normalizeActivity) }));
   const continuityNotes = orderedChunks.map((chunk) => chunk.handoff?.nextBridge || chunk.handoff?.learned || "").filter(Boolean).map((note, index) => `Tiết ${orderedChunks[index]?.periodNumber || index + 1}: ${note}`);
   return normalizeLesson(input, {
@@ -1029,7 +944,7 @@ function normalizeNaturalSocialBlueprint(
   const normalizedClassification = normalizeNaturalSocialClassification(rawBlueprint.classification, classification);
   const profile = getNaturalSocialPedagogyProfile(normalizedClassification);
   const homeEnvironment = normalizedClassification.primaryType === "family" && normalizedClassification.topicFocus === "home-environment";
-  const lessonTitle = rawBlueprint.lessonTitle?.trim() || input.lessonTitle || "Bài học Tự nhiên và Xã hội";
+  const lessonTitle = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const core = rawBlueprint.naturalSocialCore || {};
   const sourceInventory = normalizeNaturalSocialSourceInventory(rawBlueprint.sourceInventory);
   const periods = Array.from({ length: expectedPeriods }, (_, index): NaturalSocialPeriodBlueprint => {
@@ -1313,7 +1228,7 @@ function normalizeNaturalSocialPeriodChunk(
   rawChunk: NaturalSocialPeriodChunk,
 ): NaturalSocialPeriodChunk {
   const periodNumber = Number(rawChunk.periodNumber || periodBlueprint.periodNumber || 1);
-  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Tự nhiên và Xã hội";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const lessonType = periodBlueprint.lessonType || blueprint.classification?.primaryType || "mixed";
   const rawActivities = Array.isArray(rawChunk.activities) ? rawChunk.activities : [];
   const activities = requiredActivityPhases.map((phase, index) => {
@@ -1429,7 +1344,7 @@ function buildNaturalSocialLessonFromChunks(
   chunks: NaturalSocialPeriodChunk[],
   model: string,
 ): LessonPlan {
-  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Tự nhiên và Xã hội";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const orderedChunks = chunks
     .slice()
     .sort((left, right) => Number(left.periodNumber || 0) - Number(right.periodNumber || 0))
@@ -1781,7 +1696,7 @@ function normalizeVietnameseBlueprint(
   const expectedPeriods = Math.max(1, Number(input.periods || 1));
   const rawPeriods = Array.isArray(rawBlueprint.periods) ? rawBlueprint.periods : [];
   const normalizedClassification = normalizeVietnameseClassification(rawBlueprint.classification, classification);
-  const lessonTitle = rawBlueprint.lessonTitle?.trim() || input.lessonTitle || "Bài học Tiếng Việt";
+  const lessonTitle = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const periods = Array.from({ length: expectedPeriods }, (_, index): VietnamesePeriodBlueprint => {
     const periodNumber = index + 1;
     const rawPeriod = rawPeriods.find((period) => Number(period.periodNumber) === periodNumber) || rawPeriods[index] || {};
@@ -1870,7 +1785,7 @@ function normalizeVietnamesePeriodChunk(
   rawChunk: VietnamesePeriodChunk,
 ): VietnamesePeriodChunk {
   const periodNumber = Number(rawChunk.periodNumber || periodBlueprint.periodNumber || 1);
-  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Tiếng Việt";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const lessonType = periodBlueprint.lessonType || blueprint.classification?.primaryType || "mixed";
   const rawActivities = Array.isArray(rawChunk.activities) ? rawChunk.activities : [];
   const activities = requiredActivityPhases.map((phase, index) => {
@@ -1947,7 +1862,7 @@ async function repairVietnamesePeriodWithModel(
 }
 
 function buildVietnameseLessonFromChunks(input: LessonInput, blueprint: VietnameseLessonBlueprint, chunks: VietnamesePeriodChunk[], model: string): LessonPlan {
-  const title = blueprint.lessonTitle || input.lessonTitle || "Bài học Tiếng Việt";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const orderedChunks = chunks
     .slice()
     .sort((left, right) => Number(left.periodNumber || 0) - Number(right.periodNumber || 0))
@@ -2829,7 +2744,7 @@ function rebalanceVietnamesePeriodActivities(
 function normalizeLesson(input: LessonInput, lesson: LessonPlan, model: string): LessonPlan {
   lesson = sanitizeLessonText(lesson);
   if (isVietnameseSubject(input)) lesson = sanitizeVietnameseLessonText(lesson);
-  const title = lesson.generalInfo?.lessonTitle || input.lessonTitle || "bài học";
+  const title = assertSpecificLessonTitle(input.lessonTitle, input.subject);
   const vietnameseSubject = isVietnameseSubject(input);
   const naturalSocialSubject = isNaturalSocialSubject(input);
   const lessonWideVietnameseType = vietnameseSubject ? classifyVietnameseLesson(input, JSON.stringify(lesson)).primaryType : "mixed";
@@ -3398,15 +3313,22 @@ function stripUndefinedDeep<T>(value: T): T {
 }
 
 async function saveGeneratedLesson(uid: string, lesson: LessonPlan) {
+  const title = assertSpecificLessonTitle(
+    lesson.generalInfo?.lessonTitle,
+    lesson.generalInfo?.subject,
+  );
   const ref = getFirebaseDb().collection("lessons").doc();
   const now = new Date();
   await ref.set(stripUndefinedDeep({
     ownerId: uid,
-    title: lesson.generalInfo?.lessonTitle || "Giáo án chưa đặt tên",
+    title,
     subject: lesson.generalInfo?.subject || "",
     grade: lesson.generalInfo?.grade || "",
     periods: Number(lesson.generalInfo?.periods || 1),
-    lesson,
+    lesson: {
+      ...lesson,
+      generalInfo: { ...lesson.generalInfo, lessonTitle: title },
+    },
     createdAt: now,
     updatedAt: now,
     expiresAt: lessonExpiresAt(),
@@ -3469,9 +3391,13 @@ export async function POST(request: Request) {
       return NextResponse.json<GenerateResponse>({ error: "Bạn cần xác minh email trước khi tạo giáo án.", stage: requestState.stage }, { status: 403 });
     }
 
-    const input = (await request.json()) as LessonInput;
+    const parsedInput = (await request.json()) as LessonInput;
+    let input: LessonInput = {
+      ...parsedInput,
+      uploadedAssets: Array.isArray(parsedInput.uploadedAssets) ? parsedInput.uploadedAssets : [],
+    };
     requestedPeriods = Math.max(1, Number(input.periods || 1));
-    const uploadedAssets = Array.isArray(input.uploadedAssets) ? input.uploadedAssets : [];
+    const uploadedAssets = input.uploadedAssets;
     if (uploadedAssets.length > 10) {
       return NextResponse.json<GenerateResponse>({ error: "Tối đa 10 ảnh SGK mỗi lần tạo.", stage: requestState.stage }, { status: 400 });
     }
@@ -3479,15 +3405,40 @@ export async function POST(request: Request) {
     if (imagePayloadError) {
       return NextResponse.json<GenerateResponse>({ error: imagePayloadError, stage: requestState.stage }, { status: 413 });
     }
+    if (!uploadedAssets.length && !isSpecificLessonTitle(input.lessonTitle, input.subject)) {
+      return NextResponse.json<GenerateResponse>(
+        { error: LESSON_TITLE_REQUIRED_MESSAGE, stage: requestState.stage },
+        { status: 422 },
+      );
+    }
     const requestId = request.headers.get("idempotency-key") || crypto.randomUUID();
+    const security = generationSecurityContext(
+      request,
+      "direct",
+      generationInputFingerprint(input),
+    );
     reservation = await reserveUsage(user.uid, "generate", requestId, {
       userEmail: user.email,
       subject: input.subject,
+      security,
     });
     const selectedStrategy = getPlanModelStrategy(reservation.plan);
     strategy = selectedStrategy;
     const { lesson, pedagogyAudit, ocrTextLength } = await withGenerationDeadline(requestId, async () => {
       requestState.stage = "ocr";
+      const ocrResult = await runOpenAiOcr(input);
+      ocrStats = {
+        textLength: ocrResult.text.length,
+        cacheHitCount: ocrResult.cacheHitCount,
+        cacheMissCount: ocrResult.cacheMissCount,
+      };
+      const lockedTitle = requireResolvedLessonTitle(resolveLessonTitle({
+        subject: input.subject,
+        ocrText: ocrResult.text,
+        candidates: [{ value: input.lessonTitle, source: "user-input", confidence: 0.95 }],
+      }));
+      input = { ...input, lessonTitle: lockedTitle };
+
       let cachedVietnameseInventory: Awaited<ReturnType<typeof readVietnameseSourceInventory>> = null;
       let cachedNaturalSocialInventory: Awaited<ReturnType<typeof readNaturalSocialSourceInventory>> = null;
       if (isVietnameseSubject(input)) {
@@ -3518,12 +3469,6 @@ export async function POST(request: Request) {
           console.warn("[EduPlan AI] Natural-social source inventory read skipped", { requestId, message: cacheError instanceof Error ? cacheError.message : "Unknown cache error" });
         }
       }
-      const ocrResult = await runOpenAiOcr(input);
-      ocrStats = {
-        textLength: ocrResult.text.length,
-        cacheHitCount: ocrResult.cacheHitCount,
-        cacheMissCount: ocrResult.cacheMissCount,
-      };
       requestState.stage = "openai";
       const generated = await generateLesson(input, ocrResult.text, selectedStrategy, {
         vietnameseSourceInventory: cachedVietnameseInventory?.inventory,
@@ -3537,11 +3482,7 @@ export async function POST(request: Request) {
         if (mergedInventory) {
           generated.lesson.meta = { ...generated.lesson.meta, vietnameseSourceInventory: mergedInventory };
           try {
-            const inventoryKeyInput = {
-              ...input,
-              lessonTitle: generated.lesson.generalInfo?.lessonTitle || input.lessonTitle,
-            };
-            const savedInventory = await upsertVietnameseSourceInventory(inventoryKeyInput, mergedInventory, [
+            const savedInventory = await upsertVietnameseSourceInventory(input, mergedInventory, [
               ...(cachedVietnameseInventory?.sourceHashes || []),
               ...(ocrResult.sourceHashes || []),
             ]);
@@ -3566,11 +3507,7 @@ export async function POST(request: Request) {
         if (mergedInventory) {
           generated.lesson.meta = { ...generated.lesson.meta, naturalSocialSourceInventory: mergedInventory };
           try {
-            const inventoryKeyInput = {
-              ...input,
-              lessonTitle: generated.lesson.generalInfo?.lessonTitle || input.lessonTitle,
-            };
-            const savedInventory = await upsertNaturalSocialSourceInventory(inventoryKeyInput, mergedInventory, [
+            const savedInventory = await upsertNaturalSocialSourceInventory(input, mergedInventory, [
               ...(cachedNaturalSocialInventory?.sourceHashes || []),
               ...(ocrResult.sourceHashes || []),
             ]);
@@ -3630,6 +3567,12 @@ export async function POST(request: Request) {
     })).catch(() => undefined);
     const policyError = subscriptionErrorResponse(error);
     if (policyError) return NextResponse.json<GenerateResponse>({ ...policyError.body, stage: requestState.stage }, { status: policyError.status });
+    if (error instanceof LessonTitleResolutionError) {
+      return NextResponse.json<GenerateResponse>(
+        { error: error.message, stage: requestState.stage },
+        { status: error.status },
+      );
+    }
     const rawMessage = error instanceof Error ? error.message : "Không thể tạo giáo án lúc này.";
     const status = error instanceof GenerationTimeoutError ? 504 : error instanceof Error && error.name === "UNAUTHENTICATED" ? 401 : 500;
     const errorStage: GenerateResponse["stage"] = requestState.stage;

@@ -167,6 +167,15 @@ function allLabelWordsPresent(text: string, label: string) {
   return words.every((word) => comparable.includes(word));
 }
 
+function exactLabelPhrasePresent(text: string, label: string) {
+  const labelTokens = labelWords(label);
+  if (!labelTokens.length) return false;
+  const textTokens = comparableText(text).split(" ").filter(Boolean);
+  return textTokens.some((_, start) =>
+    labelTokens.every((token, offset) => textTokens[start + offset] === token),
+  );
+}
+
 function periods(lesson: LessonPlan): PeriodPlan[] {
   return lesson.periodPlans?.length
     ? lesson.periodPlans
@@ -248,16 +257,61 @@ function defaultProductKindForTaskType(taskType: NaturalSocialSourceTaskType): N
   return "oral";
 }
 
+function normalizeSourceTaskType(value: unknown, label = ""): NaturalSocialSourceTaskType {
+  const raw = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (raw === "question" || raw === "questions" || raw === "answer" || raw === "qa") return "answer_question";
+  if (raw === "practice" || raw === "product" || raw === "hands_on" || raw === "make_product") return "practice_product";
+  if (raw === "presentation" || raw === "present" || raw === "share" || raw === "speaking") return "personal_connection";
+  if (raw === "sequence" || raw === "procedure" || raw === "sort") return "sort_sequence";
+  if (raw === "classification" || raw === "grouping") return "classify";
+  if (raw === "situation" || raw === "roleplay") return "role_play";
+  if (raw === "observe" || raw === "visual" || raw === "image") return "observe_image";
+  if (raw === "home" || raw === "application") return "home_application";
+  if (([
+    "observe_image",
+    "answer_question",
+    "describe_effect",
+    "personal_connection",
+    "sort_sequence",
+    "classify",
+    "role_play",
+    "practice_product",
+    "safety_note",
+    "home_application",
+    "other",
+  ] as string[]).includes(raw)) return raw as NaturalSocialSourceTaskType;
+
+  if (/giới thiệu|chia sẻ|liên hệ|trường em|lớp em|gia đình em|bản thân/i.test(label)) return "personal_connection";
+  if (/câu hỏi|trả lời|xác định|nêu|vì sao|theo em/i.test(label)) return "answer_question";
+  if (/hoàn thiện|thực hành|làm|sản phẩm|phiếu|mô hình|vẽ/i.test(label)) return "practice_product";
+  if (/sắp xếp|trình tự|quy trình|thứ tự/i.test(label)) return "sort_sequence";
+  if (/phân loại|xếp nhóm|bảng/i.test(label)) return "classify";
+  if (/đóng vai|xử lí tình huống|xử lý tình huống/i.test(label)) return "role_play";
+  if (/quan sát|tranh|hình ảnh/i.test(label)) return "observe_image";
+  return "other";
+}
+
+function normalizeProductKind(value: unknown, taskType: NaturalSocialSourceTaskType): NaturalSocialProductKind {
+  const raw = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (raw === "oral" || raw === "lời_nói" || raw === "loi_noi" || raw.includes("lời_nói")) return "oral";
+  if (raw === "written" || raw === "phiếu" || raw === "phieu" || raw.includes("phiếu") || raw.includes("ghi")) return "written";
+  if (raw === "presentation" || raw === "video" || raw.includes("trình_bày") || raw.includes("gioi_thieu")) return "oral";
+  if ((["oral", "written", "classification", "sequence", "role-play", "physical-product", "practice", "observation", "action", "other"] as string[]).includes(raw)) {
+    return raw as NaturalSocialProductKind;
+  }
+  return defaultProductKindForTaskType(taskType);
+}
+
 function normalizeRequiredTask(task: NaturalSocialRequiredTask, index: number): NaturalSocialCoverageTask | null {
   const label = optionalString(task.label);
   if (!label || task.required === false) return null;
-  const taskType = task.taskType || "other";
+  const taskType = normalizeSourceTaskType(task.taskType, label);
   return {
     ...task,
     taskId: optionalString(task.taskId) || `required-${index + 1}`,
     label,
     taskType,
-    productKind: task.productKind || defaultProductKindForTaskType(taskType),
+    productKind: normalizeProductKind(task.productKind, taskType),
     periodNumber: task.periodNumber ? Number(task.periodNumber) : undefined,
     sourceText: optionalString(task.sourceText),
     expectedAnswer: optionalString(task.expectedAnswer),
@@ -548,17 +602,24 @@ function sourcePageFindings(
 ): PedagogyAuditFinding[] {
   const visuals = sourceInventory?.visuals || [];
   if (!visuals.length) return [];
+  const visualsById = new Map(
+    visuals.flatMap((visual) => visual.visualId ? [[visual.visualId, visual] as const] : []),
+  );
   return periods(lesson).flatMap((period) =>
     (period.activities || []).flatMap((activity, activityIndex) => {
       const text = activityText(activity);
       const mentionedPages = pageNumbers(text);
       if (!mentionedPages.length) return [];
-      return visuals.flatMap((visual) => {
+      const boundVisuals = Array.from(new Set(activity.sourceVisualIds || []))
+        .map((visualId) => visualsById.get(visualId))
+        .filter((visual): visual is NonNullable<typeof visual> => Boolean(visual));
+      const candidates = boundVisuals.length
+        ? boundVisuals
+        : visuals.filter((visual) => exactLabelPhrasePresent(text, visual.specificName || visual.label));
+      return candidates.flatMap((visual) => {
         const expectedPages = pageNumbers(visual.page || "", { allowBare: true });
         if (!expectedPages.length) return [];
         const visualName = visual.specificName || visual.label;
-        const mentionsVisual = allLabelWordsPresent(text, visualName);
-        if (!mentionsVisual) return [];
         const pageOk = mentionedPages.some((page) => expectedPages.includes(page));
         if (pageOk) return [];
         return [finding(

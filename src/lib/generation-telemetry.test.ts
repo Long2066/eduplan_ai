@@ -12,18 +12,19 @@ describe("generation telemetry", () => {
   it("counts failures and fallback calls without charging failed-token totals", () => {
     const calls: GenerationCallMetric[] = [
       { scope: "detail", provider: "openai", model: "gpt-5.6-terra", fallbackUsed: false, outcome: "http_error", elapsedMs: 1000, httpStatus: 500, inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      { scope: "blueprint", provider: "openai", model: "gpt-5.6-terra", fallbackUsed: false, outcome: "timeout", elapsedMs: 60_000, inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       { scope: "detail", provider: "openai", model: "gpt-5.4-mini", fallbackUsed: true, outcome: "success", elapsedMs: 2000, inputTokens: 120, outputTokens: 80, totalTokens: 200 },
     ];
 
     expect(summarizeGenerationCalls(calls)).toEqual({
-      callCount: 2,
+      callCount: 3,
       successfulCallCount: 1,
-      failedCallCount: 1,
+      failedCallCount: 2,
       fallbackCallCount: 1,
       inputTokens: 120,
       outputTokens: 80,
       totalTokens: 200,
-      elapsedMs: 3000,
+      elapsedMs: 63_000,
     });
   });
 });

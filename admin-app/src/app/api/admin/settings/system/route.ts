@@ -7,7 +7,8 @@ import { toIso } from "@/lib/serializers";
 export const runtime = "nodejs";
 
 const fallbackSystemSettings = {
-  defaultFreeLimit: 10,
+  defaultFreeLimit: 3,
+  paidTrialDailyCredits: 10,
   featureFlags: {
     feedbackWidget: true,
     lessonHistory: true,
@@ -22,8 +23,8 @@ export async function GET() {
     const data = snapshot.data() || {};
     return NextResponse.json({
       system: {
-        ...fallbackSystemSettings,
-        ...data,
+        defaultFreeLimit: Number(data.defaultFreeLimit ?? fallbackSystemSettings.defaultFreeLimit),
+        paidTrialDailyCredits: Number(data.paidTrialDailyCredits ?? fallbackSystemSettings.paidTrialDailyCredits),
         featureFlags: {
           ...fallbackSystemSettings.featureFlags,
           ...(data.featureFlags || {}),
@@ -42,10 +43,12 @@ export async function PATCH(request: Request) {
     const admin = await requireAdmin();
     const body = (await request.json()) as {
       defaultFreeLimit?: number;
+      paidTrialDailyCredits?: number;
       featureFlags?: Record<string, boolean>;
     };
     const system = {
       defaultFreeLimit: Math.min(1000, Math.max(0, Number(body.defaultFreeLimit ?? fallbackSystemSettings.defaultFreeLimit))),
+      paidTrialDailyCredits: Math.min(1000, Math.max(0, Number(body.paidTrialDailyCredits ?? fallbackSystemSettings.paidTrialDailyCredits))),
       featureFlags: {
         feedbackWidget: Boolean(body.featureFlags?.feedbackWidget),
         lessonHistory: Boolean(body.featureFlags?.lessonHistory),
@@ -57,6 +60,7 @@ export async function PATCH(request: Request) {
     await getFirebaseDb().collection("app_settings").doc("system").set(system, { merge: true });
     await writeAuditLog(admin, "system.update", {
       defaultFreeLimit: system.defaultFreeLimit,
+      paidTrialDailyCredits: system.paidTrialDailyCredits,
       featureFlags: system.featureFlags,
     });
     return NextResponse.json({ system });

@@ -3,37 +3,77 @@ import type { DocumentData, QueryDocumentSnapshot } from "firebase-admin/firesto
 export function toIso(value: unknown) {
   if (!value) return "";
   if (typeof value === "string") return value;
-  const maybeTimestamp = value as { toDate?: () => Date };
-  if (typeof maybeTimestamp.toDate === "function") return maybeTimestamp.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object" && value !== null && "toDate" in value) return (value as { toDate: () => Date }).toDate().toISOString();
   return "";
 }
 
-export function serializeUser(doc: QueryDocumentSnapshot<DocumentData>) {
+export const ONLINE_WINDOW_MS = 150_000;
+
+function normalizePlan(value: unknown) {
+  return value === "plus" || value === "pro" ? "plus" : "free";
+}
+
+function vietnamDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+export type AdminQuotaSettings = {
+  freeDailyLimit: number;
+  paidTrialDailyCredits: number;
+};
+
+export function serializeUser(doc: QueryDocumentSnapshot<DocumentData>, settings: AdminQuotaSettings = { freeDailyLimit: 3, paidTrialDailyCredits: 10 }) {
   const data = doc.data();
-  const freeLimit = Number(data.freeLimit ?? 10);
-  const usedGenerations = Number(data.usedGenerations ?? 0);
+  const today = vietnamDayKey();
+  const freeLimit = Math.max(0, Number(settings.freeDailyLimit || 0));
+  const usedGenerations = data.freeDailyDayKey === today ? Math.max(0, Number(data.freeDailyUsed || 0)) : 0;
+  const paidTrialLimit = Math.max(0, Number(settings.paidTrialDailyCredits || 0));
+  const paidTrialUsed = data.paidTrialDailyDayKey === today ? Math.max(0, Number(data.paidTrialDailyUsed || 0)) : 0;
+  const disabled = Boolean(data.disabled);
+  const blockedReason = String(data.blockedReason || "");
+  const blockedReasonDetail = String(data.blockedReasonDetail || "");
+  const blockedAt = toIso(data.blockedAt);
+  const lastSeenAt = toIso(data.lastSeenAt) || toIso(data.lastLoginAt);
+  const lastSeenMs = lastSeenAt ? new Date(lastSeenAt).getTime() : 0;
+  const presenceState = data.presenceState === "online" ? "online" : "offline";
+  const isOnline = !disabled
+    && presenceState === "online"
+    && Number.isFinite(lastSeenMs)
+    && Date.now() - lastSeenMs <= ONLINE_WINDOW_MS;
   return {
+    id: doc.id,
     uid: doc.id,
     email: String(data.email || ""),
     displayName: String(data.displayName || ""),
-    role: data.role === "admin" ? "admin" : "user",
-    plan: String(data.plan || "free"),
+    photoURL: String(data.photoURL || ""),
     emailVerified: Boolean(data.emailVerified),
-    disabled: Boolean(data.disabled),
-    blockedReason: String(data.blockedReason || ""),
+    disabled,
+    blockedReason,
+    blockedReasonDetail,
+    blockedAt,
+    role: data.role === "admin" ? "admin" : "user",
+    plan: normalizePlan(data.plan),
     lastLoginIpHash: String(data.lastLoginIpHash || ""),
     ipLimitOverride: Boolean(data.ipLimitOverride),
     mustChangePassword: Boolean(data.mustChangePassword),
     freeLimit,
     usedGenerations,
     remainingGenerations: Math.max(0, freeLimit - usedGenerations),
-    activePlan: String(data.activePlan || data.plan || "free"),
-    paidPlan: String(data.paidPlan || ""),
+    paidTrialLimit,
+    paidTrialUsed,
+    paidTrialRemaining: Math.max(0, paidTrialLimit - paidTrialUsed),
+    activePlan: normalizePlan(data.activePlan || data.plan),
+    paidPlan: data.paidPlan ? normalizePlan(data.paidPlan) : "",
     planStatus: String(data.planStatus || "free"),
     packageCredits: Number(data.packageCredits || 0),
     topupCredits: Number(data.topupCredits || 0),
     planExpiresAt: toIso(data.planExpiresAt),
+    presenceState,
+    isOnline,
+    lastSeenAt,
+    lastLoginAt: toIso(data.lastLoginAt),
+    lastOfflineAt: toIso(data.lastOfflineAt),
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -83,6 +123,7 @@ export function serializeFeedback(doc: QueryDocumentSnapshot<DocumentData>) {
     userName: String(data.userName || ""),
     pageUrl: String(data.pageUrl || ""),
     userAgent: String(data.userAgent || ""),
+    pilot: data.pilot && typeof data.pilot === "object" ? data.pilot : null,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };

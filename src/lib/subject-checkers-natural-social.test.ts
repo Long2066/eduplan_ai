@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildPedagogyAudit, periodHasRequiredPhases, subjectPedagogyIssues } from "./subject-checkers";
+import {
+  buildPedagogyAudit,
+  hasDetailedOutcomeGroup,
+  hasWeaklyPairedActions,
+  periodHasRequiredPhases,
+  subjectPedagogyIssues,
+} from "./subject-checkers";
 import { makeInput } from "./vietnamese-fixtures";
 import type { LessonPlan } from "@/types/lesson";
 
@@ -104,5 +110,24 @@ describe("subject-checkers – Tự nhiên và Xã hội", () => {
     candidate.activities[3] = { ...candidate.activities[3], title: "Vận dụng sau hoạt động khám phá trường học" };
 
     expect(periodHasRequiredPhases(candidate.activities)).toBe(true);
+  });
+
+  it("accepts observable outcomes expressed with subject-appropriate verbs", () => {
+    expect(hasDetailedOutcomeGroup({
+      generalCompetencies: ["Tự chủ và tự học: chủ động thực hiện nhiệm vụ quan sát và chia sẻ kết quả."],
+      specificCompetencies: ["Nhận thức khoa học: nhận biết và mô tả được sự phối hợp của cơ, xương, khớp."],
+      qualities: ["Trách nhiệm: tuân thủ hướng dẫn an toàn khi vận động và hỗ trợ bạn."],
+      knowledgeAndSkills: ["Chỉ và nói tên được một số xương, cơ, khớp trên tranh hoặc trên cơ thể."],
+    })).toBe(true);
+  });
+
+  it("recognizes active student responses instead of requiring a narrow verb list", () => {
+    expect(hasWeaklyPairedActions({
+      phase: "Luyện tập",
+      title: "Cử động nhẹ",
+      objective: "Thực hiện cử động nhẹ nhàng và nhận biết vị trí khớp.",
+      teacherActions: ["GV yêu cầu HS cúi nhẹ, co duỗi tay và chỉ vị trí khớp."],
+      studentActions: ["HS cúi nhẹ, co duỗi tay, chỉ vị trí khớp và dừng khi không thoải mái."],
+    })).toBe(false);
   });
 });

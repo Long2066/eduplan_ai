@@ -1,23 +1,28 @@
-import "server-only";
+﻿import "server-only";
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
+import { FieldValue } from "firebase-admin/firestore";
+import { SECURITY_SCHEMA_VERSION } from "@shared/security-contract";
 import { buildSubscriptionStatus } from "@/lib/subscription-policy";
+import { requestIpHash } from "@/lib/security-context";
 import { getFirebaseAdminAuth, getFirebaseDb } from "@/lib/firebase-admin";
 
 export const IP_ACCOUNT_LIMIT_MESSAGE = "Bạn đang sử dụng quá nhiều tài khoản để truy cập, vui lòng chỉ sử dụng 1 tài khoản để truy cập. Trân trọng.";
-
-function clientIp(request: Request) {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("cf-connecting-ip")?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
-}
-
-function hashIp(ip: string) {
-  const salt = process.env.IP_HASH_SALT || process.env.FIREBASE_PROJECT_ID || "eduplan-ip-policy";
-  return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
-}
+const FREE_TRIAL_IP_ACCOUNT_LIMIT = 2;
+const MAX_IP_CLUSTER_READS = 50;
 
 function accessDocId(ipHash: string, uid: string) {
   return createHash("sha256").update(`${ipHash}:${uid}`).digest("hex");
+}
+
+function isExemptProfile(profile: Record<string, unknown>) {
+  return profile.role === "admin"
+    || profile.ipLimitOverride === true
+    || buildSubscriptionStatus(profile).planStatus === "paid";
+}
+
+function isActiveFreeTrialProfile(profile: Record<string, unknown>) {
+  return !isExemptProfile(profile) && !profile.disabled;
 }
 
 export async function enforceFreeTrialIpLimit(request: Request, uid: string) {
@@ -26,38 +31,97 @@ export async function enforceFreeTrialIpLimit(request: Request, uid: string) {
   const profileRef = db.collection("users").doc(uid);
   const profileSnapshot = await profileRef.get();
   const profile = profileSnapshot.data() || {};
-  if (profile.role === "admin" || profile.ipLimitOverride === true || buildSubscriptionStatus(profile).planStatus === "paid") return;
+  if (isExemptProfile(profile)) return;
 
-  const ip = clientIp(request);
-  if (ip === "unknown") return;
-  const ipHash = hashIp(ip);
+  const ipHash = requestIpHash(request);
+  if (!ipHash) return;
+
   const accessCollection = db.collection("freeTrialIpAccess");
   const accessRef = accessCollection.doc(accessDocId(ipHash, uid));
-  const existingAccess = await accessRef.get();
+  const accessSnapshot = await accessCollection
+    .where("ipHash", "==", ipHash)
+    .limit(MAX_IP_CLUSTER_READS)
+    .get();
+  const otherUids = Array.from(new Set(
+    accessSnapshot.docs
+      .map((doc) => String(doc.get("uid") || ""))
+      .filter((id) => id && id !== uid),
+  ));
+  const otherProfiles = await Promise.all(
+    otherUids.map((id) => db.collection("users").doc(id).get()),
+  );
+  const activeFreeTrialUids = otherProfiles
+    .filter((snapshot) => snapshot.exists && isActiveFreeTrialProfile(snapshot.data() || {}))
+    .map((snapshot) => snapshot.id);
+  const blocked = activeFreeTrialUids.length >= FREE_TRIAL_IP_ACCOUNT_LIMIT;
+  const now = new Date();
+  const eventRef = blocked ? db.collection("securityEvents").doc() : null;
 
-  if (!existingAccess.exists) {
-    const accessSnapshot = await accessCollection.where("ipHash", "==", ipHash).limit(20).get();
-    const otherUids = Array.from(new Set(accessSnapshot.docs.map((doc) => String(doc.get("uid") || "")).filter((id) => id && id !== uid)));
-    const otherProfiles = await Promise.all(otherUids.map((id) => db.collection("users").doc(id).get()));
-    const activeFreeTrialAccounts = otherProfiles.filter((snapshot) => {
-      if (!snapshot.exists) return false;
-      const data = snapshot.data() || {};
-      return data.role !== "admin" && !data.disabled && data.ipLimitOverride !== true && buildSubscriptionStatus(data).planStatus !== "paid";
-    });
+  // The transaction validates the current profile state and writes the decision as
+  // one unit. The bounded cluster read above avoids unbounded login-time scans.
+  await db.runTransaction(async (transaction) => {
+    const [freshProfile, freshAccess] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(accessRef),
+    ]);
+    const freshData = freshProfile.data() || {};
+    if (!freshProfile.exists || isExemptProfile(freshData)) return;
 
-    if (activeFreeTrialAccounts.length >= 2) {
-      const now = new Date();
-      await profileRef.set({ disabled: true, blockedReason: "ip_account_limit", blockedAt: now, lastLoginIpHash: ipHash, updatedAt: now }, { merge: true });
-      await accessRef.set({ uid, ipHash, status: "blocked", firstSeenAt: now, lastSeenAt: now }, { merge: true });
-      await db.collection("securityEvents").add({ uid, type: "ip_account_limit", ipHash, relatedUids: activeFreeTrialAccounts.map((snapshot) => snapshot.id), createdAt: now });
-      await auth.revokeRefreshTokens(uid);
-      throw new Error(IP_ACCOUNT_LIMIT_MESSAGE);
+    const firstSeenAt = freshAccess.get("firstSeenAt") || now;
+    transaction.set(accessRef, {
+      schemaVersion: SECURITY_SCHEMA_VERSION,
+      uid,
+      ipHash,
+      status: blocked ? "blocked" : "allowed",
+      firstSeenAt,
+      lastSeenAt: now,
+    }, { merge: true });
+
+    transaction.set(profileRef, {
+      ...(blocked ? {
+        disabled: true,
+        blockedReason: "ip_account_limit",
+        blockedReasonDetail: IP_ACCOUNT_LIMIT_MESSAGE,
+        blockedAt: now,
+        presenceState: "offline",
+      } : {
+        lastLoginAt: now,
+      }),
+      lastLoginIpHash: ipHash,
+      updatedAt: now,
+    }, { merge: true });
+
+    if (blocked && eventRef) {
+      transaction.create(eventRef, {
+        schemaVersion: SECURITY_SCHEMA_VERSION,
+        uid,
+        type: "ip_account_limit",
+        ipHash,
+        relatedUids: activeFreeTrialUids,
+        reviewStatus: "open",
+        reviewNote: "",
+        createdAt: now,
+        updatedAt: now,
+      });
     }
+  });
+
+  if (blocked) {
+    await auth.revokeRefreshTokens(uid);
+    throw new Error(IP_ACCOUNT_LIMIT_MESSAGE);
   }
 
-  const now = new Date();
-  await Promise.all([
-    accessRef.set({ uid, ipHash, status: "allowed", firstSeenAt: existingAccess.get("firstSeenAt") || now, lastSeenAt: now }, { merge: true }),
-    profileRef.set({ lastLoginIpHash: ipHash, lastLoginAt: now, updatedAt: now }, { merge: true }),
-  ]);
+  // Keep compatibility with older readers that inspect this field while the new
+  // security console uses the decision written in the transaction above.
+  await profileRef.set({ securitySchemaVersion: SECURITY_SCHEMA_VERSION }, { merge: true }).catch(() => undefined);
+}
+
+export async function touchFreeTrialIpAccess(ipHash: string, uid: string) {
+  if (!ipHash) return;
+  await getFirebaseDb().collection("freeTrialIpAccess").doc(accessDocId(ipHash, uid)).set({
+    schemaVersion: SECURITY_SCHEMA_VERSION,
+    uid,
+    ipHash,
+    lastSeenAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
 }

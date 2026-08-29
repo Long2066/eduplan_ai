@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { lessonHeadingTitle } from "@/lib/lesson-format";
+import { isSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
+import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
 import { MathText } from "@/components/math-text";
 import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
 
@@ -131,6 +133,14 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
   return (
     <article className="a4-page period-lesson">
       <header className="lesson-heading avoid-break">
+        {lessonNeedsAdjustment(lesson) ? (
+          <p className="lesson-validation-note">{lessonValidationLabel(lesson)}</p>
+        ) : null}
+        {!isSpecificLessonTitle(heading.lessonTitle, heading.subject) ? (
+          <p className="lesson-validation-note">
+            Tên bài của giáo án cũ chưa cụ thể. Vui lòng tạo lại hoặc nhập đúng Tên bài trước khi xuất Word.
+          </p>
+        ) : null}
         <h1>{heading.documentTitle}</h1>
         <div className="admin-grid">
           <p>
@@ -196,33 +206,7 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
 function AiLoadingPreview() {
   return (
     <section className="animate-fade-in rounded-2xl border border-surface-200 bg-surface-0 p-5 shadow-soft xl:h-full xl:min-h-0 xl:overflow-hidden">
-      <div className="overflow-hidden rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-brand-100/60 p-5">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-btn-primary">
-            AI
-          </span>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-500">
-              EduPlan AI
-            </p>
-            <h2 className="text-lg font-bold text-slate-900">
-              Đang soạn giáo án theo chuẩn Công văn 2345.
-            </h2>
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-1">
-          <p className="text-xs font-medium text-brand-700/80">
-            Phân tích yêu cầu cần đạt &bull; Thiết kế hoạt động dạy học &bull; Định dạng trang A4
-          </p>
-        </div>
-
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-brand-100">
-          <div className="h-full animate-progress-indeterminate rounded-full bg-gradient-to-r from-brand-500 via-brand-400 to-brand-600" />
-        </div>
-      </div>
-
-      <div className="a4-preview-shell mt-5">
+      <div className="a4-preview-shell">
         <article className="a4-page">
           <div className="skeleton-line animate-shimmer-slow w-1/3" />
           <div className="skeleton-line animate-shimmer-slow w-1/2" />

@@ -29,6 +29,28 @@ export function repairableErrorFindings(
   );
 }
 
+const RESCUE_REPAIR_PREFIXES = [
+  "LQ-",
+  "PHASE-QUALITY-",
+  "MATH-QUALITY-",
+  "NSXH-COVERAGE-",
+  "NSXH-QUALITY-",
+  "TV-COVERAGE-",
+  "TV-QUALITY-",
+] as const;
+
+function isRescueRepairFinding(finding: PedagogyAuditFinding) {
+  if (finding.severity === "error") return finding.autoFixable === true;
+  if (finding.severity !== "warning" || finding.autoFixable !== true) return false;
+  return RESCUE_REPAIR_PREFIXES.some((prefix) => finding.code.startsWith(prefix));
+}
+
+export function repairableStagedFindings(
+  findings: PedagogyAuditFinding[] | undefined,
+): PedagogyAuditFinding[] {
+  return (findings || []).filter(isRescueRepairFinding);
+}
+
 export function findingsForPeriod(
   findings: PedagogyAuditFinding[],
   periodNumber: number,

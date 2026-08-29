@@ -1,9 +1,11 @@
 import type { LessonActivity } from "@/types/lesson";
+import { canonicalizeLessonTitle } from "@/lib/lesson-title";
+import { canonicalLessonPhase, lessonPhaseOrder } from "@/lib/lesson-phase-quality";
 
-export const requiredActivityPhases = ["Khởi động", "Khám phá", "Luyện tập", "Vận dụng"] as const;
+export const requiredActivityPhases = lessonPhaseOrder;
 
 export function canonicalLessonTitle(title: string) {
-  return (title || "").replace(/\s+/g, " ").trim() || "BÀI HỌC";
+  return canonicalizeLessonTitle(title);
 }
 
 export function lessonHeadingTitle(title: string) {
@@ -11,12 +13,7 @@ export function lessonHeadingTitle(title: string) {
 }
 
 export function phaseKey(value: string) {
-  const source = (value || "").toLowerCase();
-  if (/khởi động|khoi dong/.test(source)) return "Khởi động";
-  if (/khám phá|kham pha|hình thành|hinh thanh/.test(source)) return "Khám phá";
-  if (/luyện tập|luyen tap|thực hành|thuc hanh/.test(source)) return "Luyện tập";
-  if (/vận dụng|van dung/.test(source)) return "Vận dụng";
-  return "";
+  return canonicalLessonPhase(value);
 }
 
 export function activityPhaseKey(activity: { phase?: string; title?: string }) {

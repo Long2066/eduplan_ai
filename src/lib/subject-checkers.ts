@@ -5,6 +5,7 @@ import { validateMathLesson } from "@/lib/math-quality-validator";
 import { validateLessonQuality } from "@/lib/lesson-quality-validator";
 import { validateLessonTime } from "@/lib/lesson-time-validator";
 import { validateLessonContinuity } from "@/lib/lesson-continuity";
+import { validatePhaseQuality } from "@/lib/phase-quality-validator";
 import { validateNaturalSocialLesson } from "@/lib/natural-social-quality-validator";
 import { validateNaturalSocialTaskCoverage } from "@/lib/natural-social-task-coverage";
 import { validateVietnameseLesson } from "@/lib/vietnamese-quality-validator";
@@ -39,7 +40,7 @@ export function hasWeaklyPairedActions(activity: LessonPlan["activities"][number
     const teacher = pair.teacher.toLowerCase();
     const student = pair.student.toLowerCase();
     const teacherRequiresResponse = /đặt câu hỏi|câu hỏi|yêu cầu|giao nhiệm vụ|hướng dẫn.*(tìm|xác định|viết|làm|thảo luận|trao đổi|đọc|tính|vẽ|lập|hoàn thành)|mời hs|tổ chức.*(thảo luận|trao đổi|làm việc|trình bày)/i.test(teacher);
-    const studentHasMatchingAction = /trả lời|nêu|giải thích|chia sẻ|thảo luận|trao đổi|thực hiện|làm|đọc|viết|tìm|xác định|tính|vẽ|lập|hoàn thành|trình bày|báo cáo|nhận xét|ghi|đóng vai|vận dụng/i.test(student);
+    const studentHasMatchingAction = /trả lời|nêu|giải thích|chia sẻ|thảo luận|trao đổi|thực hiện|làm|đọc|viết|tìm|xác định|tính|vẽ|lập|hoàn thành|trình bày|báo cáo|nhận xét|ghi|đóng vai|vận dụng|quan sát|dự đoán|chọn|giơ|chỉ|cúi|co|duỗi|mở|cảm nhận|dừng|nghỉ|ghép|xếp|đánh dấu/i.test(student);
     const studentOnlyPassive = /^hs\s+(lắng nghe|nghe|quan sát|theo dõi)(\.|$)/i.test(pair.student.trim()) && !studentHasMatchingAction;
     const teacherOnlyCloses = /chốt|kết luận|chuyển\s+(sang|vào|ý)|giới thiệu.*(phần|hoạt động|nội dung)/i.test(teacher);
     const studentUsesGenericFallback = /thực hiện nhiệm vụ tương ứng|phản hồi theo hướng dẫn|trao đổi kết quả và phản hồi/i.test(student);
@@ -68,7 +69,10 @@ export function hasDetailedOutcomeGroup(outcomes?: Partial<LessonOutcomes>) {
     outcomes?.specificCompetencies || [],
     outcomes?.qualities || [],
   ];
-  return groups.every((items) => items.length > 0 && items.every((item) => item.trim().length >= 34 && /:|biết|thực hiện|trình bày|trao đổi|vận dụng|đề xuất|quan sát|hoàn thành|đọc|viết|nêu|tìm|xác định/i.test(item)));
+  const observableOutcomePattern = /:|biết|nhận biết|thực hiện|trình bày|trao đổi|vận dụng|đề xuất|quan sát|hoàn thành|đọc|viết|nêu|tìm|xác định|chỉ|mô tả|lựa chọn|phân loại|so sánh|giải thích/i;
+  return groups.every((items) => items.length > 0 && items.every(
+    (item) => item.trim().length >= 34 && observableOutcomePattern.test(item),
+  ));
 }
 
 const mechanicalVietnameseOutcomePattern = /thực hiện được qua|sử dụng kiến thức,?\s*kĩ năng đặc thù|sử dụng kiến thức đặc thù|kiến thức đặc thù|nội dung học tập đặc thù|được hình thành qua|\.\s*:/i;
@@ -666,6 +670,7 @@ export function buildPedagogyAudit(lesson: LessonPlan, input: LessonInput, repai
     ...validateLessonQuality(lesson),
     ...validateLessonTime(lesson),
     ...validateLessonContinuity(lesson, input),
+    ...validatePhaseQuality(lesson, input),
     ...(/^(toán|toan)$/i.test(input.subject.trim()) ? validateMathLesson(lesson, input) : []),
     ...(isVietnameseSubjectName(input.subject) ? validateVietnameseLesson(lesson, input) : []),
     ...(isNaturalSocialSubjectName(input.subject) ? validateNaturalSocialLesson(lesson, input) : []),

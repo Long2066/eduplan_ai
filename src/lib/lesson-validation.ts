@@ -1,5 +1,6 @@
 import type { FormErrors, LessonInput } from "@/types/lesson";
 import { gradeOptions, subjectOptionsByGrade } from "@/lib/defaults";
+import { isSpecificLessonTitle } from "@/lib/lesson-title";
 
 export function validateLessonInput(input: LessonInput): FormErrors {
   const errors: FormErrors = {};
@@ -19,8 +20,9 @@ export function validateLessonInput(input: LessonInput): FormErrors {
   if (!Number.isFinite(input.periods) || input.periods <= 0) {
     errors.periods = "Số tiết phải lớn hơn 0.";
   }
-  if (!input.uploadedAssets.length) {
-    errors.uploadedAssets = "Upload hoặc paste ảnh SGK định dạng JPG/PNG để AI lấy nội dung bài học.";
+  const assets = Array.isArray(input.uploadedAssets) ? input.uploadedAssets : [];
+  if (!assets.length && !isSpecificLessonTitle(input.lessonTitle, input.subject)) {
+    errors.lessonTitle = "Không có ảnh SGK: vui lòng nhập tên bài cụ thể, ví dụ “Bài 2. Ô nhiễm, xói mòn đất và bảo vệ môi trường đất”.";
   }
 
   return errors;
@@ -28,6 +30,6 @@ export function validateLessonInput(input: LessonInput): FormErrors {
 
 export function hasBlockingErrors(errors: FormErrors) {
   return Boolean(
-    errors.subject || errors.grade || errors.periods || errors.uploadedAssets,
+    errors.subject || errors.grade || errors.lessonTitle || errors.periods || errors.uploadedAssets,
   );
 }

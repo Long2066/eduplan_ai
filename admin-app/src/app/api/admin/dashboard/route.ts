@@ -38,15 +38,17 @@ export async function GET() {
     const today = vietnamDateKey();
     const dateKeys = lastVietnamDateKeys(7);
     const weekStart = dateKeys[0];
-    const [users, visitsDoc, lessons, feedback, audits, errorLogs, visitDocs] = await Promise.all([
+    const [users, settingsDoc, visitsDoc, lessons, feedback, audits, errorLogs, visitDocs] = await Promise.all([
       db.collection("users").get(),
+      db.collection("app_settings").doc("system").get(),
       db.collection("analytics_daily_visits").doc(today).get(),
-      db.collection("lessons").limit(2000).get(),
+      db.collection("generationOperations").orderBy("reservedAt", "desc").limit(2000).get(),
       db.collection("feedback").limit(1000).get(),
       db.collection("admin_audit_logs").limit(50).get(),
       db.collection("app_error_logs").limit(20).get(),
       Promise.all(dateKeys.map((key) => db.collection("analytics_daily_visits").doc(key).get())),
     ]);
+    const freeLimit = Math.max(0, Number(settingsDoc.get("defaultFreeLimit") ?? 3));
 
     const verifiedUsers = users.docs.filter((doc) => Boolean(doc.get("emailVerified"))).length;
     const newUsersToday = users.docs.filter((doc) => docDateKey(doc.get("createdAt")) === today).length;
@@ -55,16 +57,15 @@ export async function GET() {
       return key && key >= weekStart;
     }).length;
     const lowQuotaUsers = users.docs.filter((doc) => {
-      const freeLimit = Number(doc.get("freeLimit") ?? 10);
-      const used = Number(doc.get("usedGenerations") ?? 0);
+      const used = doc.get("freeDailyDayKey") === today ? Number(doc.get("freeDailyUsed") || 0) : 0;
       return Math.max(0, freeLimit - used) <= 2;
     }).length;
     const remainingGenerations = users.docs.reduce((total, doc) => {
-      const freeLimit = Number(doc.get("freeLimit") ?? 10);
-      const used = Number(doc.get("usedGenerations") ?? 0);
+      const used = doc.get("freeDailyDayKey") === today ? Number(doc.get("freeDailyUsed") || 0) : 0;
       return total + Math.max(0, freeLimit - used);
     }, 0);
-    const lessonsToday = lessons.docs.filter((doc) => docDateKey(doc.get("createdAt")) === today).length;
+    const successfulLessons = lessons.docs.filter((doc) => String(doc.get("kind") || "generate") === "generate" && String(doc.get("status") || "") === "committed");
+    const lessonsToday = successfulLessons.filter((doc) => docDateKey(doc.get("committedAt") || doc.get("reservedAt")) === today).length;
     const feedbackOpen = feedback.docs.filter((doc) => !["resolved", "ignored"].includes(String(doc.get("status") || "new"))).length;
     const feedbackNew = feedback.docs.filter((doc) => String(doc.get("status") || "new") === "new").length;
     const recentAuditIssues = audits.docs
@@ -90,7 +91,7 @@ export async function GET() {
       newUsersToday,
       newUsersThisWeek,
       todayVisits: Number(visitsDoc.get("visits") || 0),
-      totalLessons: lessons.size,
+      totalLessons: successfulLessons.length,
       lessonsToday,
       lowQuotaUsers,
       remainingGenerations,
@@ -100,7 +101,7 @@ export async function GET() {
       chart: {
         visits: dateKeys.map((date, index) => ({ date, value: Number(visitDocs[index].get("visits") || 0) })),
         users: countByDate(users.docs, dateKeys, (doc) => docDateKey(doc.get("createdAt"))),
-        lessons: countByDate(lessons.docs, dateKeys, (doc) => docDateKey(doc.get("createdAt"))),
+        lessons: countByDate(successfulLessons, dateKeys, (doc) => docDateKey(doc.get("committedAt") || doc.get("reservedAt"))),
         feedback: countByDate(feedback.docs, dateKeys, (doc) => docDateKey(doc.get("createdAt"))),
       },
     });

@@ -1,6 +1,14 @@
 import "server-only";
 
-export const OCR_PROMPT = "Hãy OCR chuẩn các ảnh SGK tiếng Việt theo đúng thứ tự ảnh. Chỉ trích xuất văn bản nhìn thấy trong ảnh, giữ xuống dòng hợp lý, nhận diện tên bài/số bài/yêu cầu cần đạt/nội dung/câu hỏi nếu có. Ngăn cách mỗi ảnh bằng dòng --- HẾT ẢNH ---. Không giải thích và không thêm nội dung ngoài ảnh.";
+export const OCR_PROMPT = `Hãy OCR chuẩn các ảnh SGK tiếng Việt theo đúng thứ tự ảnh. Chỉ trích xuất văn bản nhìn thấy trong ảnh, không suy đoán hoặc thêm nội dung ngoài ảnh.
+
+QUY TẮC BẮT BUỘC CHO TÊN BÀI:
+- Bảo toàn chính xác dòng "Bài"/số bài/tên bài và dấu tiếng Việt như trên ảnh.
+- Nếu "Bài", số bài và tên bài nằm ở các dòng riêng thì giữ từng dòng riêng; không ghép với câu hỏi hoặc nhiệm vụ phía dưới.
+- Phân biệt heading tên bài ở đầu trang với các mục "Bài 1", "Bài 2" trong phần bài tập; không nâng dòng bài tập thành tên bài.
+- Không tự tạo số bài hoặc tên bài khi ảnh không đọc được.
+
+Giữ xuống dòng hợp lý, nhận diện yêu cầu cần đạt/nội dung/câu hỏi nếu có. Ngăn cách mỗi ảnh bằng dòng --- HẾT ẢNH ---. Không giải thích.`;
 
 export function usesOcrResponsesApi(model: string) {
   return /^gpt-5/i.test(model);

@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import { normalizeNaturalSocialSourceInventory } from "@/lib/natural-social-task-coverage";
-import type { LessonInput, NaturalSocialSourceInventory } from "@/types/lesson";
+import {
+  classifyNaturalSocialLesson,
+  naturalSocialSourceInventoryText,
+  normalizeNaturalSocialText,
+} from "@/lib/natural-social-pedagogy";
+import type { LessonInput, NaturalSocialClassification, NaturalSocialSourceInventory } from "@/types/lesson";
 
 export const NATURAL_SOCIAL_SOURCE_INVENTORY_SCHEMA_VERSION = 1;
 
@@ -185,6 +190,69 @@ export function hasStableNaturalSocialSourceInventoryKey(input: Pick<LessonInput
 
 export function cleanNaturalSocialSourceInventory(raw: unknown): NaturalSocialSourceInventory | undefined {
   return normalizeNaturalSocialSourceInventory(raw);
+}
+
+function habitatEvidenceText(inventory: NaturalSocialSourceInventory) {
+  return [
+    ...(inventory.visuals || []).flatMap((visual) => [
+      visual.label,
+      visual.specificName,
+      visual.description,
+      visual.expectedObservation,
+      visual.effectOrReason,
+      ...(visual.sourceEvidence || []),
+    ]),
+    ...(inventory.requiredTasks || []).flatMap((task) => [
+      task.label,
+      task.sourceText,
+      task.expectedAnswer,
+      ...(task.sourceEvidence || []),
+    ]),
+    ...(inventory.questions || []).flatMap((task) => [
+      task.question,
+      task.expectedAnswer,
+      ...(task.sourceEvidence || []),
+    ]),
+  ].filter(Boolean).join(" ");
+}
+
+function shouldKeepHabitatFields(
+  input: Pick<LessonInput, "subject" | "grade" | "lessonTitle" | "specialRequest">,
+  inventory: NaturalSocialSourceInventory,
+  classification?: Pick<NaturalSocialClassification, "primaryType">,
+) {
+  const effectiveClassification = classification
+    || classifyNaturalSocialLesson(input as LessonInput, naturalSocialSourceInventoryText(inventory));
+  if (effectiveClassification.primaryType === "plants-animals") return true;
+  const evidence = normalizeNaturalSocialText(habitatEvidenceText(inventory));
+  return /\b(cay|con vat|dong vat|vat nuoi|moi truong song|noi song|tren can|duoi nuoc|vua tren can vua duoi nuoc|ao|ho|song|bien|rung|dong co|chuong nuoi)\b/i.test(evidence);
+}
+
+export function sanitizeNaturalSocialSourceInventoryForLesson(
+  input: Pick<LessonInput, "subject" | "grade" | "lessonTitle" | "specialRequest">,
+  raw: unknown,
+  classification?: Pick<NaturalSocialClassification, "primaryType">,
+): NaturalSocialSourceInventory | undefined {
+  const cleaned = cleanNaturalSocialSourceInventory(raw);
+  if (!cleaned) return undefined;
+  if (shouldKeepHabitatFields(input, cleaned, classification)) return cleaned;
+
+  let strippedCount = 0;
+  const visuals = (cleaned.visuals || []).map((visual) => {
+    if (!visual.habitatPlace && !visual.environmentCategory) return visual;
+    strippedCount += 1;
+    const { habitatPlace: _habitatPlace, environmentCategory: _environmentCategory, ...rest } = visual;
+    return rest;
+  });
+  if (!strippedCount) return cleaned;
+  return cleanNaturalSocialSourceInventory({
+    ...cleaned,
+    visuals,
+    uncertain: uniqueStrings([
+      ...(cleaned.uncertain || []),
+      "Đã bỏ qua trường nơi sống/môi trường sống do bài không thuộc chủ đề cây, con vật hoặc môi trường sống.",
+    ]),
+  });
 }
 
 export function hasUsableNaturalSocialSourceInventory(inventory: NaturalSocialSourceInventory | undefined) {

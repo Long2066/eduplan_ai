@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { lessonExpiresAt, requireUser } from "@/lib/auth-server";
 import { getFirebaseDb } from "@/lib/firebase-admin";
+import { lessonValidationSummary } from "@/lib/lesson-validation-status";
 import type { LessonPlan } from "@/types/lesson";
 
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ function lessonSummary(lesson: LessonPlan) {
     subject: lesson.generalInfo?.subject || "",
     grade: lesson.generalInfo?.grade || "",
     periods: Number(lesson.generalInfo?.periods || 1),
+    ...lessonValidationSummary(lesson),
   };
 }
 
@@ -27,6 +29,9 @@ function serializeDoc(id: string, data: FirebaseFirestore.DocumentData) {
     subject: data.subject || "",
     grade: data.grade || "",
     periods: data.periods || 1,
+    validationStatus: data.validationStatus || "passed",
+    validationLabel: data.validationLabel || "",
+    freeDraft: Boolean(data.freeDraft),
     createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAt || "",
     updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || "",
     expiresAt: data.expiresAt?.toDate?.()?.toISOString?.() || data.expiresAt || "",

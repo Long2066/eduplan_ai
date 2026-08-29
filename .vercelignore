@@ -7,9 +7,14 @@ node_modules
 release
 admin-app/.next
 admin-app/node_modules
+admin-app/admin-app
 electron
 docs
 scripts
+HANDOFF_ANTIGRAVITY.md
+Giới thiệu EduPlan AI
+HƯỚNG DẪN SỬ DỤNG
+VĂN BẢN PHÁP LÝ
 *.log
 *.tsbuildinfo
 .env

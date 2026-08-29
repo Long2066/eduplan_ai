@@ -1,8 +1,11 @@
 "use client";
 
-import { type CSSProperties, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { sendEmailVerification } from "firebase/auth";
 import { AuthPanel } from "@/components/auth-panel";
+import { GenerationProgressCard } from "@/components/generation-progress-card";
+import { GuideModal } from "@/components/guide-modal";
+import { IntroductionModal } from "@/components/introduction-modal";
 import { LessonForm } from "@/components/lesson-form";
 import { LessonPreview } from "@/components/lesson-preview";
 import { PedagogyAuditCard } from "@/components/pedagogy-audit-card";
@@ -14,16 +17,32 @@ import { accountBlockedMessage } from "@/lib/account-block";
 import { getEmailActionSettings, getFirebaseClientAuth, hasFirebaseClientConfig } from "@/lib/firebase-client";
 import { hasBlockingErrors, validateLessonInput } from "@/lib/lesson-validation";
 import { MAX_GENERATION_REQUEST_BYTES, serializeGenerationInput } from "@/lib/client-image-processing";
+import {
+  clearActiveStagedGeneration,
+  readActiveStagedGeneration,
+  saveActiveStagedGeneration,
+} from "@/lib/generation/client-job-storage";
+import {
+  StagedGenerationTerminalError,
+  cancelStagedGenerationJobClient,
+  resumeStagedGeneration,
+  startStagedGeneration,
+  type ClientGenerationJob,
+  type StagedGenerationResult,
+} from "@/lib/generation/client-orchestrator";
+import {
+  configuredClientGenerationPipelineMode,
+  loadEffectiveClientGenerationPipelineMode,
+} from "@/lib/generation/client-pipeline-mode";
+import { lessonNeedsAdjustment } from "@/lib/lesson-validation-status";
 import type { FormErrors, LessonInput, LessonPlan, LessonStyle, PedagogyAudit } from "@/types/lesson";
 
 const DRAFT_KEY = "eduplan-ai.lesson-input.v1";
-const defaultBillboardMessages = [
-  "EduPlan AI chào mừng thầy cô đến với công cụ soạn giáo án thông minh",
-  "Tạo giáo án chuẩn CV2345 nhanh chóng, rõ hoạt động giáo viên và học sinh",
-  "Xuất Word giữ định dạng đẹp, tiện chỉnh sửa và lưu trữ",
-  "Dữ liệu giáo án được lưu trong 7 ngày, dễ mở lại khi cần",
-];
+const ZALO_SUPPORT_GROUP_URL = "https://zalo.me/g/iunsqm93yttvc2wx99cq";
+const SUPPORT_PHONE = "0342733640";
+const SUPPORT_ZALO_URL = `https://zalo.me/${SUPPORT_PHONE}`;
 const VISIT_COUNTED_KEY = "__eduplanVisitCountedForLoad";
+const CLIENT_GENERATION_PIPELINE_MODE = configuredClientGenerationPipelineMode();
 
 
 function generationUsageLabel(user: AppUser) {
@@ -139,8 +158,17 @@ export default function Home() {
   const [verificationError, setVerificationError] = useState("");
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [todayVisits, setTodayVisits] = useState<number | null>(null);
-  const [ledMessages, setLedMessages] = useState(defaultBillboardMessages);
-  const [ledDurationSeconds, setLedDurationSeconds] = useState(18);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isIntroVisible, setIsIntroVisible] = useState(false);
+  const [isGuideVisible, setIsGuideVisible] = useState(false);
+  const [generationJob, setGenerationJob] = useState<ClientGenerationJob | null>(null);
+  const [isCancellingGeneration, setIsCancellingGeneration] = useState(false);
+  const [generationPipelineMode, setGenerationPipelineMode] = useState<"legacy" | "staged">("legacy");
+  const [pipelineConfigLoaded, setPipelineConfigLoaded] = useState(
+    CLIENT_GENERATION_PIPELINE_MODE === "legacy",
+  );
+  const generationRunnerRef = useRef<AbortController | null>(null);
+  const resumedUserRef = useRef<string | null>(null);
 
   async function loadCurrentUser() {
     try {
@@ -180,28 +208,6 @@ export default function Home() {
     const timer = window.setTimeout(() => setToastMessage(""), 2600);
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
-
-  useEffect(() => {
-    async function loadLedSettings() {
-      try {
-        const response = await fetch("/api/settings/header-led");
-        const result = (await response.json()) as { led?: { enabled?: boolean; messages?: unknown[]; durationSeconds?: number } };
-        const data = result.led;
-        if (!response.ok || !data) throw new Error("Không thể tải LED.");
-        const messages = Array.isArray(data.messages)
-          ? data.messages.map((item) => String(item || "").trim()).filter(Boolean)
-          : [];
-        setLedMessages(data.enabled === false ? ["EduPlan AI"] : messages.length ? messages : defaultBillboardMessages);
-        setLedDurationSeconds(Math.min(120, Math.max(6, Number(data.durationSeconds || 18))));
-      } catch {
-        setLedMessages(defaultBillboardMessages);
-        setLedDurationSeconds(18);
-      }
-    }
-    void loadLedSettings();
-    const timer = window.setInterval(loadLedSettings, 3000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (!authLoaded || !user?.emailVerified) return;
@@ -252,7 +258,139 @@ export default function Home() {
     if (Object.keys(errors).length) setErrors(validateLessonInput(next));
   }
 
+  function isTerminalGenerationJob(job: ClientGenerationJob) {
+    return job.status === "completed" || job.status === "failed" || job.status === "cancelled";
+  }
+
+  function handleStagedJobUpdate(job: ClientGenerationJob) {
+    setGenerationJob(job);
+    if (!user) return;
+    if (isTerminalGenerationJob(job)) {
+      clearActiveStagedGeneration(user.uid, job.id);
+    } else {
+      saveActiveStagedGeneration(user.uid, job);
+    }
+  }
+
+  async function finishStagedGeneration(result: StagedGenerationResult) {
+    setGenerationJob(result.job);
+    setLesson(result.lesson);
+    setPedagogyAudit(null);
+    if (user) clearActiveStagedGeneration(user.uid, result.job.id);
+    await loadCurrentUser();
+    setToastMessage(lessonNeedsAdjustment(result.lesson)
+      ? "Đã tạo và lưu bản nháp cần điều chỉnh vào lịch sử trong 7 ngày."
+      : "Đã tạo và lưu giáo án vào lịch sử trong 7 ngày.");
+  }
+
+  async function handleResumeStagedGeneration(jobId: string) {
+    if (!user || generationRunnerRef.current) return;
+    const controller = new AbortController();
+    generationRunnerRef.current = controller;
+    setIsGenerating(true);
+    setGenerationError("");
+
+    try {
+      const token = await getFirebaseClientAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      const result = await resumeStagedGeneration({
+        jobId,
+        authToken: token,
+        ocrAssets: input.uploadedAssets,
+        signal: controller.signal,
+        onJob: handleStagedJobUpdate,
+      });
+      await finishStagedGeneration(result);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error instanceof StagedGenerationTerminalError) {
+        handleStagedJobUpdate(error.job);
+      }
+      setGenerationError(error instanceof Error ? error.message : "Không thể tiếp tục tạo giáo án.");
+    } finally {
+      if (generationRunnerRef.current === controller) generationRunnerRef.current = null;
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleCancelStagedGeneration() {
+    if (!user || !generationJob || isTerminalGenerationJob(generationJob)) return;
+    setIsCancellingGeneration(true);
+    generationRunnerRef.current?.abort();
+    generationRunnerRef.current = null;
+    try {
+      const token = await getFirebaseClientAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      const cancelled = await cancelStagedGenerationJobClient(generationJob.id, {
+        authToken: token,
+      });
+      handleStagedJobUpdate(cancelled);
+      clearActiveStagedGeneration(user.uid, generationJob.id);
+      setGenerationError("");
+      setToastMessage("Đã hủy yêu cầu và hoàn lại lượt sử dụng.");
+      await loadCurrentUser();
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Không thể hủy yêu cầu tạo giáo án.");
+    } finally {
+      setIsGenerating(false);
+      setIsCancellingGeneration(false);
+    }
+  }
+
+  useEffect(() => {
+    return () => generationRunnerRef.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    if (CLIENT_GENERATION_PIPELINE_MODE !== "staged") {
+      setGenerationPipelineMode("legacy");
+      setPipelineConfigLoaded(true);
+      return;
+    }
+    if (!user?.emailVerified || user.disabled) {
+      setGenerationPipelineMode("legacy");
+      setPipelineConfigLoaded(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setPipelineConfigLoaded(false);
+    void loadEffectiveClientGenerationPipelineMode({
+      publicMode: CLIENT_GENERATION_PIPELINE_MODE,
+      signal: controller.signal,
+    }).then((mode) => {
+      if (controller.signal.aborted) return;
+      setGenerationPipelineMode(mode);
+      setPipelineConfigLoaded(true);
+      if (mode === "legacy") setGenerationJob(null);
+    });
+    return () => controller.abort();
+  }, [user?.uid, user?.emailVerified, user?.disabled]);
+
+  useEffect(() => {
+    if (generationPipelineMode !== "staged" || !pipelineConfigLoaded) return;
+    if (!user) {
+      resumedUserRef.current = null;
+      return;
+    }
+    if (!user.emailVerified || user.disabled || resumedUserRef.current === user.uid) return;
+    resumedUserRef.current = user.uid;
+    const stored = readActiveStagedGeneration(user.uid);
+    if (!stored) return;
+    setGenerationJob(stored.job);
+    if (isTerminalGenerationJob(stored.job)) {
+      clearActiveStagedGeneration(user.uid, stored.job.id);
+      return;
+    }
+    void handleResumeStagedGeneration(stored.job.id);
+  }, [generationPipelineMode, pipelineConfigLoaded, user]);
+
   async function handleGenerate() {
+    if (generationRunnerRef.current) return;
+    if (CLIENT_GENERATION_PIPELINE_MODE === "staged" && !pipelineConfigLoaded) {
+      setGenerationError("Đang tải cấu hình quy trình tạo giáo án. Vui lòng thử lại sau giây lát.");
+      return;
+    }
     const nextErrors = validateLessonInput(input);
     setErrors(nextErrors);
     if (hasBlockingErrors(nextErrors)) return;
@@ -264,6 +402,8 @@ export default function Home() {
     setIsGenerating(true);
     setGenerationError("");
     setPedagogyAudit(null);
+    if (generationPipelineMode === "legacy") setGenerationJob(null);
+    let stagedController: AbortController | null = null;
 
     try {
       const auth = getFirebaseClientAuth();
@@ -275,6 +415,19 @@ export default function Home() {
       const { payload, bytes: payloadBytes } = serializeGenerationInput(input);
       if (payloadBytes > MAX_GENERATION_REQUEST_BYTES) {
         throw new Error("Tổng dung lượng ảnh SGK vẫn quá lớn. Vui lòng xóa bớt ảnh hoặc chụp gần phần nội dung bài học hơn.");
+      }
+      if (generationPipelineMode === "staged") {
+        stagedController = new AbortController();
+        generationRunnerRef.current = stagedController;
+        const result = await startStagedGeneration({
+          payload,
+          idempotencyKey: requestId,
+          authToken: token,
+          signal: stagedController.signal,
+          onJob: handleStagedJobUpdate,
+        });
+        await finishStagedGeneration(result);
+        return;
       }
       const response = await fetch("/api/lesson/generate", {
         method: "POST",
@@ -309,8 +462,13 @@ export default function Home() {
       await loadCurrentUser();
       setToastMessage("Đã tạo và lưu giáo án vào lịch sử trong 7 ngày.");
     } catch (error) {
+      if (stagedController?.signal.aborted) return;
+      if (error instanceof StagedGenerationTerminalError) {
+        handleStagedJobUpdate(error.job);
+      }
       setGenerationError(error instanceof Error ? error.message : "Không thể tạo giáo án lúc này.");
     } finally {
+      if (generationRunnerRef.current === stagedController) generationRunnerRef.current = null;
       setIsGenerating(false);
     }
   }
@@ -322,8 +480,13 @@ export default function Home() {
 
   async function handleExportWord() {
     if (!lesson) return;
-    await exportLessonToDocx(lesson, safeFileName());
-    setToastMessage("Đã xuất file Word (.docx) có thể chỉnh sửa.");
+    try {
+      await exportLessonToDocx(lesson, safeFileName());
+      setGenerationError("");
+      setToastMessage("Đã xuất file Word (.docx) có thể chỉnh sửa.");
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Không thể xuất file Word lúc này.");
+    }
   }
 
   function handleOpenLesson(nextLesson: LessonPlan, _lessonId: string) {
@@ -355,6 +518,34 @@ export default function Home() {
     } finally {
       setIsSendingVerification(false);
     }
+  }
+
+  function openFeedbackWidget() {
+    setIsSupportOpen(false);
+    setIsIntroVisible(false);
+    window.dispatchEvent(new Event("eduplan:open-feedback"));
+  }
+
+  function openGuide() {
+    setIsSupportOpen(false);
+    setIsIntroVisible(false);
+    setIsGuideVisible(true);
+  }
+
+  function goHome() {
+    setIsSupportOpen(false);
+    setIsIntroVisible(false);
+    setIsGuideVisible(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openIntro() {
+    setIsSupportOpen(false);
+    setIsGuideVisible(false);
+    setIsIntroVisible(true);
+    window.requestAnimationFrame(() => {
+      document.getElementById("gioi-thieu")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   /* ── Loading auth ── */
@@ -420,40 +611,83 @@ export default function Home() {
 
   /* ── Main app ── */
   return (
-    <main className="app-shell min-h-screen px-3 pb-5 sm:px-4 lg:px-5 xl:h-screen xl:overflow-hidden xl:pb-0">
+    <main className="app-shell min-h-screen px-3 pb-5 pt-[86px] sm:px-4 sm:pt-[90px] lg:px-5 xl:h-screen xl:overflow-hidden xl:pb-0">
       <div className="mx-auto max-w-[1680px] xl:flex xl:h-full xl:flex-col">
 
         {/* ── HEADER ── */}
-        <div className="sticky top-0 z-50 mb-3 shrink-0 py-2.5">
-          <div className="glass-card overflow-visible rounded-2xl shadow-sm">
-            <div className="relative grid gap-2.5 p-2.5 lg:grid-cols-[minmax(0,1fr)_220px_auto] lg:items-center xl:grid-cols-[minmax(0,1fr)_240px_auto]">
-              {/* Billboard LED */}
-              <div className="billboard-sign" style={{ "--billboard-duration": `${ledDurationSeconds}s` } as CSSProperties}>
-                <div className="billboard-track" aria-live="polite">
-                  <span className="billboard-led-text">{ledMessages.join("   •   ")}</span>
-                </div>
-              </div>
+        <header className="app-topbar">
+          <div className="app-topbar-inner">
+            <button type="button" className="app-brand-mark" onClick={goHome} aria-label="Về trang chủ EduPlan AI">
+              <span>EduPlan AI</span>
+              <small>Soạn giáo án</small>
+            </button>
 
-              {/* Visit counter */}
-              <div className="flex min-h-[44px] items-center gap-3 rounded-xl border border-slate-100 bg-white px-3.5 py-2 shadow-sm transition-all duration-200 hover:shadow-md">
+            <nav className="support-nav" aria-label="Thanh điều hướng EduPlan AI">
+              <button type="button" className={`support-nav-item ${!isIntroVisible && !isGuideVisible ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
+                Trang chủ
+              </button>
+              <button type="button" className={`support-nav-item ${isIntroVisible ? "support-nav-active" : ""}`} title="Giới thiệu EduPlan AI" onClick={openIntro}>
+                Giới thiệu
+              </button>
+              <button type="button" className={`support-nav-item ${isGuideVisible ? "support-nav-active" : ""}`} title="Xem hướng dẫn sử dụng EduPlan AI" onClick={openGuide}>
+                Hướng dẫn
+              </button>
+              <div className="support-menu-wrap">
+                <button
+                  type="button"
+                  className="support-nav-item support-menu-button"
+                  aria-haspopup="menu"
+                  aria-expanded={isSupportOpen}
+                  onClick={() => setIsSupportOpen((current) => !current)}
+                >
+                  Hỗ trợ
+                </button>
+                {isSupportOpen ? (
+                  <div className="support-menu-popover" role="menu" aria-label="Hỗ trợ EduPlan AI">
+                    <p>Hỗ trợ nhanh</p>
+                    <a href={ZALO_SUPPORT_GROUP_URL} target="_blank" rel="noreferrer" role="menuitem">
+                      <strong>Nhóm Zalo hỗ trợ</strong>
+                      <span>Cộng đồng hỗ trợ sử dụng tool</span>
+                    </a>
+                    <a href={`tel:${SUPPORT_PHONE}`} role="menuitem">
+                      <strong>Gọi trực tiếp</strong>
+                      <span>{SUPPORT_PHONE}</span>
+                    </a>
+                    <a href={SUPPORT_ZALO_URL} target="_blank" rel="noreferrer" role="menuitem">
+                      <strong>Zalo cá nhân</strong>
+                      <span>{SUPPORT_PHONE}</span>
+                    </a>
+                    <button type="button" role="menuitem" onClick={openFeedbackWidget}>
+                      <strong>Gửi góp ý</strong>
+                      <span>Mở hòm thư phản hồi</span>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </nav>
+
+            <div className="app-topbar-actions">
+              <div className="app-visit-pill">
                 <div className="relative">
                   <span className="block h-2.5 w-2.5 rounded-full bg-emerald-500" />
                   <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-40" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Truy cập hôm nay</p>
-                  <p className="text-base font-extrabold leading-tight text-slate-900">
+                  <p>Truy cập hôm nay</p>
+                  <strong>
                     {todayVisits === null ? "..." : todayVisits.toLocaleString("vi-VN")}{" "}
-                    <span className="text-[11px] font-medium text-slate-400">lượt</span>
-                  </p>
+                    <span>lượt</span>
+                  </strong>
                 </div>
               </div>
 
-              {/* User menu */}
               <UserMenu user={user} onUserChange={loadCurrentUser} onOpenLesson={handleOpenLesson} />
             </div>
           </div>
-        </div>
+        </header>
+
+        <IntroductionModal isOpen={isIntroVisible} onClose={() => setIsIntroVisible(false)} />
+        <GuideModal isOpen={isGuideVisible} onClose={() => setIsGuideVisible(false)} />
 
         {/* ── BODY: Form + Preview ── */}
         <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[420px_1fr] xl:gap-5 xl:overflow-hidden">
@@ -478,6 +712,15 @@ export default function Home() {
               </div>
             ) : null}
 
+            {generationPipelineMode === "staged" && generationJob ? (
+              <GenerationProgressCard
+                job={generationJob}
+                isActive={isGenerating}
+                isCancelling={isCancellingGeneration}
+                onResume={() => { void handleResumeStagedGeneration(generationJob.id); }}
+                onCancel={() => { void handleCancelStagedGeneration(); }}
+              />
+            ) : null}
 
             {lesson && !isGenerating ? (
               <div className="mb-2.5 shrink-0">

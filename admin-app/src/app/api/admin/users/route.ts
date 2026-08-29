@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
-import { adminError, requireAdmin, writeAuditLog } from "@/lib/admin-auth";
+import { requireAdmin, adminError, writeAuditLog } from "@/lib/admin-auth";
 import { getFirebaseAdminAuth, getFirebaseDb } from "@/lib/firebase-admin";
 import { serializeUser } from "@/lib/serializers";
 
+const NO_STORE_HEADERS = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
+
+function inactiveLongerThan(user: ReturnType<typeof serializeUser>, days: number) {
+  if (!user.lastSeenAt) return false;
+  const lastSeenMs = new Date(user.lastSeenAt).getTime();
+  return Number.isFinite(lastSeenMs) && Date.now() - lastSeenMs >= days * 86_400_000;
+}
+
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function isMissingAuthUser(error: unknown) {
   return typeof error === "object"
@@ -12,14 +21,25 @@ function isMissingAuthUser(error: unknown) {
     && (error as { code?: string }).code === "auth/user-not-found";
 }
 
+async function quotaSettings() {
+  const snapshot = await getFirebaseDb().collection("app_settings").doc("system").get();
+  return {
+    freeDailyLimit: Math.max(0, Number(snapshot.get("defaultFreeLimit") ?? 3)),
+    paidTrialDailyCredits: Math.max(0, Number(snapshot.get("paidTrialDailyCredits") ?? 10)),
+  };
+}
+
 export async function GET(request: Request) {
   try {
     await requireAdmin();
     const { searchParams } = new URL(request.url);
     const query = (searchParams.get("q") || "").trim().toLowerCase();
     const filter = searchParams.get("filter") || "all";
-    const snapshot = await getFirebaseDb().collection("users").limit(300).get();
-    let users = snapshot.docs.map(serializeUser);
+    const [snapshot, settings] = await Promise.all([
+      getFirebaseDb().collection("users").limit(300).get(),
+      quotaSettings(),
+    ]);
+    let users = snapshot.docs.map((doc) => serializeUser(doc, settings));
     if (query) {
       users = users.filter((user) =>
         `${user.email} ${user.displayName}`.toLowerCase().includes(query),
@@ -30,12 +50,19 @@ export async function GET(request: Request) {
     if (filter === "admin") users = users.filter((user) => user.role === "admin");
     if (filter === "unverified") users = users.filter((user) => !user.emailVerified);
     if (filter === "disabled") users = users.filter((user) => user.disabled);
-    if (filter === "ip_blocked") users = users.filter((user) => user.blockedReason === "ip_account_limit");
+    if (filter === "ip_blocked") users = users.filter((user) => user.disabled && user.blockedReason === "ip_account_limit");
+    if (filter === "online") users = users.filter((user) => user.isOnline);
+    if (filter === "offline") users = users.filter((user) => !user.isOnline && Boolean(user.lastSeenAt));
+    if (filter === "inactive_7d") users = users.filter((user) => !user.isOnline && inactiveLongerThan(user, 7));
+    if (filter === "inactive_30d") users = users.filter((user) => !user.isOnline && inactiveLongerThan(user, 30));
+    if (filter === "inactive_90d") users = users.filter((user) => !user.isOnline && inactiveLongerThan(user, 90));
+    if (filter === "never_seen") users = users.filter((user) => !user.lastSeenAt);
+
     users.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-    return NextResponse.json({ users });
+    return NextResponse.json({ users }, { headers: NO_STORE_HEADERS });
   } catch (error) {
     const { message, status } = adminError(error, "Không thể tải danh sách user.");
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status, headers: NO_STORE_HEADERS });
   }
 }
 

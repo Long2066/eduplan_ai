@@ -55,12 +55,22 @@ type ManagedUser = {
   emailVerified: boolean;
   disabled: boolean;
   blockedReason: string;
+  blockedReasonDetail: string;
+  blockedAt: string;
   lastLoginIpHash: string;
+  presenceState: "online" | "offline";
+  isOnline: boolean;
+  lastSeenAt: string;
+  lastLoginAt: string;
+  lastOfflineAt: string;
   ipLimitOverride: boolean;
   mustChangePassword: boolean;
   freeLimit: number;
   usedGenerations: number;
   remainingGenerations: number;
+  paidTrialLimit: number;
+  paidTrialUsed: number;
+  paidTrialRemaining: number;
   activePlan: string;
   paidPlan: string;
   planStatus: string;
@@ -71,38 +81,19 @@ type ManagedUser = {
   updatedAt: string;
 };
 
-type LedSettings = {
-  enabled: boolean;
-  messages: string[];
-  durationSeconds: number;
-  theme: string;
-};
-
-type LessonPayload = {
-  generalInfo?: {
-    lessonTitle?: string;
-    subject?: string;
-    grade?: string;
-    periods?: number;
-    duration?: number;
-  };
-  outcomes?: Record<string, string[]>;
-  materials?: Record<string, string[]>;
-  activities?: Array<{ name?: string; teacherActions?: string[]; studentActions?: string[] }>;
-  periodPlans?: Array<{ periodNumber?: number; focus?: string; activities?: Array<{ name?: string }> }>;
-};
-
-type LessonItem = {
+type GenerationItem = {
   id: string;
-  ownerId: string;
-  title: string;
+  uid: string;
+  userEmail: string;
+  totalCreated: number;
   subject: string;
-  grade: string;
-  periods: number;
-  lesson: LessonPayload | null;
   createdAt: string;
-  updatedAt: string;
-  expiresAt: string;
+  status: "success" | "failed" | "processing";
+  modelUsed: string;
+  ocrModelUsed: string;
+  fallbackUsed: boolean;
+  elapsedMs: number;
+  totalTokens: number;
 };
 
 type Policies = {
@@ -114,6 +105,7 @@ type Policies = {
 
 type SystemSettings = {
   defaultFreeLimit: number;
+  paidTrialDailyCredits: number;
   featureFlags: {
     feedbackWidget: boolean;
     lessonHistory: boolean;
@@ -136,6 +128,9 @@ type FeedbackPriority = "low" | "medium" | "high";
 type PaymentItem = {
   id: string;
   uid: string;
+  provider: string;
+  orderCode: number | null;
+  paymentLinkId: string;
   purchaseType: string;
   targetPlan: string;
   amountVnd: number;
@@ -146,14 +141,29 @@ type PaymentItem = {
   approvalMode: string;
   safeReason: string;
   checks: Array<{ key: string; passed: boolean; detail: string }>;
-  ocr: Record<string, unknown> | null;
+  payos: Record<string, unknown> | null;
   createdAt: string;
   approvedAt: string;
 };
 
+type PilotRating = "pass" | "needs-work" | "unrated";
+type PilotFeedback = {
+  version?: number;
+  lessonId: string;
+  subject: string;
+  grade: string;
+  lessonTitle: string;
+  book: string;
+  periods: number;
+  teachable: boolean | null;
+  ratings: Record<string, PilotRating>;
+  summary: { passedCount: number; needsWorkCount: number; unratedCount: number; scorePercent: number; gate: string };
+  audit: { status?: string; lessonType?: string; classificationConfidence?: string; periodTypes?: string[]; issueCount?: number };
+};
+
 type FeedbackItem = {
   id: string;
-  category: "bug" | "improvement" | "feature" | "other" | string;
+  category: "bug" | "improvement" | "feature" | "other" | "vietnamese-pilot" | string;
   status: FeedbackStatus;
   priority: FeedbackPriority;
   adminNote: string;
@@ -163,6 +173,7 @@ type FeedbackItem = {
   userName: string;
   pageUrl: string;
   userAgent: string;
+  pilot: PilotFeedback | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -173,7 +184,7 @@ const tabs = [
   { id: "lessons", label: "Giáo án" },
   { id: "payments", label: "Thanh toán" },
   { id: "feedback", label: "Góp ý" },
-  { id: "led", label: "Bảng LED" },
+  { id: "support", label: "Thanh hỗ trợ" },
   { id: "settings", label: "Cấu hình" },
   { id: "policies", label: "Chính sách" },
   { id: "audit", label: "Audit log" },
@@ -182,13 +193,33 @@ const tabs = [
 type TabId = (typeof tabs)[number]["id"];
 
 const pageSize = 20;
+const supportLinks = [
+  { label: "Nhận diện", value: "EduPlan AI / Soạn giáo án", href: "/" },
+  { label: "Trang chủ", value: "Giao diện soạn giáo án", href: "/" },
+  { label: "Hướng dẫn", value: "Tài liệu hướng dẫn sẽ được upload sau", href: "" },
+  { label: "Dropdown Hỗ trợ", value: "Nhóm Zalo, gọi trực tiếp, Zalo cá nhân và góp ý được gom vào một menu", href: "" },
+  { label: "Nhóm Zalo hỗ trợ", value: "https://zalo.me/g/iunsqm93yttvc2wx99cq", href: "https://zalo.me/g/iunsqm93yttvc2wx99cq" },
+  { label: "Liên hệ trực tiếp", value: "Gọi/Zalo 0342733640", href: "https://zalo.me/0342733640" },
+];
 
 const feedbackCategoryLabels: Record<string, string> = {
   all: "Tất cả",
   bug: "Báo lỗi",
   improvement: "Góp ý cải thiện",
   feature: "Yêu cầu tính năng",
+  "vietnamese-pilot": "Pilot Tiếng Việt",
   other: "Khác",
+};
+
+const pilotCriterionLabels: Record<string, string> = {
+  classification: "Đúng kiểu bài",
+  "source-fidelity": "Đúng ngữ liệu, không bịa",
+  "measurable-outcomes": "Mục tiêu đo được",
+  "pedagogy-sequence": "Đúng chuỗi dạy học",
+  "responses-and-support": "Phản hồi và sửa lỗi",
+  "time-fit": "Dạy được trong 35 phút",
+  "period-continuity": "Nối tiết không lặp",
+  "preview-and-word": "Preview và Word",
 };
 
 const feedbackStatusLabels: Record<string, string> = {
@@ -198,6 +229,13 @@ const feedbackStatusLabels: Record<string, string> = {
   resolved: "Đã xử lý",
   ignored: "Bỏ qua",
   reviewed: "Đã xem",
+};
+
+const planStatusLabels: Record<string, string> = {
+  free: "Miễn phí",
+  trial: "Đang trải nghiệm",
+  paid: "Đang trả phí",
+  expired: "Đã hết hạn",
 };
 
 const priorityLabels: Record<string, string> = {
@@ -225,6 +263,26 @@ function shortDate(value: string) {
   return new Date(value).toLocaleString("vi-VN");
 }
 
+function durationSeconds(value: number) {
+  return value > 0 ? `${Math.round(value / 100) / 10}s` : "—";
+}
+
+function relativeActivity(value: string) {
+  if (!value) return "Chưa từng ghi nhận";
+  const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+  if (elapsed < 60_000) return "vừa xong";
+  if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)} phút`;
+  if (elapsed < 86_400_000) return `${Math.floor(elapsed / 3_600_000)} giờ`;
+  if (elapsed < 2_592_000_000) return `${Math.floor(elapsed / 86_400_000)} ngày`;
+  return `${Math.floor(elapsed / 2_592_000_000)} tháng`;
+}
+
+function activityTone(user: ManagedUser) {
+  if (user.isOnline) return "online";
+  if (!user.lastSeenAt) return "never";
+  return Date.now() - new Date(user.lastSeenAt).getTime() >= 30 * 86_400_000 ? "inactive" : "offline";
+}
+
 function shortDay(value: string) {
   if (!value) return "";
   return value.slice(5).replace("-", "/");
@@ -233,6 +291,41 @@ function shortDay(value: string) {
 function previewText(value: string, maxLength = 120) {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength).trim()}...`;
+}
+
+function firebaseErrorCode(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: string }).code || "")
+    : "";
+}
+
+function friendlyAdminAuthError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  const code = firebaseErrorCode(error);
+  const currentDomain = typeof window !== "undefined" ? window.location.hostname : "domain admin hiện tại";
+
+  if (/auth\/unauthorized-domain/i.test(`${code} ${message}`)) {
+    return `Firebase chưa cho phép domain ${currentDomain} đăng nhập. Vào Firebase Console > Authentication > Settings > Authorized domains và thêm ${currentDomain}.`;
+  }
+  if (/auth\/configuration-not-found/i.test(`${code} ${message}`)) {
+    return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Email/Password và Google.";
+  }
+  if (/auth\/operation-not-allowed/i.test(`${code} ${message}`)) {
+    return "Phương thức đăng nhập này chưa được bật trong Firebase Authentication > Sign-in method.";
+  }
+  if (/auth\/invalid-credential|auth\/wrong-password|auth\/user-not-found/i.test(`${code} ${message}`)) {
+    return "Email hoặc mật khẩu chưa đúng.";
+  }
+  if (/auth\/popup-blocked/i.test(`${code} ${message}`)) {
+    return "Trình duyệt đang chặn cửa sổ đăng nhập Google. Hãy cho phép popup hoặc đăng nhập bằng email/mật khẩu.";
+  }
+  if (/auth\/popup-closed-by-user/i.test(`${code} ${message}`)) {
+    return "Cửa sổ đăng nhập Google đã bị đóng trước khi hoàn tất.";
+  }
+  if (/Tài khoản này chưa được cấp quyền admin/i.test(message)) {
+    return "Tài khoản đăng nhập thành công nhưng chưa được cấp quyền admin.";
+  }
+  return code ? `Firebase: ${code}. ${message}` : message || "Không thể đăng nhập admin.";
 }
 
 function clampPage(page: number, total: number) {
@@ -255,9 +348,9 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [led, setLed] = useState<LedSettings>({ enabled: true, messages: [], durationSeconds: 18, theme: "blue" });
   const [system, setSystem] = useState<SystemSettings>({
-    defaultFreeLimit: 10,
+    defaultFreeLimit: 3,
+    paidTrialDailyCredits: 10,
     featureFlags: { feedbackWidget: true, lessonHistory: true, exportFiles: true },
   });
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -265,16 +358,17 @@ export default function AdminPage() {
   const [userFilter, setUserFilter] = useState("all");
   const [userPage, setUserPage] = useState(1);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
-  const [userLessons, setUserLessons] = useState<LessonItem[]>([]);
-  const [lessons, setLessons] = useState<LessonItem[]>([]);
+  const [blockTarget, setBlockTarget] = useState<ManagedUser | null>(null);
+  const [blockReason, setBlockReason] = useState("");
+  const [isBlocking, setIsBlocking] = useState(false);
+
+  const [lessons, setLessons] = useState<GenerationItem[]>([]);
   const [lessonQuery, setLessonQuery] = useState("");
   const [lessonSubject, setLessonSubject] = useState("");
-  const [lessonGrade, setLessonGrade] = useState("");
+  const [lessonStatus, setLessonStatus] = useState("all");
   const [lessonFrom, setLessonFrom] = useState("");
   const [lessonTo, setLessonTo] = useState("");
   const [lessonPage, setLessonPage] = useState(1);
-  const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [feedbackCategory, setFeedbackCategory] = useState("all");
   const [feedbackStatus, setFeedbackStatus] = useState("all");
@@ -297,7 +391,6 @@ export default function AdminPage() {
   const [grantCreditsAmount, setGrantCreditsAmount] = useState(25);
   const [deductAmount, setDeductAmount] = useState(10);
 
-  const ledText = useMemo(() => led.messages.join("\n"), [led.messages]);
   const pagedUsers = useMemo(() => slicePage(users, clampPage(userPage, users.length)), [users, userPage]);
   const selectablePagedUsers = useMemo(() => pagedUsers.filter((user) => user.uid !== admin?.uid), [pagedUsers, admin?.uid]);
   const selectedUsers = useMemo(() => users.filter((user) => selectedUserIds.includes(user.uid)), [users, selectedUserIds]);
@@ -314,40 +407,37 @@ export default function AdminPage() {
     setDashboard(await api<Dashboard>("/api/admin/dashboard"));
   }
 
-  async function loadLed() {
-    const result = await api<{ led: LedSettings }>("/api/admin/settings/header-led");
-    setLed(result.led);
-  }
-
   async function loadSystem() {
     const result = await api<{ system: SystemSettings }>("/api/admin/settings/system");
     setSystem(result.system);
   }
 
-  async function loadUsers(query = userQuery, filter = userFilter) {
+  async function loadUsers(query = userQuery, filter = userFilter, preserveState = false) {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (filter !== "all") params.set("filter", filter);
     const result = await api<{ users: ManagedUser[] }>(`/api/admin/users${params.toString() ? `?${params}` : ""}`);
     setUsers(result.users);
-    setSelectedUserIds([]);
-    setUserPage(1);
+    if (preserveState) {
+      const availableIds = new Set(result.users.map((user) => user.uid));
+      setSelectedUserIds((current) => current.filter((uid) => availableIds.has(uid)));
+      setUserPage((current) => clampPage(current, result.users.length));
+    } else {
+      setSelectedUserIds([]);
+      setUserPage(1);
+    }
   }
 
-  async function loadLessons(ownerId?: string) {
+  async function loadLessons() {
     const params = new URLSearchParams();
     if (lessonQuery) params.set("q", lessonQuery);
     if (lessonSubject) params.set("subject", lessonSubject);
-    if (lessonGrade) params.set("grade", lessonGrade);
+    if (lessonStatus !== "all") params.set("status", lessonStatus);
     if (lessonFrom) params.set("from", lessonFrom);
     if (lessonTo) params.set("to", lessonTo);
-    const result = await api<{ lessons: LessonItem[] }>(`/api/admin/lessons${params.toString() ? `?${params}` : ""}`);
-    const nextLessons = ownerId ? result.lessons.filter((lesson) => lesson.ownerId === ownerId) : result.lessons;
-    if (ownerId) setUserLessons(nextLessons);
-    else {
-      setLessons(nextLessons);
-      setLessonPage(1);
-    }
+    const result = await api<{ generations: GenerationItem[] }>(`/api/admin/lessons${params.toString() ? `?${params}` : ""}`);
+    setLessons(result.generations);
+    setLessonPage(1);
   }
 
   async function loadPayments(status = paymentStatus) {
@@ -392,7 +482,6 @@ export default function AdminPage() {
     setLoadingTab(true);
     try {
       if (nextTab === "dashboard") await loadDashboard();
-      if (nextTab === "led") await loadLed();
       if (nextTab === "settings") await loadSystem();
       if (nextTab === "users") await loadUsers();
       if (nextTab === "lessons") await loadLessons();
@@ -416,6 +505,23 @@ export default function AdminPage() {
     void refreshCurrentTab(tab);
   }, [admin, tab]);
 
+  useEffect(() => {
+    if (!admin || tab !== "users") return;
+    const refreshPresence = () => {
+      if (document.visibilityState === "visible") {
+        void loadUsers(userQuery, userFilter, true).catch((loadError) => {
+          setError(loadError instanceof Error ? loadError.message : "Không thể làm mới trạng thái user.");
+        });
+      }
+    };
+    const interval = window.setInterval(refreshPresence, 60_000);
+    document.addEventListener("visibilitychange", refreshPresence);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshPresence);
+    };
+  }, [admin, tab, userQuery, userFilter]);
+
   async function createSession() {
     const auth = await getFirebaseClientAuth();
     const idToken = await auth.currentUser?.getIdToken(true);
@@ -434,9 +540,14 @@ export default function AdminPage() {
     try {
       const auth = await getFirebaseClientAuth();
       await signInWithEmailAndPassword(auth, email, password);
-      await createSession();
+      try {
+        await createSession();
+      } catch (sessionError) {
+        await signOut(auth).catch(() => undefined);
+        throw sessionError;
+      }
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "Không thể đăng nhập admin.");
+      setError(friendlyAdminAuthError(loginError));
     } finally {
       setIsSubmitting(false);
     }
@@ -449,9 +560,14 @@ export default function AdminPage() {
     try {
       const auth = await getFirebaseClientAuth();
       await signInWithPopup(auth, googleAuthProvider);
-      await createSession();
+      try {
+        await createSession();
+      } catch (sessionError) {
+        await signOut(auth).catch(() => undefined);
+        throw sessionError;
+      }
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "Không thể đăng nhập Google.");
+      setError(friendlyAdminAuthError(loginError));
     } finally {
       setIsSubmitting(false);
     }
@@ -464,24 +580,6 @@ export default function AdminPage() {
     setAdmin(null);
   }
 
-  async function saveLed() {
-    setError("");
-    setMessage("");
-    try {
-      const result = await api<{ led: LedSettings }>("/api/admin/settings/header-led", {
-        method: "PATCH",
-        body: JSON.stringify({
-          ...led,
-          messages: ledText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
-        }),
-      });
-      setLed(result.led);
-      setMessage("Đã lưu bảng LED.");
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Không thể lưu LED.");
-    }
-  }
-
   async function saveSystem() {
     setError("");
     setMessage("");
@@ -492,6 +590,10 @@ export default function AdminPage() {
       });
       setSystem(result.system);
       setMessage("Đã lưu cấu hình hệ thống.");
+      await Promise.all([
+        loadUsers(userQuery, userFilter, true).catch(() => undefined),
+        loadDashboard().catch(() => undefined),
+      ]);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Không thể lưu cấu hình.");
     }
@@ -503,13 +605,70 @@ export default function AdminPage() {
     try {
       await api(`/api/admin/users/${user.uid}`, {
         method: "PATCH",
-        body: JSON.stringify(user),
+        body: JSON.stringify({
+          displayName: user.displayName,
+          role: user.role,
+          emailVerified: user.emailVerified,
+          ipLimitOverride: user.ipLimitOverride,
+        }),
       });
       setMessage(`Đã cập nhật ${user.email}.`);
-      await loadUsers();
+      await loadUsers(userQuery, userFilter, true);
       await loadDashboard().catch(() => undefined);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Không thể lưu user.");
+    }
+  }
+
+  function openBlockUser(user: ManagedUser) {
+    if (user.uid === admin?.uid) {
+      setError("Không thể tự khóa chính tài khoản admin đang đăng nhập.");
+      return;
+    }
+    setBlockTarget(user);
+    setBlockReason("");
+    setError("");
+  }
+
+  async function blockUser() {
+    if (!blockTarget) return;
+    const reason = blockReason.replace(/\s+/g, " ").trim();
+    if (!reason) {
+      setError("Vui lòng nhập lý do khóa tài khoản.");
+      return;
+    }
+    setIsBlocking(true);
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${blockTarget.uid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ disabled: true, blockedReasonDetail: reason }),
+      });
+      setMessage(`Đã khóa ${blockTarget.email} và thu hồi phiên đăng nhập.`);
+      setBlockTarget(null);
+      setBlockReason("");
+      await loadUsers(userQuery, userFilter, true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể khóa user.");
+    } finally {
+      setIsBlocking(false);
+    }
+  }
+
+  async function unblockUser(user: ManagedUser) {
+    if (!window.confirm(`Mở khóa tài khoản ${user.email}?`)) return;
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/admin/users/${user.uid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ disabled: false }),
+      });
+      setMessage(`Đã mở khóa ${user.email}.`);
+      await loadUsers(userQuery, userFilter, true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Không thể mở khóa user.");
     }
   }
 
@@ -542,7 +701,7 @@ export default function AdminPage() {
     try {
       await api(`/api/admin/users/${user.uid}`, { method: "DELETE" });
       setSelectedUserIds((current) => current.filter((uid) => uid !== user.uid));
-      if (selectedUser?.uid === user.uid) setSelectedUser(null);
+
       if (passwordTarget?.uid === user.uid) setPasswordTarget(null);
       setMessage(`Đã xóa user ${user.email}.`);
       await loadUsers();
@@ -568,7 +727,7 @@ export default function AdminPage() {
         body: JSON.stringify({ uids: targets.map((user) => user.uid) }),
       });
       setSelectedUserIds([]);
-      if (selectedUser && targets.some((user) => user.uid === selectedUser.uid)) setSelectedUser(null);
+
       if (passwordTarget && targets.some((user) => user.uid === passwordTarget.uid)) setPasswordTarget(null);
       setMessage(`Đã xóa ${result.deletedCount} user.`);
       await loadUsers();
@@ -578,20 +737,6 @@ export default function AdminPage() {
     }
   }
 
-  function adjustQuota(user: ManagedUser, delta: number) {
-    const next = users.map((item) => (
-      item.uid === user.uid
-        ? { ...item, freeLimit: Math.max(0, item.freeLimit + delta), remainingGenerations: Math.max(0, item.freeLimit + delta - item.usedGenerations) }
-        : item
-    ));
-    setUsers(next);
-  }
-
-  async function openUserHistory(user: ManagedUser) {
-    setSelectedUser(user);
-    setUserLessons([]);
-    await loadLessons(user.uid);
-  }
 
   async function changePassword() {
     if (!passwordTarget) return;
@@ -611,12 +756,12 @@ export default function AdminPage() {
     }
   }
 
-  async function grantPlan(uid: string, plan: "plus" | "pro") {
-    if (!window.confirm(`Kích hoạt gói ${plan.toUpperCase()} (50 tín dụng, 30 ngày) cho user này?`)) return;
+  async function grantPlan(uid: string) {
+    if (!window.confirm("Kích hoạt gói Trả phí (50 tín dụng, 30 ngày) cho user này?")) return;
     setError(""); setMessage("");
     try {
-      const result = await api<{ granted: { plan: string; credits: number; expiresAt: string } }>(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ grantPlan: plan }) });
-      setMessage(`Đã kích hoạt gói ${result.granted.plan.toUpperCase()} với ${result.granted.credits} tín dụng.`);
+      const result = await api<{ granted: { plan: string; credits: number; expiresAt: string } }>(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ grantPlan: "plus" }) });
+      setMessage(`Đã kích hoạt gói Trả phí với ${result.granted.credits} tín dụng.`);
       setGrantTarget(null);
       await loadUsers();
     } catch (e) { setError(e instanceof Error ? e.message : "Không thể kích hoạt gói."); }
@@ -635,11 +780,11 @@ export default function AdminPage() {
   }
 
   async function revokePlan(uid: string) {
-    if (!window.confirm("Xác nhận tước quyền gói Plus/Pro của user này?\n\nUser sẽ bị chuyển về FREE, mất toàn bộ tín dụng còn lại.")) return;
+    if (!window.confirm("Xác nhận tước quyền gói Trả phí của người dùng này?\n\nNgười dùng sẽ bị chuyển về gói Miễn phí và mất toàn bộ tín dụng còn lại.")) return;
     setError(""); setMessage("");
     try {
       await api(`/api/admin/users/${uid}`, { method: "PATCH", body: JSON.stringify({ revokePlan: true }) });
-      setMessage("Đã tước quyền gói. User đã chuyển về FREE.");
+      setMessage("Đã tước quyền gói. Người dùng đã chuyển về gói Miễn phí.");
       setGrantTarget(null);
       await loadUsers();
     } catch (e) { setError(e instanceof Error ? e.message : "Không thể tước quyền gói."); }
@@ -715,28 +860,8 @@ export default function AdminPage() {
     }
   }
 
-  async function deleteLesson(item: LessonItem) {
-    const confirmed = window.confirm(`Xóa giáo án "${item.title}"? Thao tác này chỉ xóa thủ công và không tự khôi phục.`);
-    if (!confirmed) return;
-    setError("");
-    setMessage("");
-    try {
-      await api(`/api/admin/lessons/${item.id}`, { method: "DELETE" });
-      setSelectedLesson(null);
-      setMessage("Đã xóa giáo án.");
-      await loadLessons();
-      await loadDashboard().catch(() => undefined);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Không thể xóa giáo án.");
-    }
-  }
-
   function exportFeedback() {
     window.location.href = "/api/admin/feedback/export";
-  }
-
-  function exportLessons() {
-    window.location.href = "/api/admin/lessons/export";
   }
 
   if (!authLoaded) {
@@ -909,29 +1034,24 @@ export default function AdminPage() {
           <DashboardView dashboard={dashboard} />
         ) : null}
 
-        {tab === "led" ? (
+        {tab === "support" ? (
           <div className="card form-card" style={{ marginTop: 14 }}>
-            <label className="switch-row">
-              <input type="checkbox" checked={led.enabled} onChange={(event) => setLed({ ...led, enabled: event.target.checked })} />
-              <span>Bật bảng LED</span>
-            </label>
-            <label className="label" style={{ marginTop: 12 }}>Nội dung, mỗi dòng là một thông báo</label>
-            <textarea className="textarea" value={ledText} onChange={(event) => setLed({ ...led, messages: event.target.value.split(/\r?\n/) })} />
-            <div className="grid settings-grid" style={{ marginTop: 12 }}>
-              <label>
-                <span className="label">Giây chạy</span>
-                <input className="input" type="number" min={6} max={120} value={led.durationSeconds} onChange={(event) => setLed({ ...led, durationSeconds: Number(event.target.value) })} />
-              </label>
-              <label>
-                <span className="label">Theme</span>
-                <select className="select" value={led.theme} onChange={(event) => setLed({ ...led, theme: event.target.value })}>
-                  <option value="blue">Blue</option>
-                  <option value="dark">Dark</option>
-                  <option value="notice">Notice</option>
-                </select>
-              </label>
+            <div className="section-title-row">
+              <div>
+                <p className="eyebrow">Header trang chính</p>
+                <h2>Thanh hỗ trợ thay thế bảng LED</h2>
+                <p className="muted">Bảng chữ chạy đã được bỏ. Header trang chính dùng cấu trúc nhận diện, điều hướng gọn và dropdown Hỗ trợ.</p>
+              </div>
             </div>
-            <button className="button" style={{ marginTop: 14 }} onClick={saveLed}>Lưu thay đổi</button>
+            <div className="support-admin-grid">
+              {supportLinks.map((item) => (
+                <div key={item.label} className="support-admin-card">
+                  <strong>{item.label}</strong>
+                  <p>{item.value}</p>
+                  {item.href ? <a href={item.href} target="_blank" rel="noreferrer">Mở liên kết</a> : <span className="muted">Không cần liên kết ngoài</span>}
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -941,8 +1061,9 @@ export default function AdminPage() {
               <select className="select" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)}>
                 <option value="all">Tất cả giao dịch</option>
                 <option value="pending_review">Cần kiểm tra</option>
-                <option value="precheck_failed">OCR không khớp</option>
-                <option value="awaiting_proof">Chờ bill</option>
+                <option value="awaiting_payment">Chờ payOS</option>
+                <option value="provider_failed">Lỗi nhà cung cấp</option>
+                <option value="expired">Hết hạn</option>
                 <option value="approved">Đã duyệt</option>
                 <option value="rejected">Từ chối</option>
               </select>
@@ -953,10 +1074,10 @@ export default function AdminPage() {
                 <thead><tr><th>Giao dịch</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead>
                 <tbody>{payments.length ? payments.map((payment) => (
                   <tr key={payment.id}>
-                    <td><strong>{payment.senderName}</strong><div className="muted">{payment.transferContent}</div></td>
-                    <td>{payment.purchaseType === "package" ? `Gói ${payment.targetPlan}` : `${payment.credits} tín dụng ${payment.targetPlan}`}</td>
+                    <td><strong>{payment.senderName}</strong><div className="muted">{payment.provider === "payos" ? "payOS" : "Chuyển khoản"} · {payment.transferContent}</div></td>
+                    <td>{payment.purchaseType === "package" ? "Gói Trả phí" : `${payment.credits} tín dụng Trả phí`}</td>
                     <td>{payment.amountVnd.toLocaleString("vi-VN")}đ</td>
-                    <td><span className={`status-pill ${payment.status === "approved" ? "" : payment.status === "precheck_failed" || payment.status === "rejected" ? "danger-pill" : "new"}`}>{payment.status}</span><div className="muted">{payment.safeReason}</div></td>
+                    <td><span className={`status-pill ${payment.status === "approved" ? "" : payment.status === "rejected" ? "danger-pill" : "new"}`}>{payment.status}</span><div className="muted">{payment.safeReason}</div></td>
                     <td>{shortDate(payment.createdAt)}</td>
                     <td><button className="button secondary" onClick={() => setSelectedPayment(payment)}>Chi tiết</button></td>
                   </tr>
@@ -970,11 +1091,16 @@ export default function AdminPage() {
           <div className="card form-card" style={{ marginTop: 14 }}>
             <div className="section-title">
               <h2>Cấu hình hệ thống</h2>
-              <p className="muted">Các cờ tính năng và lượt miễn phí mặc định cho vận hành.</p>
+              <p className="muted">Quota hằng ngày được app người dùng và API tạo giáo án dùng trực tiếp.</p>
             </div>
             <label>
-              <span className="label">Số lượt miễn phí mặc định</span>
+              <span className="label">Số lượt miễn phí mặc định (Gói Miễn phí)</span>
               <input className="input" type="number" min={0} max={1000} value={system.defaultFreeLimit} onChange={(event) => setSystem({ ...system, defaultFreeLimit: Number(event.target.value) })} />
+            </label>
+            <label style={{ marginTop: 12 }}>
+              <span className="label">Tín dụng trải nghiệm gói Trả phí mỗi ngày</span>
+              <input className="input" type="number" min={0} max={1000} step={10} value={system.paidTrialDailyCredits} onChange={(event) => setSystem({ ...system, paidTrialDailyCredits: Number(event.target.value) })} />
+              <span className="muted">Mỗi lần tạo bằng gói Trả phí tốn 10 tín dụng. Đặt 0 để tắt trải nghiệm; quota reset lúc 00:00 Việt Nam.</span>
             </label>
             <div className="settings-toggles">
               {Object.entries(system.featureFlags).map(([key, value]) => (
@@ -1007,6 +1133,12 @@ export default function AdminPage() {
                 <option value="unverified">Chưa xác minh</option>
                 <option value="disabled">Đang khóa</option>
                 <option value="ip_blocked">Khóa do giới hạn IP</option>
+                <option value="online">Đang online</option>
+                <option value="offline">Đang offline</option>
+                <option value="inactive_7d">Offline trên 7 ngày</option>
+                <option value="inactive_30d">Offline trên 30 ngày</option>
+                <option value="inactive_90d">Offline trên 90 ngày</option>
+                <option value="never_seen">Chưa từng hoạt động</option>
               </select>
               <button className="button secondary" onClick={() => loadUsers()}>Lọc</button>
               <button className="button danger" disabled={!selectedUsers.length} onClick={deleteSelectedUsers}>Xóa đã chọn ({selectedUsers.length})</button>
@@ -1025,8 +1157,9 @@ export default function AdminPage() {
                     </th>
                     <th>User</th>
                     <th>Trạng thái</th>
+                    <th>Hoạt động</th>
                     <th>Role</th>
-                    <th>Lượt</th>
+                    <th>Quota hôm nay</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -1068,7 +1201,12 @@ export default function AdminPage() {
                           {user.blockedReason === "ip_account_limit" ? (
                             <span className="muted" title={user.lastLoginIpHash}>Giới hạn 2 tài khoản/IP · {user.lastLoginIpHash.slice(0, 10)}…</span>
                           ) : null}
-                          <label className="muted" title="Cho phép tài khoản này bỏ qua giới hạn Free/Trial theo IP">
+                          {user.disabled && user.blockedReasonDetail ? (
+                            <div className="block-reason" title={user.blockedReasonDetail}>
+                              <strong>Lý do khóa:</strong> {user.blockedReasonDetail}
+                            </div>
+                          ) : null}
+                          <label className="muted" title="Cho phép tài khoản này bỏ qua giới hạn Miễn phí/Trải nghiệm theo IP">
                             <input
                               type="checkbox"
                               checked={user.ipLimitOverride}
@@ -1082,6 +1220,15 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td>
+                        <div className={`presence-card ${activityTone(user)}`} title={user.lastSeenAt ? `Lần cuối: ${shortDate(user.lastSeenAt)}` : "Chưa có heartbeat hoặc lần đăng nhập"}>
+                          <span className="presence-dot" aria-hidden="true" />
+                          <div>
+                            <strong>{user.isOnline ? "Đang online" : user.lastSeenAt ? `Offline · ${relativeActivity(user.lastSeenAt)}` : "Chưa hoạt động"}</strong>
+                            <span>{user.lastSeenAt ? shortDate(user.lastSeenAt) : "Chưa ghi nhận lần truy cập"}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
                         <select className="select" value={user.role} onChange={(event) => {
                           setUsers(users.map((item) => item.uid === user.uid ? { ...item, role: event.target.value as "user" | "admin" } : item));
                         }}>
@@ -1090,36 +1237,30 @@ export default function AdminPage() {
                         </select>
                       </td>
                       <td>
-                        <div className="quota-row">
-                          <button className="mini-button" onClick={() => adjustQuota(user, -1)}>-</button>
-                          <NumberInput value={user.freeLimit} onChange={(value) => {
-                            setUsers(users.map((item) => item.uid === user.uid ? { ...item, freeLimit: value, remainingGenerations: Math.max(0, value - item.usedGenerations) } : item));
-                          }} />
-                          <button className="mini-button" onClick={() => adjustQuota(user, 1)}>+</button>
-                        </div>
-                        <div className="muted">Đã dùng {user.usedGenerations}, còn {Math.max(0, user.freeLimit - user.usedGenerations)}</div>
+                        <strong>Free: {user.remainingGenerations}/{user.freeLimit} lượt</strong>
+                        <div className="muted">Đã dùng {user.usedGenerations} lượt hôm nay</div>
+                        <strong style={{ display: "block", marginTop: 6 }}>Trial Trả phí: {user.paidTrialRemaining}/{user.paidTrialLimit} tín dụng</strong>
+                        <div className="muted">Đã dùng {user.paidTrialUsed} tín dụng hôm nay</div>
                       </td>
                       <td>
                         <div className="row-actions">
                           <button className="button secondary" onClick={() => saveUser(user)}>Lưu</button>
                           <button
-                            className="button secondary"
-                            onClick={() => {
-                              const next = { ...user, disabled: !user.disabled };
-                              setUsers(users.map((item) => item.uid === user.uid ? next : item));
-                              void saveUser(next);
-                            }}
+                            id={`toggle-block-${user.uid}`}
+                            className={`button ${user.disabled ? "secondary" : "danger"}`}
+                            disabled={user.uid === admin.uid}
+                            onClick={() => user.disabled ? void unblockUser(user) : openBlockUser(user)}
                           >
                             {user.disabled ? "Mở khóa" : "Khóa"}
                           </button>
-                          <button className="button secondary" onClick={() => openUserHistory(user)}>Lịch sử</button>
+
                           <button className="button secondary" onClick={() => { setGrantTarget(user); setGrantCreditsAmount(25); }}>Gói</button>
                           <button className="button" onClick={() => setPasswordTarget(user)}>Đổi mật khẩu</button>
                           <button className="button danger" disabled={user.uid === admin.uid} onClick={() => deleteUser(user)}>Xóa</button>
                         </div>
                       </td>
                     </tr>
-                  )) : <EmptyTable colSpan={6} text="Không có user theo bộ lọc hiện tại." />}
+                  )) : <EmptyTable colSpan={7} text="Không có user theo bộ lọc hiện tại." />}
                 </tbody>
               </table>
             </div>
@@ -1129,43 +1270,45 @@ export default function AdminPage() {
 
         {tab === "lessons" ? (
           <div className="card" style={{ marginTop: 14 }}>
-            <div className="toolbar-grid lesson-toolbar">
-              <input className="input" placeholder="Tìm tên, user, môn, lớp" value={lessonQuery} onChange={(event) => setLessonQuery(event.target.value)} />
+            <div className="toolbar-grid lesson-toolbar lesson-toolbar-compact">
+              <input className="input" placeholder="Tìm email hoặc môn" value={lessonQuery} onChange={(event) => setLessonQuery(event.target.value)} />
               <input className="input" placeholder="Môn" value={lessonSubject} onChange={(event) => setLessonSubject(event.target.value)} />
-              <input className="input" placeholder="Lớp" value={lessonGrade} onChange={(event) => setLessonGrade(event.target.value)} />
+              <select className="select" value={lessonStatus} onChange={(event) => setLessonStatus(event.target.value)}>
+                <option value="all">Tất cả trạng thái</option>
+                <option value="success">Thành công</option>
+                <option value="failed">Thất bại</option>
+                <option value="processing">Đang xử lý</option>
+              </select>
               <input className="input" type="date" value={lessonFrom} onChange={(event) => setLessonFrom(event.target.value)} />
               <input className="input" type="date" value={lessonTo} onChange={(event) => setLessonTo(event.target.value)} />
               <button className="button secondary" onClick={() => loadLessons()}>Lọc</button>
-              <button className="button" onClick={exportLessons}>Tải Excel</button>
             </div>
+            <p className="muted lesson-data-note">Chỉ tải 200 lượt tạo gần nhất và metadata tối thiểu, không tải nội dung giáo án.</p>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Tên</th>
-                    <th>User</th>
-                    <th>Môn/Lớp</th>
-                    <th>Tiết</th>
-                    <th>Cập nhật</th>
-                    <th>Thao tác</th>
+                    <th>Email người dùng</th>
+                    <th>Số giáo án đã tạo</th>
+                    <th>Thời gian tạo</th>
+                    <th>Môn</th>
+                    <th>Model / thời gian</th>
+                    <th>Token</th>
+                    <th>Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pagedLessons.length ? pagedLessons.map((lesson) => (
                     <tr key={lesson.id}>
-                      <td><strong>{lesson.title}</strong><div className="muted">Tạo {shortDate(lesson.createdAt)}</div></td>
-                      <td>{lesson.ownerId}</td>
-                      <td>{lesson.subject} - {lesson.grade}</td>
-                      <td>{lesson.periods}</td>
-                      <td>{shortDate(lesson.updatedAt)}</td>
-                      <td>
-                        <div className="row-actions">
-                          <button className="button secondary" onClick={() => setSelectedLesson(lesson)}>Preview</button>
-                          <button className="button danger" onClick={() => deleteLesson(lesson)}>Xóa</button>
-                        </div>
-                      </td>
+                      <td><strong>{lesson.userEmail || lesson.uid}</strong></td>
+                      <td>{lesson.totalCreated}</td>
+                      <td>{shortDate(lesson.createdAt)}</td>
+                      <td>{lesson.subject || "Chưa ghi nhận"}</td>
+                      <td><strong>{lesson.modelUsed || "Chưa ghi nhận"}</strong><div className="muted">OCR: {lesson.ocrModelUsed || "cache/chưa ghi nhận"} · {durationSeconds(lesson.elapsedMs)}{lesson.fallbackUsed ? " · fallback" : ""}</div></td>
+                      <td>{lesson.totalTokens ? lesson.totalTokens.toLocaleString("vi-VN") : "—"}</td>
+                      <td><GenerationStatusPill status={lesson.status} /></td>
                     </tr>
-                  )) : <EmptyTable colSpan={6} text="Không có giáo án theo bộ lọc hiện tại." />}
+                  )) : <EmptyTable colSpan={7} text="Không có lượt tạo theo bộ lọc hiện tại." />}
                 </tbody>
               </table>
             </div>
@@ -1284,6 +1427,46 @@ export default function AdminPage() {
         ) : null}
       </section>
 
+      {blockTarget ? (
+        <div className="modal-backdrop" onClick={() => !isBlocking && setBlockTarget(null)}>
+          <div className="modal block-modal" role="dialog" aria-modal="true" aria-labelledby="block-user-title" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-title-row">
+              <div>
+                <p className="eyebrow danger-eyebrow">Kiểm soát tài khoản</p>
+                <h2 id="block-user-title">Khóa người dùng</h2>
+              </div>
+              <span className="status-pill danger-pill">Thu hồi phiên ngay</span>
+            </div>
+            <div className="block-target-card">
+              <strong>{blockTarget.displayName || "Người dùng chưa đặt tên"}</strong>
+              <span>{blockTarget.email}</span>
+            </div>
+            <label className="label" htmlFor="block-reason-input">Lý do khóa gửi tới người dùng <strong aria-hidden="true">*</strong></label>
+            <textarea
+              id="block-reason-input"
+              className="textarea block-reason-input"
+              rows={5}
+              maxLength={500}
+              autoFocus
+              placeholder="Ví dụ: Tài khoản vi phạm điều khoản sử dụng do chia sẻ quyền truy cập cho nhiều người..."
+              value={blockReason}
+              disabled={isBlocking}
+              onChange={(event) => setBlockReason(event.target.value)}
+            />
+            <div className="block-reason-meta">
+              <span>Lý do này sẽ hiển thị nguyên văn sau khi người dùng đăng nhập đúng.</span>
+              <strong>{blockReason.length}/500</strong>
+            </div>
+            <div className="modal-actions">
+              <button id="cancel-block-user" className="button secondary" disabled={isBlocking} onClick={() => setBlockTarget(null)}>Hủy</button>
+              <button id="confirm-block-user" className="button danger" disabled={isBlocking || !blockReason.trim()} onClick={blockUser}>
+                {isBlocking ? "Đang khóa..." : "Xác nhận khóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {passwordTarget ? (
         <div className="modal-backdrop">
           <div className="modal">
@@ -1305,40 +1488,7 @@ export default function AdminPage() {
         </div>
       ) : null}
 
-      {selectedUser ? (
-        <div className="modal-backdrop">
-          <div className="modal feedback-modal">
-            <div className="modal-title-row">
-              <div>
-                <p className="eyebrow">Lịch sử user</p>
-                <h2>{selectedUser.displayName || selectedUser.email}</h2>
-              </div>
-              <button className="button secondary" onClick={() => setSelectedUser(null)}>Đóng</button>
-            </div>
-            <div className="table-wrap" style={{ marginTop: 14 }}>
-              <table>
-                <thead>
-                  <tr><th>Giáo án</th><th>Môn/Lớp</th><th>Cập nhật</th><th>Thao tác</th></tr>
-                </thead>
-                <tbody>
-                  {userLessons.length ? userLessons.map((lesson) => (
-                    <tr key={lesson.id}>
-                      <td>{lesson.title}</td>
-                      <td>{lesson.subject} - {lesson.grade}</td>
-                      <td>{shortDate(lesson.updatedAt)}</td>
-                      <td><button className="button secondary" onClick={() => setSelectedLesson(lesson)}>Preview</button></td>
-                    </tr>
-                  )) : <EmptyTable colSpan={4} text="User này chưa có giáo án trong 200 bản gần nhất." />}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
-      {selectedLesson ? (
-        <LessonModal lesson={selectedLesson} onClose={() => setSelectedLesson(null)} onDelete={() => deleteLesson(selectedLesson)} />
-      ) : null}
 
       {selectedFeedback && feedbackDraft ? (
         <div className="modal-backdrop">
@@ -1365,6 +1515,37 @@ export default function AdminPage() {
                 <strong>{shortDate(selectedFeedback.createdAt)}</strong>
               </div>
             </div>
+            {selectedFeedback.pilot ? (
+              <section className="pilot-detail-panel">
+                <div className="modal-title-row">
+                  <div>
+                    <p className="eyebrow">Pilot Tiếng Việt</p>
+                    <h3>{selectedFeedback.pilot.lessonTitle || "Giáo án chưa đặt tên"}</h3>
+                  </div>
+                  <span className={`status-pill ${selectedFeedback.pilot.summary.needsWorkCount ? "danger-pill" : ""}`}>
+                    {selectedFeedback.pilot.summary.scorePercent}% đạt
+                  </span>
+                </div>
+                <div className="feedback-detail-grid pilot-meta-grid">
+                  <div><span className="label">Lớp / Bộ sách</span><strong>{selectedFeedback.pilot.grade} · {selectedFeedback.pilot.book || "Chưa ghi"}</strong></div>
+                  <div><span className="label">Loại bài</span><strong>{selectedFeedback.pilot.audit?.lessonType || "Chưa xác định"}</strong><div className="muted">{selectedFeedback.pilot.audit?.classificationConfidence || "không có confidence"}</div></div>
+                  <div><span className="label">Audit / Số tiết</span><strong>{selectedFeedback.pilot.audit?.status || "không có"} · {selectedFeedback.pilot.periods} tiết</strong><div className="muted">{selectedFeedback.pilot.audit?.issueCount || 0} issue</div></div>
+                  <div><span className="label">Dùng để dạy</span><strong>{selectedFeedback.pilot.teachable === true ? "Có" : selectedFeedback.pilot.teachable === false ? "Chưa" : "Chưa đánh giá"}</strong></div>
+                  <div><span className="label">Lesson ID</span><strong className="pilot-lesson-id">{selectedFeedback.pilot.lessonId}</strong></div>
+                </div>
+                <div className="pilot-rating-grid">
+                  {Object.entries(pilotCriterionLabels).map(([id, label]) => {
+                    const rating = selectedFeedback.pilot?.ratings?.[id] || "unrated";
+                    return (
+                      <div key={id} className={`pilot-rating ${rating}`}>
+                        <span>{label}</span>
+                        <strong>{rating === "pass" ? "✓ Đạt" : rating === "needs-work" ? "! Cần chỉnh" : "— Chưa chấm"}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
             <div className="feedback-message-box">{selectedFeedback.message}</div>
             <div className="grid settings-grid" style={{ marginTop: 14 }}>
               <label>
@@ -1417,15 +1598,17 @@ export default function AdminPage() {
             <div className="detail-grid">
               <div><span className="label">Người chuyển</span><strong>{selectedPayment.senderName}</strong></div>
               <div><span className="label">Số tiền</span><strong>{selectedPayment.amountVnd.toLocaleString("vi-VN")}đ</strong></div>
-              <div><span className="label">Gói / tín dụng</span><strong>{selectedPayment.targetPlan} · {selectedPayment.credits} credits</strong></div>
+              <div><span className="label">Gói / tín dụng</span><strong>Trả phí · {selectedPayment.credits} tín dụng</strong></div>
               <div><span className="label">Mã giao dịch</span><strong>{selectedPayment.id}</strong></div>
+              <div><span className="label">Nhà cung cấp</span><strong>{selectedPayment.provider === "payos" ? "payOS" : "Chuyển khoản"}</strong></div>
+              <div><span className="label">Order code</span><strong>{selectedPayment.orderCode || "—"}</strong></div>
             </div>
             <div style={{ marginTop: 14 }}>
               {selectedPayment.checks.map((check) => <div key={check.key} className={`message ${check.passed ? "ok" : "error"}`}>{check.passed ? "✓" : "✕"} {check.key}: {check.detail}</div>)}
             </div>
-            <pre className="code-block">{JSON.stringify(selectedPayment.ocr, null, 2)}</pre>
+            <pre className="code-block">{JSON.stringify(selectedPayment.payos, null, 2)}</pre>
             <div className="modal-actions">
-              {!['approved','rejected'].includes(selectedPayment.status) ? <>
+              {selectedPayment.status === 'pending_review' ? <>
                 <button className="button" onClick={() => reviewPayment(selectedPayment.id, "approve")}>Duyệt & cộng quyền lợi</button>
                 <button className="button danger" onClick={() => reviewPayment(selectedPayment.id, "reject")}>Từ chối</button>
               </> : null}
@@ -1447,8 +1630,8 @@ export default function AdminPage() {
             </div>
 
             <div className="detail-grid">
-              <div><span className="label">Gói hiện tại</span><strong>{grantTarget.paidPlan ? grantTarget.paidPlan.toUpperCase() : 'FREE'}</strong></div>
-              <div><span className="label">Trạng thái</span><strong>{grantTarget.planStatus}</strong></div>
+              <div><span className="label">Gói hiện tại</span><strong>{grantTarget.paidPlan && grantTarget.paidPlan !== 'free' ? 'Trả phí' : 'Miễn phí'}</strong></div>
+              <div><span className="label">Trạng thái</span><strong>{planStatusLabels[grantTarget.planStatus] || grantTarget.planStatus}</strong></div>
               <div><span className="label">Tín dụng gói</span><strong>{grantTarget.packageCredits}</strong></div>
               <div><span className="label">Tín dụng top-up</span><strong>{grantTarget.topupCredits}</strong></div>
               <div><span className="label">Hết hạn</span><strong>{grantTarget.planExpiresAt ? shortDate(grantTarget.planExpiresAt) : '—'}</strong></div>
@@ -1460,14 +1643,13 @@ export default function AdminPage() {
               <p className="label">Kích hoạt gói mới (50 tín dụng, 30 ngày)</p>
               <p className="muted" style={{ margin: '4px 0 10px' }}>Reset tín dụng về 50, gia hạn 30 ngày. Top-up cũ sẽ bị xóa.</p>
               <div className="row-actions">
-                <button className="button" onClick={() => grantPlan(grantTarget.uid, 'plus')}>Kích hoạt PLUS</button>
-                <button className="button" onClick={() => grantPlan(grantTarget.uid, 'pro')}>Kích hoạt PRO</button>
+                <button className="button" onClick={() => grantPlan(grantTarget.uid)}>Kích hoạt gói Trả phí</button>
               </div>
             </div>
 
             {/* ── Cộng tín dụng ── */}
             <div style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 18 }}>
-              <p className="label">Cộng tín dụng (yêu cầu gói Plus/Pro còn hạn)</p>
+              <p className="label">Cộng tín dụng (yêu cầu gói Trả phí còn hạn)</p>
               <div className="row-actions" style={{ marginTop: 8 }}>
                 <input className="input" type="number" min={1} max={9999} value={grantCreditsAmount} onChange={(event) => setGrantCreditsAmount(Math.max(1, Number(event.target.value)))} style={{ maxWidth: 120 }} />
                 <button className="button" onClick={() => grantCredits(grantTarget.uid, grantCreditsAmount)}>Cộng {grantCreditsAmount} tín dụng</button>
@@ -1488,8 +1670,8 @@ export default function AdminPage() {
             {grantTarget.paidPlan && grantTarget.paidPlan !== 'free' ? (
               <div style={{ marginTop: 20, borderTop: '1px solid var(--c-border, #e2e8f0)', paddingTop: 18 }}>
                 <p className="label">Tước quyền gói</p>
-                <p className="muted" style={{ margin: '4px 0 10px' }}>Chuyển user về FREE, xóa toàn bộ tín dụng và hạn gói. Thao tác không thể hoàn tác.</p>
-                <button className="button danger" onClick={() => revokePlan(grantTarget.uid)}>Tước quyền {grantTarget.paidPlan.toUpperCase()}</button>
+                <p className="muted" style={{ margin: '4px 0 10px' }}>Chuyển người dùng về gói Miễn phí, xóa toàn bộ tín dụng và hạn gói. Thao tác không thể hoàn tác.</p>
+                <button className="button danger" onClick={() => revokePlan(grantTarget.uid)}>Tước quyền gói Trả phí</button>
               </div>
             ) : null}
 
@@ -1647,46 +1829,10 @@ function LoadingRows() {
   );
 }
 
-function LessonModal({ lesson, onClose, onDelete }: { lesson: LessonItem; onClose: () => void; onDelete: () => void }) {
-  const payload = lesson.lesson;
-  const outcomes = payload?.outcomes ? Object.entries(payload.outcomes).flatMap(([key, values]) => values.map((value) => `${key}: ${value}`)).slice(0, 8) : [];
-  const materials = payload?.materials ? Object.entries(payload.materials).flatMap(([key, values]) => values.map((value) => `${key}: ${value}`)).slice(0, 8) : [];
-  const activities = payload?.periodPlans?.flatMap((period) => (period.activities || []).map((activity) => `Tiết ${period.periodNumber || ""}: ${activity.name || "Hoạt động"}`))
-    || payload?.activities?.map((activity) => activity.name || "Hoạt động")
-    || [];
-  return (
-    <div className="modal-backdrop">
-      <div className="modal lesson-modal">
-        <div className="modal-title-row">
-          <div>
-            <p className="eyebrow">Preview giáo án</p>
-            <h2>{lesson.title}</h2>
-            <p className="muted">{lesson.subject} - {lesson.grade} - {lesson.periods} tiết</p>
-          </div>
-          <button className="button secondary" onClick={onClose}>Đóng</button>
-        </div>
-        <div className="lesson-preview-grid">
-          <PreviewBlock title="Mục tiêu" items={outcomes} empty="Chưa có mục tiêu trong payload." />
-          <PreviewBlock title="Học liệu" items={materials} empty="Chưa có học liệu trong payload." />
-          <PreviewBlock title="Hoạt động" items={activities.slice(0, 12)} empty="Chưa có hoạt động trong payload." />
-        </div>
-        <div className="modal-actions">
-          <button className="button danger" onClick={onDelete}>Xóa giáo án</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewBlock({ title, items, empty }: { title: string; items: string[]; empty: string }) {
-  return (
-    <div className="preview-block">
-      <h3>{title}</h3>
-      {items.length ? (
-        <ul>{items.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul>
-      ) : <p className="muted">{empty}</p>}
-    </div>
-  );
+function GenerationStatusPill({ status }: { status: GenerationItem["status"] }) {
+  const label = status === "success" ? "Thành công" : status === "failed" ? "Thất bại" : "Đang xử lý";
+  const className = status === "success" ? "success-pill" : status === "failed" ? "danger-pill" : "new";
+  return <span className={`status-pill ${className}`}>{label}</span>;
 }
 
 function featureFlagLabel(key: string) {

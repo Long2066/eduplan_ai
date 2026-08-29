@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const categoryOptions = [
   { value: "bug", label: "Báo lỗi" },
@@ -16,6 +16,12 @@ export function FeedbackWidget() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const openFeedback = () => setOpen(true);
+    window.addEventListener("eduplan:open-feedback", openFeedback);
+    return () => window.removeEventListener("eduplan:open-feedback", openFeedback);
+  }, []);
 
   async function submitFeedback() {
     setNotice("");
@@ -95,13 +101,7 @@ export function FeedbackWidget() {
         </section>
       ) : null}
 
-      <button type="button" className="feedback-fab" onClick={() => setOpen((current) => !current)} aria-label="Mở hòm thư góp ý">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-          <path d="M5 6.5h14v9H8.5L5 19v-3.5H5v-9Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-          <path d="M8 10h8M8 13h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <span>Góp ý</span>
-      </button>
+      <button type="button" className="feedback-hidden-trigger" onClick={() => setOpen((current) => !current)} aria-label="Mở hòm thư góp ý" />
     </div>
   );
 }
