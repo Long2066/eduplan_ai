@@ -455,11 +455,12 @@ textarea {
 .site-footer {
   position: relative;
   overflow: hidden;
-  border-top: 1px solid rgba(56, 189, 248, 0.2);
-  background:
-    radial-gradient(circle at 15% 0%, rgba(37, 99, 235, 0.16), transparent 22rem),
-    linear-gradient(105deg, #08182b 0%, #0a2038 58%, #0a2a40 100%);
-  color: #fff;
+  border-top: 1px solid rgba(203, 213, 225, 0.72);
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .site-footer-inner {
@@ -481,20 +482,22 @@ textarea {
 }
 
 .site-footer-logo {
-  display: grid;
+  display: block;
   width: 52px;
   height: 52px;
   flex: 0 0 52px;
-  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(191, 219, 254, 0.82);
   border-radius: 14px;
-  background: linear-gradient(145deg, #2563eb, #0ea5e9 50%, #10b981);
-  color: #fff;
-  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.2);
+  background: linear-gradient(135deg, #eff6ff, #f0fdfa);
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.12);
 }
 
-.site-footer-logo svg {
-  width: 42px;
-  height: 42px;
+.site-footer-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .site-footer-identity {
@@ -503,6 +506,7 @@ textarea {
 
 .site-footer-identity strong {
   display: block;
+  color: #0f172a;
   font-size: 1.25rem;
   font-weight: 900;
   letter-spacing: -0.02em;
@@ -512,7 +516,7 @@ textarea {
 .site-footer-identity span {
   display: block;
   margin-top: 0.28rem;
-  color: #60a5fa;
+  color: #2563eb;
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -520,7 +524,7 @@ textarea {
 
 .site-footer-identity p {
   margin: 0.58rem 0 0;
-  color: #a9b8ca;
+  color: #64748b;
   font-size: 0.78rem;
   font-weight: 500;
   line-height: 1.45;
@@ -529,7 +533,7 @@ textarea {
 .site-footer-copyright {
   flex: 0 0 auto;
   margin: 0;
-  color: #8393a8;
+  color: #64748b;
   font-size: 0.72rem;
   font-weight: 500;
   white-space: nowrap;
@@ -554,7 +558,7 @@ textarea {
 
   .site-footer-copyright {
     width: 100%;
-    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    border-top: 1px solid rgba(203, 213, 225, 0.72);
     padding-top: 0.9rem;
   }
 }
