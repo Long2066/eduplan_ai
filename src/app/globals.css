@@ -451,12 +451,120 @@ textarea {
   zoom: var(--a4-preview-zoom);
 }
 
+/* ───────────────────────── SITE FOOTER ───────────────────────── */
+.site-footer {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid rgba(56, 189, 248, 0.2);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(37, 99, 235, 0.16), transparent 22rem),
+    linear-gradient(105deg, #08182b 0%, #0a2038 58%, #0a2a40 100%);
+  color: #fff;
+}
+
+.site-footer-inner {
+  display: flex;
+  width: min(100%, 1680px);
+  min-height: 116px;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.4rem 2rem;
+}
+
+.site-footer-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
+}
+
+.site-footer-logo {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #2563eb, #0ea5e9 50%, #10b981);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(14, 165, 233, 0.2);
+}
+
+.site-footer-logo svg {
+  width: 42px;
+  height: 42px;
+}
+
+.site-footer-identity {
+  min-width: 0;
+}
+
+.site-footer-identity strong {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.site-footer-identity span {
+  display: block;
+  margin-top: 0.28rem;
+  color: #60a5fa;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.site-footer-identity p {
+  margin: 0.58rem 0 0;
+  color: #a9b8ca;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.site-footer-copyright {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #8393a8;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .site-footer-inner {
+    min-height: 0;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding: 1.35rem 1.25rem;
+  }
+
+  .site-footer-brand {
+    align-items: flex-start;
+  }
+
+  .site-footer-identity p {
+    max-width: 22rem;
+  }
+
+  .site-footer-copyright {
+    width: 100%;
+    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    padding-top: 0.9rem;
+  }
+}
+
 /* ───────────────────────── DESKTOP LAYOUT LOCK ───────────────────────── */
 @media (min-width: 1280px) {
   html,
   body {
-    height: 100%;
-    overflow: hidden;
+    min-height: 100%;
+    overflow-x: hidden;
   }
 
   .app-shell {

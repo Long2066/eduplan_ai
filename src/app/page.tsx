@@ -10,6 +10,7 @@ import { LessonForm } from "@/components/lesson-form";
 import { LessonPreview } from "@/components/lesson-preview";
 import { PedagogyAuditCard } from "@/components/pedagogy-audit-card";
 import { PreviewToolbar } from "@/components/preview-toolbar";
+import { SiteFooter } from "@/components/site-footer";
 import { type AppUser, UserMenu } from "@/components/user-menu";
 import { defaultLessonInput, gradeOptions, subjectOptions } from "@/lib/defaults";
 import { exportLessonToDocx } from "@/lib/export-docx";
@@ -611,8 +612,9 @@ export default function Home() {
 
   /* ── Main app ── */
   return (
-    <main className="app-shell min-h-screen px-3 pb-5 pt-[86px] sm:px-4 sm:pt-[90px] lg:px-5 xl:h-screen xl:overflow-hidden xl:pb-0">
-      <div className="mx-auto max-w-[1680px] xl:flex xl:h-full xl:flex-col">
+    <>
+      <main className="app-shell min-h-screen px-3 pb-5 pt-[86px] sm:px-4 sm:pt-[90px] lg:px-5 xl:h-screen xl:overflow-hidden xl:pb-0">
+        <div className="mx-auto max-w-[1680px] xl:flex xl:h-full xl:flex-col">
 
         {/* ── HEADER ── */}
         <header className="app-topbar">
@@ -744,6 +746,8 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </main>
+      </main>
+      <SiteFooter />
+    </>
   );
 }
