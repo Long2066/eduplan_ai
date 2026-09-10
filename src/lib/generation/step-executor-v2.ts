@@ -38,6 +38,7 @@ import {
   type StagedPhaseArtifact,
   type StagedPhaseName,
   type StagedSectionArtifacts,
+  type StagedSectionPrefixOptions,
   type StagedSectionsAssembly,
   type StagedSourceFactsArtifact,
 } from "@/lib/generation/section-types";
@@ -232,6 +233,17 @@ function quotaSettlementTelemetry(
   };
 }
 
+function assertLockedSectionPrefix(options: StagedSectionPrefixOptions): void {
+  const validation = validateStagedSectionPrefix(options);
+  if (!validation.passed) {
+    throw new GenerationJobRequestError(
+      `Dữ liệu đã khóa không đạt chuẩn: ${validation.issues.map((i) => `[${i.code}] ${i.message}`).join("; ")}. Không thể sửa bằng cách thử lại bước hiện tại. Hãy hủy yêu cầu và tạo lại.`,
+      "GENERATION_LOCKED_PREREQUISITE_INVALID",
+      422,
+    );
+  }
+}
+
 async function loadAllPeriodBlueprints(jobId: string, totalPeriods: number): Promise<StagedPeriodBlueprintArtifact[]> {
   const list: StagedPeriodBlueprintArtifact[] = [];
   for (let seq = 1; seq <= totalPeriods; seq += 1) {
@@ -272,6 +284,9 @@ export async function advanceStagedGenerationJobV2(
   }
   if (["completed", "failed", "cancelled"].includes(initialJob.status)) {
     throw new GenerationJobConflictError("Generation job không còn có thể chạy tiếp.", "GENERATION_JOB_TERMINAL");
+  }
+  if (initialJob.status === "waiting_next_step" && initialJob.error?.retryable === false) {
+    return initialJob;
   }
 
   const advanceableStages: GenerationJobStage[] = [
@@ -388,17 +403,19 @@ export async function advanceStagedGenerationJobV2(
       );
     }
 
-    if (error instanceof GenerationJobConflictError || error instanceof GenerationJobRequestError) {
+    const lockedPrerequisiteError = error instanceof GenerationJobRequestError
+      && error.code === "GENERATION_LOCKED_PREREQUISITE_INVALID";
+    if (error instanceof GenerationJobConflictError || (error instanceof GenerationJobRequestError && !lockedPrerequisiteError)) {
       throw error;
     }
 
     const isTimeout = error instanceof GenerationTimeoutError;
     const isExhausted = (currentAttempts + 1) >= MAX_UNIT_ATTEMPTS;
     const errorPatch: GenerationJobError = {
-      code: isTimeout ? "GENERATION_STEP_TIMEOUT" : "GENERATION_STEP_FAILED",
+      code: lockedPrerequisiteError ? error.code : isTimeout ? "GENERATION_STEP_TIMEOUT" : "GENERATION_STEP_FAILED",
       message: error instanceof Error ? error.message : "Không thể chạy bước tạo giáo án.",
       stage: job.currentStage,
-      retryable: !isExhausted,
+      retryable: !lockedPrerequisiteError && !isExhausted,
     };
 
     await commitGenerationJobCheckpoint(job.id, uid, owner, epoch, {
@@ -409,9 +426,11 @@ export async function advanceStagedGenerationJobV2(
         error: errorPatch,
         progress: {
           ...job.progress,
-          message: isExhausted
-            ? `Đơn vị "${unitKey}" đã thử đủ ${MAX_UNIT_ATTEMPTS} lần không thành công.`
-            : "Bước hiện tại gặp lỗi; có thể tiếp tục thử lại.",
+          message: lockedPrerequisiteError
+            ? "Dữ liệu đã khóa cần tạo lại. Đã dừng, không gọi AI thêm."
+            : isExhausted
+              ? `Đơn vị "${unitKey}" đã thử đủ ${MAX_UNIT_ATTEMPTS} lần không thành công.`
+              : "Bước hiện tại gặp lỗi; có thể tiếp tục thử lại.",
         },
       },
     }).catch(() => undefined);
@@ -419,7 +438,7 @@ export async function advanceStagedGenerationJobV2(
     throw new GenerationJobRequestError(
       errorPatch.message,
       errorPatch.code,
-      isTimeout ? 504 : 502,
+      lockedPrerequisiteError ? 422 : isTimeout ? 504 : 502,
     );
   } finally {
     if (telemetryHolder.current) {
@@ -726,6 +745,7 @@ async function executeLessonMapStepV2(ctx: ExecutionContext): Promise<void> {
   const outcomes = await requiredOutcomes(job.id);
 
   const existing = await readGenerationJobArtifact<StagedLessonMapArtifact>(job.id, { kind: "lesson-map" });
+  assertLockedSectionPrefix({ input, sourceFacts, outcomes, lessonMap: existing?.payload });
   let lessonMap: StagedLessonMapArtifact;
 
   if (existing) {
@@ -737,6 +757,7 @@ async function executeLessonMapStepV2(ctx: ExecutionContext): Promise<void> {
       sourceFacts,
       outcomes,
       strategy,
+      feedback: ctx.useFallback && job.error?.stage === job.currentStage ? job.error.message : undefined,
     });
   }
 
@@ -776,6 +797,11 @@ async function executePeriodBlueprintStepV2(ctx: ExecutionContext): Promise<void
     job.id,
     { kind: "period-blueprint", sequence: periodNumber },
   );
+  const priorBlueprints = await loadAllPeriodBlueprints(job.id, position);
+  assertLockedSectionPrefix({
+    input, sourceFacts, outcomes, lessonMap,
+    periodBlueprints: existing ? [...priorBlueprints, existing.payload] : priorBlueprints,
+  });
   let periodBp: StagedPeriodBlueprintArtifact;
 
   if (existing) {
@@ -789,14 +815,10 @@ async function executePeriodBlueprintStepV2(ctx: ExecutionContext): Promise<void
       lessonMap,
       periodNumber,
       strategy,
+      feedback: ctx.useFallback && job.error?.stage === job.currentStage ? job.error.message : undefined,
     });
   }
 
-  const priorBlueprints: StagedPeriodBlueprintArtifact[] = [];
-  for (let s = 1; s < periodNumber; s += 1) {
-    const b = await readGenerationJobArtifact<StagedPeriodBlueprintArtifact>(job.id, { kind: "period-blueprint", sequence: s });
-    if (b) priorBlueprints.push(b.payload);
-  }
   const allCurrentBlueprints = [...priorBlueprints, periodBp];
 
   const validation = validateStagedSectionPrefix({
@@ -843,6 +865,7 @@ async function executeSectionMaterialsStepV2(ctx: ExecutionContext): Promise<voi
   const periodBlueprints = await loadAllPeriodBlueprints(job.id, totalPeriods);
 
   const existing = await readGenerationJobArtifact<StagedMaterialsArtifact>(job.id, { kind: "section-materials" });
+  assertLockedSectionPrefix({ input, sourceFacts, outcomes, lessonMap, periodBlueprints, materials: existing?.payload });
   let materials: StagedMaterialsArtifact;
 
   if (existing) {
@@ -901,20 +924,22 @@ async function executePeriodPhaseStepV2(ctx: ExecutionContext): Promise<void> {
   const sequence = position + 1;
   const { periodNumber, phase } = phaseFromSequence(sequence);
 
-  const periodBlueprint = await readGenerationJobArtifact<StagedPeriodBlueprintArtifact>(
-    job.id,
-    { kind: "period-blueprint", sequence: periodNumber },
-  );
+  const periodBlueprints = await loadAllPeriodBlueprints(job.id, totalPeriods);
+  const periodBlueprint = periodBlueprints.find((bp) => bp.periodNumber === periodNumber);
   if (!periodBlueprint) throw new Error(`Không tìm thấy khung tiết ${periodNumber}.`);
 
-  const previousPhase = sequence > 1
-    ? await (async () => {
-        const p = await readGenerationJobArtifact<StagedPhaseArtifact>(job.id, { kind: "period-phase", sequence: sequence - 1 });
-        return p?.payload || null;
-      })()
-    : null;
-
+  const priorPhases: StagedPhaseArtifact[] = [];
+  for (let s = 1; s < sequence; s += 1) {
+    const art = await readGenerationJobArtifact<StagedPhaseArtifact>(job.id, { kind: "period-phase", sequence: s });
+    if (!art) throw new Error(`Thiếu pha trước đó (thứ ${s}) trong chuỗi.`);
+    priorPhases.push(art.payload);
+  }
+  const previousPhase = priorPhases.at(-1) ?? null;
   const existing = await readGenerationJobArtifact<StagedPhaseArtifact>(job.id, { kind: "period-phase", sequence });
+  assertLockedSectionPrefix({
+    input, sourceFacts, outcomes, lessonMap, materials, periodBlueprints,
+    phases: existing ? [...priorPhases, existing.payload] : priorPhases,
+  });
   let currentPhaseArt: StagedPhaseArtifact;
 
   if (existing) {
@@ -927,19 +952,14 @@ async function executePeriodPhaseStepV2(ctx: ExecutionContext): Promise<void> {
       outcomes,
       lessonMap,
       materials,
-      periodBlueprint: periodBlueprint.payload,
+      periodBlueprint,
       phase,
       previousPhase,
       strategy,
+      feedback: ctx.useFallback && job.error?.stage === job.currentStage ? job.error.message : undefined,
     });
   }
 
-  const priorPhases: StagedPhaseArtifact[] = [];
-  for (let s = 1; s < sequence; s += 1) {
-    const art = await readGenerationJobArtifact<StagedPhaseArtifact>(job.id, { kind: "period-phase", sequence: s });
-    if (!art) throw new Error(`Thiếu pha trước đó (thứ ${s}) trong chuỗi.`);
-    priorPhases.push(art.payload);
-  }
   const allCurrentPhases = [...priorPhases, currentPhaseArt];
 
   const validation = validateStagedSectionPrefix({
@@ -948,10 +968,14 @@ async function executePeriodPhaseStepV2(ctx: ExecutionContext): Promise<void> {
     outcomes,
     lessonMap,
     materials,
+    periodBlueprints,
     phases: allCurrentPhases,
   });
   if (!validation.passed) {
-    throw new Error(`Pha ${phase} (Tiết ${periodNumber}) không đạt chuẩn: ${validation.issues.map((i) => i.message).join("; ")}`);
+    const scope = validation.issues.some((i) => i.code === "SEC-OBJ-UNCOVERED")
+      ? "Liên kết mục tiêu toàn bài"
+      : `Pha ${phase} (Tiết ${periodNumber})`;
+    throw new Error(`${scope} không đạt chuẩn: ${validation.issues.map((i) => `[${i.code}] ${i.message}`).join("; ")}`);
   }
 
   const nextPos = position + 1;

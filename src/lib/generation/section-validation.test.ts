@@ -519,4 +519,40 @@ describe("staged-v2 validation and assembly", () => {
     expect(periods).toHaveLength(1);
     expect(blueprint.blueprint.lessonTitle).toBe("Hình tam giác");
   });
+
+  it("catches uncovered objectives at lesson map, blueprint, and detailed phase levels", () => {
+    const fixtures = createValidSectionFixtures();
+
+    // 1. Map omits obj-2
+    const badMap = JSON.parse(JSON.stringify(fixtures.lessonMap));
+    badMap.lessonMap.periods[0].objectiveIds = ["obj-1"];
+    const mapRes = validateStagedSections({ ...fixtures, lessonMap: badMap });
+    expect(mapRes.issues.some((i) => i.code === "SEC-MAP-OBJ-UNCOVERED" && i.objectiveId === "obj-2")).toBe(true);
+
+    // 2. Blueprint omits obj-2 from its phases
+    const badBp = JSON.parse(JSON.stringify(fixtures.periodBlueprints[0]));
+    badBp.periodBlueprint.phases.forEach((ph: any) => {
+      ph.objectiveIds = ["obj-1"];
+    });
+    const bpRes = validateStagedSections({ ...fixtures, periodBlueprints: [badBp] });
+    expect(bpRes.issues.some((i) => i.code === "SEC-BP-OBJ-UNCOVERED" && i.objectiveId === "obj-2")).toBe(true);
+
+    // 3. Detailed phase omits assigned objective
+    const badPhases = JSON.parse(JSON.stringify(fixtures.phases));
+    badPhases[2].activity.objectiveIds = ["obj-1"]; // practice had obj-2 assigned
+    const phaseRes = validateStagedSections({ ...fixtures, phases: badPhases });
+    expect(phaseRes.issues.some((i) => i.code === "SEC-PHASE-OBJ-UNCOVERED" && i.objectiveId === "obj-2")).toBe(true);
+
+    // 4. Malformed array shape fails with issue, does not throw
+    const malformedPhases = JSON.parse(JSON.stringify(fixtures.phases));
+    malformedPhases[0].activity.objectiveIds = "not-an-array";
+    const shapeRes = validateStagedSections({ ...fixtures, phases: malformedPhases });
+    expect(shapeRes.issues.some((i) => i.code === "SEC-PHASE-INVALID-OBJ")).toBe(true);
+
+    // 5. Additional globally valid incidental objective allowed without error
+    const incidentalPhases = JSON.parse(JSON.stringify(fixtures.phases));
+    incidentalPhases[0].activity.objectiveIds = ["obj-1", "obj-2"]; // warmup had obj-1, adding valid obj-2
+    const incRes = validateStagedSections({ ...fixtures, phases: incidentalPhases });
+    expect(incRes.issues.filter((i) => i.code.includes("OBJ-UNCOVERED") || i.code.includes("INVALID-OBJ"))).toEqual([]);
+  });
 });

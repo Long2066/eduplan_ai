@@ -205,17 +205,21 @@ export async function generateStagedLessonMap(
 ): Promise<StagedLessonMapArtifact> {
   const { input, sourceFacts, outcomes, strategy } = options;
   const identity = sourceFacts.identity;
+  const feedbackInstruction = options.feedback
+    ? `\nPHẢN HỒI CẦN SỬA ĐỔI TỪ LẦN TRƯỚC:\n${options.feedback}\nBẮT BUỘC: Sửa triệt để các lỗi trên, phân bổ đủ mọi YCCĐ còn thiếu vào đúng các tiết phù hợp. Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.`
+    : "";
+
   const prompt = `Lập BẢN ĐỒ TIẾN TRÌNH BÀI HỌC (Lesson Map) cho: "${identity.lessonTitle}".
 Tổng số tiết: ${identity.periods}.
 Dữ kiện nguồn đã khóa:
 ${JSON.stringify(sourceFacts.facts.sourceEvidence)}
 Yêu cầu cần đạt đã khóa:
-${JSON.stringify(outcomes.outcomes.objectiveMetadata.map((o) => ({ id: o.id, statement: o.statement })))}
+${JSON.stringify(outcomes.outcomes.objectiveMetadata.map((o) => ({ id: o.id, statement: o.statement, category: o.category })))}
 
 Nhiệm vụ:
-- Phân bổ mạch logic và các objectiveId ("obj-1",...) vào đúng từng tiết (từ tiết 1 đến ${identity.periods}).
+- BẮT BUỘC: Phân bổ TẤT CẢ 100% objectiveId ("obj-1",...) trong Yêu cầu cần đạt đã khóa vào các tiết (từ tiết 1 đến ${identity.periods}). Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào (kể cả Phẩm chất (qualities) và năng lực chung).
 - Mỗi tiết phải có trọng tâm, continuityIn, continuityOut.
-- Phân bổ sourceIds đã có ("src-1",...) cho từng tiết.
+- Phân bổ sourceIds đã có ("src-1",...) cho từng tiết.${feedbackInstruction}
 
 Trả về duy nhất JSON:
 {
@@ -269,14 +273,21 @@ export async function generateStagedPeriodBlueprint(
   const periodMap = lessonMap.lessonMap.periods.find((p) => p.periodNumber === periodNumber)
     || { periodNumber, focus: `Tiết ${periodNumber}`, objectiveIds: outcomes.outcomes.objectiveMetadata.map((o) => o.id), sourceIds: [] };
 
+  const allocatedObjs = outcomes.outcomes.objectiveMetadata.filter((o) => (periodMap.objectiveIds || []).includes(o.id));
+  const feedbackInstruction = options.feedback
+    ? `\nPHẢN HỒI CẦN SỬA ĐỔI TỪ LẦN TRƯỚC:\n${options.feedback}\nBẮT BUỘC: Sửa triệt để các lỗi trên, phân bổ đủ mọi mục tiêu của tiết vào các pha tương ứng. Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.`
+    : "";
+
   const prompt = `Lập BLUEPRINT CHI TIẾT 4 PHA CHO TIẾT ${periodNumber}/${identity.periods} bài "${identity.lessonTitle}".
 Trọng tâm tiết: ${periodMap.focus}.
-YCCĐ phân bổ cho tiết này: ${JSON.stringify(periodMap.objectiveIds)}.
+YCCĐ phân bổ cho tiết này (kèm nội dung chi tiết):
+${JSON.stringify(allocatedObjs.map((o) => ({ id: o.id, statement: o.statement, category: o.category })))}
 Dữ kiện nguồn phân bổ: ${JSON.stringify(periodMap.sourceIds)}.
 
 Yêu cầu:
 - Thiết kế khung gọn gàng cho 4 pha bắt buộc: warmup, explore, practice, apply.
-- Với mỗi pha, xác định: activityId (p${periodNumber}-warmup, p${periodNumber}-explore, p${periodNumber}-practice, p${periodNumber}-apply), title, durationMinutes (tổng 4 pha xấp xỉ ${identity.duration} phút), objectiveIds liên quan, handoffToNext.
+- BẮT BUỘC: hợp objectiveIds của 4 pha phải bao phủ 100% mọi YCCĐ của tiết này (${JSON.stringify(periodMap.objectiveIds)}). Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.
+- Với mỗi pha, xác định: activityId (p${periodNumber}-warmup, p${periodNumber}-explore, p${periodNumber}-practice, p${periodNumber}-apply), title, durationMinutes (tổng 4 pha xấp xỉ ${identity.duration} phút), objectiveIds liên quan, handoffToNext.${feedbackInstruction}
 
 Trả về duy nhất JSON:
 {

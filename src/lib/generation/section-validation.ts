@@ -214,6 +214,31 @@ function verifyArtifactHash(
   }
 }
 
+function checkObjectiveIds(
+  value: unknown,
+  validIds: Set<string>,
+  issue: StagedSectionIssue,
+  issues: StagedSectionIssue[],
+): Set<string> {
+  const ids = new Set<string>();
+  if (!Array.isArray(value) || value.length === 0) {
+    issues.push({ ...issue, message: `${issue.message}: objectiveIds phải là mảng ID không rỗng` });
+    return ids;
+  }
+  for (const id of value) {
+    if (typeof id !== "string" || !id.trim() || !validIds.has(id)) {
+      issues.push({
+        ...issue,
+        message: `${issue.message}: objectiveId không hợp lệ trong Mục I: ${canonicalJson(id)}`,
+        ...(typeof id === "string" ? { objectiveId: id } : {}),
+      });
+    } else {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
 /**
  * Validates any prefix of staged-v2 artifacts strictly.
  * - Verifies identities and exact payload hashes for every present artifact.
@@ -289,6 +314,7 @@ export function validateStagedSectionPrefix(
 
   // 2. Validate Outcomes (if present)
   const validObjectiveIds = new Set<string>();
+  const objectiveStatements = new Map<string, string>();
   if (outcomes) {
     checkIdentity(input, outcomes.identity, "Mục I (Mục tiêu)", issues);
     verifyArtifactHash(outcomes, "Mục I (Mục tiêu)", "outcomes", issues);
@@ -328,6 +354,7 @@ export function validateStagedSectionPrefix(
         }
         seenObjIds.add(obj.id);
         validObjectiveIds.add(obj.id);
+        objectiveStatements.set(obj.id, obj.statement);
 
         if (!obj.statement || !obj.statement.trim()) {
           issues.push({
@@ -342,6 +369,7 @@ export function validateStagedSectionPrefix(
   }
 
   // 3. Validate Lesson Map (if present)
+  const periodObjectiveIds = new Map<number, Set<string>>();
   if (lessonMap) {
     if (!outcomes) {
       issues.push({
@@ -369,39 +397,39 @@ export function validateStagedSectionPrefix(
       }
 
       const periods = lessonMap.lessonMap?.periods;
+      const mappedObjectiveIds = new Set<string>();
       if (!Array.isArray(periods) || periods.length !== expectedPeriods) {
         issues.push({
           code: "SEC-MAP-PERIODS-LEN",
-          message: `Bản đồ bài học phải có đúng ${expectedPeriods} tiết nhưng nhận ${periods?.length ?? 0}`,
+          message: `Bản đồ bài học phải có đúng ${expectedPeriods} tiết nhưng nhận ${Array.isArray(periods) ? periods.length : 0}`,
           path: "lessonMap.lessonMap.periods",
         });
-      } else {
+      }
+      if (Array.isArray(periods)) {
         periods.forEach((p, idx) => {
-          if (p.periodNumber !== idx + 1) {
+          if (p?.periodNumber !== idx + 1) {
             issues.push({
               code: "SEC-MAP-PERIOD-NUM",
-              message: `Bản đồ bài học tiết thứ ${idx + 1} có periodNumber = ${p.periodNumber}`,
+              message: `Bản đồ bài học tiết thứ ${idx + 1} có periodNumber = ${p?.periodNumber}`,
               path: `lessonMap.lessonMap.periods[${idx}].periodNumber`,
             });
           }
-          if (!p.focus || !p.focus.trim()) {
+          if (typeof p?.focus !== "string" || !p.focus.trim()) {
             issues.push({
               code: "SEC-MAP-PERIOD-FOCUS",
-              message: `Bản đồ bài học tiết ${p.periodNumber} thiếu trọng tâm focus`,
+              message: `Bản đồ bài học tiết ${idx + 1} thiếu trọng tâm focus`,
               path: `lessonMap.lessonMap.periods[${idx}].focus`,
             });
           }
-          for (const objId of p.objectiveIds || []) {
-            if (!validObjectiveIds.has(objId)) {
-              issues.push({
-                code: "SEC-MAP-INVALID-OBJ",
-                message: `Bản đồ bài học tiết ${p.periodNumber} tham chiếu objectiveId không tồn tại: ${objId}`,
-                path: `lessonMap.lessonMap.periods[${idx}].objectiveIds`,
-                objectiveId: objId,
-              });
-            }
-          }
-          for (const srcId of p.sourceIds || []) {
+          const ids = checkObjectiveIds(p?.objectiveIds, validObjectiveIds, {
+            code: "SEC-MAP-INVALID-OBJ",
+            message: `Bản đồ bài học Tiết ${idx + 1}`,
+            path: `lessonMap.lessonMap.periods[${idx}].objectiveIds`,
+            periodNumber: idx + 1,
+          }, issues);
+          if (p?.periodNumber === idx + 1) periodObjectiveIds.set(p.periodNumber, ids);
+          for (const id of ids) mappedObjectiveIds.add(id);
+          for (const srcId of Array.isArray(p?.sourceIds) ? p.sourceIds : []) {
             if (!validSourceIds.has(srcId)) {
               issues.push({
                 code: "SEC-MAP-INVALID-SRC",
@@ -411,6 +439,16 @@ export function validateStagedSectionPrefix(
             }
           }
         });
+      }
+      for (const id of validObjectiveIds) {
+        if (!mappedObjectiveIds.has(id)) {
+          issues.push({
+            code: "SEC-MAP-OBJ-UNCOVERED",
+            message: `YCCĐ ${id} ("${objectiveStatements.get(id)}") chưa được khai báo trong objectiveIds của bất kỳ tiết nào trên Bản đồ bài học`,
+            path: "lessonMap.lessonMap.periods",
+            objectiveId: id,
+          });
+        }
       }
     }
   }
@@ -496,15 +534,74 @@ export function validateStagedSectionPrefix(
         });
       }
 
-      for (const objId of bp.periodBlueprint?.objectiveIds || []) {
-        if (!validObjectiveIds.has(objId)) {
-          issues.push({
-            code: "SEC-BP-INVALID-OBJ",
-            message: `Blueprint Tiết ${pNum} tham chiếu objectiveId không tồn tại: ${objId}`,
-            path: `periodBlueprints[${pNum}].periodBlueprint.objectiveIds`,
+      const expectedObjIds = periodObjectiveIds.get(pNum);
+      const bpObjIds = checkObjectiveIds(bp.periodBlueprint?.objectiveIds, validObjectiveIds, {
+        code: "SEC-BP-INVALID-OBJ",
+        message: `Blueprint Tiết ${pNum}`,
+        path: `periodBlueprints[${pNum}].periodBlueprint.objectiveIds`,
+        periodNumber: pNum,
+      }, issues);
+      if (expectedObjIds) {
+        for (const id of expectedObjIds) {
+          if (!bpObjIds.has(id)) {
+            issues.push({
+              code: "SEC-BP-OBJ-UNCOVERED",
+              message: `Blueprint Tiết ${pNum} thiếu mục tiêu được phân bổ từ Bản đồ bài học: ${id} ("${objectiveStatements.get(id)}")`,
+              path: `periodBlueprints[${pNum}].periodBlueprint.objectiveIds`,
+              periodNumber: pNum,
+              objectiveId: id,
+            });
+          }
+        }
+        for (const id of bpObjIds) {
+          if (!expectedObjIds.has(id)) {
+            issues.push({
+              code: "SEC-BP-OBJ-NOT-ALLOCATED",
+              message: `Blueprint Tiết ${pNum} tự gán objectiveId ${id} không thuộc phân bổ của tiết này`,
+              path: `periodBlueprints[${pNum}].periodBlueprint.objectiveIds`,
+              periodNumber: pNum,
+              objectiveId: id,
+            });
+          }
+        }
+      }
+
+      const bpPhasesCoverage = new Set<string>();
+      if (Array.isArray(bpPhases)) {
+        for (const ph of bpPhases) {
+          const phIds = checkObjectiveIds(ph.objectiveIds, validObjectiveIds, {
+            code: "SEC-BP-PHASE-INVALID-OBJ",
+            message: `Blueprint Tiết ${pNum} Pha ${ph.phase}`,
+            path: `periodBlueprints[${pNum}].periodBlueprint.phases[${ph.phase}].objectiveIds`,
             periodNumber: pNum,
-            objectiveId: objId,
-          });
+            phase: ph.phase,
+          }, issues);
+          for (const id of phIds) {
+            bpPhasesCoverage.add(id);
+            if (expectedObjIds && !expectedObjIds.has(id)) {
+              issues.push({
+                code: "SEC-BP-PHASE-OBJ-NOT-ALLOCATED",
+                message: `Blueprint Tiết ${pNum} Pha ${ph.phase} gán objectiveId ${id} không thuộc phân bổ của tiết này`,
+                path: `periodBlueprints[${pNum}].periodBlueprint.phases[${ph.phase}].objectiveIds`,
+                periodNumber: pNum,
+                phase: ph.phase,
+                objectiveId: id,
+              });
+            }
+          }
+        }
+      }
+      if (expectedObjIds) {
+        for (const id of expectedObjIds) {
+          if (!bpPhasesCoverage.has(id)) {
+            issues.push({
+              code: "SEC-BP-OBJ-UNCOVERED",
+              message: `Các pha trong Blueprint Tiết ${pNum} chưa bao phủ mục tiêu ${id} ("${objectiveStatements.get(id)}") được phân bổ cho tiết`,
+              path: `periodBlueprints[${pNum}].periodBlueprint.phases`,
+              periodNumber: pNum,
+              objectiveId: id,
+            });
+          }
         }
       }
     }
@@ -780,18 +877,35 @@ export function validateStagedSectionPrefix(
         });
       }
 
-      for (const objId of act.objectiveIds || []) {
-        if (!validObjectiveIds.has(objId)) {
-          issues.push({
-            code: "SEC-PHASE-INVALID-OBJ",
-            message: `Tiết ${pNum} Pha ${phaseName} gán objectiveId không có trong Mục I: ${objId}`,
-            path: `phases[${actId}].activity.objectiveIds`,
-            periodNumber: pNum,
-            phase: phaseName,
-            objectiveId: objId,
-          });
-        } else {
-          coveredObjectiveIds.add(objId);
+      const actObjIds = checkObjectiveIds(act.objectiveIds, validObjectiveIds, {
+        code: "SEC-PHASE-INVALID-OBJ",
+        message: `Tiết ${pNum} Pha ${phaseName}`,
+        path: `phases[${actId}].activity.objectiveIds`,
+        periodNumber: pNum,
+        phase: phaseName,
+        activityId: act.id,
+      }, issues);
+      for (const objId of actObjIds) {
+        coveredObjectiveIds.add(objId);
+      }
+
+      if (bp) {
+        const bpPhase = bp.periodBlueprint?.phases?.find((item) => item.phase === phaseName);
+        if (bpPhase) {
+          const assignedIds = Array.isArray(bpPhase.objectiveIds) ? bpPhase.objectiveIds : [];
+          for (const id of assignedIds) {
+            if (validObjectiveIds.has(id) && !actObjIds.has(id)) {
+              issues.push({
+                code: "SEC-PHASE-OBJ-UNCOVERED",
+                message: `Hoạt động Tiết ${pNum} Pha ${phaseName} chưa khai báo mục tiêu ${id} ("${objectiveStatements.get(id)}") được phân bổ cho pha này`,
+                path: `phases[${actId}].activity.objectiveIds`,
+                periodNumber: pNum,
+                phase: phaseName,
+                activityId: act.id,
+                objectiveId: id,
+              });
+            }
+          }
         }
       }
 

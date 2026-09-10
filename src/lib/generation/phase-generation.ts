@@ -57,6 +57,10 @@ export async function generateStagedPhase(
         ? naturalSocialStrictGuidance
         : pedagogyProfileGuidance(input);
 
+  const feedbackInstruction = options.feedback
+    ? `\nPHẢN HỒI CẦN SỬA ĐỔI TỪ LẦN TRƯỚC:\n${options.feedback}\nBẮT BUỘC: Sửa triệt để các vấn đề trên; đảm bảo hoạt động triển khai đầy đủ các mục tiêu phân bổ. Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.`
+    : "";
+
   const prompt = `Soạn CHI TIẾT ĐƠN VỊ PHA: ${phaseLabel.toUpperCase()} (ID: "${activityId}").
 Bài: "${identity.lessonTitle}" - Tiết ${periodNumber}/${identity.periods} - Thời lượng pha: ~${phaseBp.durationMinutes} phút.
 Môn: ${input.subject} - Lớp: ${input.grade}.
@@ -65,7 +69,7 @@ NGỮ CẢNH BÀN GIAO TỪ PHA TRƯỚC:
 ${JSON.stringify(phaseInput)}
 
 DỮ LIỆU ĐÃ KHÓA BẮT BUỘC TUÂN THỦ:
-- YCCĐ phân bổ: ${JSON.stringify(outcomes.outcomes.objectiveMetadata.filter((o) => (phaseBp.objectiveIds || []).includes(o.id)).map((o) => ({ id: o.id, stmt: o.statement })))}
+- YCCĐ phân bổ bắt buộc triển khai: ${JSON.stringify(outcomes.outcomes.objectiveMetadata.filter((o) => (phaseBp.objectiveIds || []).includes(o.id)).map((o) => ({ id: o.id, statement: o.statement, category: o.category })))}
 - Đồ dùng có sẵn (Mục II): ${JSON.stringify(materials.items.map((m) => ({ id: m.id, label: m.label })))}
 - Dữ kiện SGK/Nguồn: ${JSON.stringify(sourceFacts.facts.sourceEvidence.map((s) => ({ id: s.id, label: s.label, text: s.text })))}
 
@@ -75,8 +79,9 @@ ${learningContextGuidance(input)}
 
 YÊU CẦU ĐẦU RA:
 1. Chỉ trả về duy nhất hoạt động này, đầy đủ các bước thực tế (teacherActions, studentActions) dùng dạy thật trên lớp.
-2. Gán các objectiveIds, materialIds ("mat-1",...), sourceIds ("src-1",...) THỰC TẾ được dùng trong pha này.
-3. Sinh khối handoff: knowledge (kiến thức đã chốt), products (sản phẩm hoàn thành), pending (nhiệm vụ chuyển tiếp), bridge (câu nối sang pha sau).
+2. BẮT BUỘC: Mỗi YCCĐ phân bổ PHẢI được hoạt động triển khai thực chất và gán đủ trong objectiveIds của pha này. Có thể bổ sung objectiveId hợp lệ khác nếu có tích hợp thực tế. Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.
+3. Gán các materialIds ("mat-1",...), sourceIds ("src-1",...) THỰC TẾ được dùng trong pha này.
+4. Sinh khối handoff: knowledge (kiến thức đã chốt), products (sản phẩm hoàn thành), pending (nhiệm vụ chuyển tiếp), bridge (câu nối sang pha sau).${feedbackInstruction}
 
 Trả về duy nhất JSON:
 {
@@ -89,6 +94,7 @@ Trả về duy nhất JSON:
     "teacherActions": string[],
     "studentActions": string[],
     "learningProducts": string[],
+    "successCriteria": string[],
     "objectiveIds": string[],
     "organization": "whole_class"|"group"|"pair"|"individual"
   },
@@ -125,7 +131,7 @@ Trả về duy nhất JSON:
     durationMinutes: (parsed.activity.durationMinutes && parsed.activity.durationMinutes > 0)
       ? parsed.activity.durationMinutes
       : phaseBp.durationMinutes,
-    objectiveIds: parsed.activity.objectiveIds?.length ? parsed.activity.objectiveIds : phaseBp.objectiveIds,
+    objectiveIds: parsed.activity?.objectiveIds ?? [],
     learningProducts: parsed.activity.learningProducts || phaseBp.learningProducts || [],
     successCriteria: (parsed.activity as any).successCriteria || [],
   };
