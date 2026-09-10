@@ -2,6 +2,7 @@ import "server-only";
 import { normalizeAiUsage } from "@/lib/generation-telemetry";
 import {
   OPENAI_TRANSIENT_RETRIES,
+  aiResponseCompletionError,
   normalizeOpenAiError,
   normalizeOpenAiFetchError,
   waitForAiRetry,
@@ -10,6 +11,7 @@ import {
   GENERATION_SAVE_RESERVE_MS,
   GenerationTimeoutError,
   abortSignalForRequest,
+  beginGenerationAiCall,
   currentGenerationContext,
   recordGenerationCall,
   remainingGenerationMs,
@@ -92,23 +94,27 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
   if (OPENAI_OCR_FALLBACK_MODEL && OPENAI_OCR_FALLBACK_MODEL !== OPENAI_OCR_MODEL) {
     models.push(OPENAI_OCR_FALLBACK_MODEL);
   }
+  const policy = currentGenerationContext()?.aiPolicy;
+  const selectedModels = policy?.singleAttempt
+    ? [policy.useFallback && models.length > 1 ? models[1] : models[0]]
+    : models;
   let primaryMessage = "OpenAI OCR không phản hồi.";
   let lastMessage = primaryMessage;
 
-  for (const [modelIndex, model] of models.entries()) {
-    const fallbackUsed = modelIndex > 0;
+  for (const [modelIndex, model] of selectedModels.entries()) {
+    const fallbackUsed = policy?.singleAttempt ? Boolean(policy.useFallback && models.length > 1) : modelIndex > 0;
     const { useResponsesApi, body } = buildOpenAiOcrRequest({
       model,
       imageDataUrls,
       reasoningEffort: model === OPENAI_OCR_MODEL ? OPENAI_OCR_REASONING_EFFORT : "none",
       maxOutputTokens: OPENAI_OCR_MAX_OUTPUT_TOKENS,
     });
-    const maxRetries = models.length > 1 ? 0 : OPENAI_TRANSIENT_RETRIES;
+    const maxRetries = policy?.singleAttempt || models.length > 1 ? 0 : OPENAI_TRANSIENT_RETRIES;
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       const remainingForOcr = remainingGenerationMs() - GENERATION_SAVE_RESERVE_MS;
       if (remainingForOcr < (fallbackUsed ? 10_000 : 5_000)) throw new GenerationTimeoutError();
-      const requestTimeoutMs = Math.max(1_000, Math.min(OPENAI_OCR_REQUEST_TIMEOUT_MS, remainingForOcr));
+      const requestTimeoutMs = Math.max(1_000, Math.min(policy?.requestTimeoutMs ?? OPENAI_OCR_REQUEST_TIMEOUT_MS, remainingForOcr));
       const controller = new AbortController();
       let requestTimedOut = false;
       const timeout = setTimeout(() => {
@@ -118,6 +124,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
       const startedAt = Date.now();
 
       try {
+        beginGenerationAiCall();
         const response = await fetch(
           useResponsesApi ? "https://api.openai.com/v1/responses" : "https://api.openai.com/v1/chat/completions",
           {
@@ -130,6 +137,22 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
 
         if (response.ok) {
           const data = await response.json();
+          const completionError = policy?.singleAttempt
+            ? aiResponseCompletionError(data, useResponsesApi, OPENAI_OCR_MAX_OUTPUT_TOKENS)
+            : null;
+          if (completionError) {
+            recordGenerationCall({
+              scope: "ocr",
+              provider: "openai",
+              model,
+              fallbackUsed,
+              outcome: "invalid_output",
+              elapsedMs: Date.now() - startedAt,
+              ...normalizeAiUsage(data),
+            });
+            lastMessage = completionError;
+            break;
+          }
           const text = useResponsesApi
             ? extractOpenAiResponsesText(data).trim()
             : (data.choices?.[0]?.message?.content || "").trim();
@@ -176,7 +199,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
           outputTokens: 0,
           totalTokens: 0,
         });
-        lastMessage = normalizeOpenAiError(await response.text(), response.status);
+        lastMessage = normalizeOpenAiError(await response.text(), response.status, Boolean(policy?.singleAttempt));
         if ((response.status === 429 || response.status >= 500) && attempt < maxRetries) {
           await waitForAiRetry(700 * (attempt + 1));
           continue;
@@ -196,7 +219,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
           totalTokens: 0,
         });
         if (generationTimedOut) throw new GenerationTimeoutError();
-        lastMessage = normalizeOpenAiFetchError(error, model, requestTimeoutMs);
+        lastMessage = normalizeOpenAiFetchError(error, model, requestTimeoutMs, Boolean(policy?.singleAttempt));
         if (attempt < maxRetries) {
           await waitForAiRetry(700 * (attempt + 1));
           continue;
@@ -217,7 +240,10 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
     }
   }
 
-  throw new Error(models.length > 1 ? `OCR chính: ${primaryMessage}; OCR dự phòng: ${lastMessage}` : lastMessage);
+  if (!policy?.singleAttempt && models.length > 1) {
+    throw new Error(`OCR chính: ${primaryMessage}; OCR dự phòng: ${lastMessage}`);
+  }
+  throw new Error(lastMessage);
 }
 
 export async function runOpenAiOcrAsset(

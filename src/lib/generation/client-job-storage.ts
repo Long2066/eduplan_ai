@@ -1,4 +1,4 @@
-import type { ClientGenerationJob } from "@/lib/generation/client-orchestrator";
+import { isClientGenerationJob, type ClientGenerationJob } from "@/lib/generation/client-orchestrator";
 
 export const ACTIVE_STAGED_JOB_STORAGE_KEY = "eduplan-ai.active-staged-generation.v1";
 
@@ -28,6 +28,10 @@ export function saveActiveStagedGeneration(
   storage.setItem(ACTIVE_STAGED_JOB_STORAGE_KEY, JSON.stringify(value));
 }
 
+export function isValidStoredJob(job: unknown): job is ClientGenerationJob {
+  return isClientGenerationJob(job);
+}
+
 export function readActiveStagedGeneration(
   uid: string,
   storage: StorageLike | null = browserStorage(),
@@ -37,7 +41,10 @@ export function readActiveStagedGeneration(
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<StoredStagedGeneration>;
-    if (parsed.uid !== uid || !parsed.job?.id || typeof parsed.job.id !== "string") {
+    if (
+      parsed.uid !== uid ||
+      !isValidStoredJob(parsed.job)
+    ) {
       storage.removeItem(ACTIVE_STAGED_JOB_STORAGE_KEY);
       return null;
     }

@@ -4,6 +4,8 @@ import { MAX_GENERATION_SECURITY_CALLS, normalizeSecurityGenerationCalls } from 
 import {
   GENERATION_JOB_SCHEMA_VERSION,
   STAGED_GENERATION_PIPELINE_VERSION,
+  STAGED_V1_PIPELINE_VERSION,
+  STAGED_V2_PIPELINE_VERSION,
   assertGenerationArtifactSize,
   generationArtifactDocumentId,
   generationArtifactSequence,
@@ -28,11 +30,24 @@ export const GENERATION_JOB_ARTIFACTS_COLLECTION = "artifacts";
 
 const DEFAULT_GENERATION_JOB_TTL_HOURS = 168;
 
-type GenerationJobPatch = Partial<Pick<
+export type GenerationJobPatch = Partial<Pick<
   GenerationJob,
-  "status" | "currentStage" | "progress" | "stageCursor" | "attempt" | "inputFingerprint" | "quotaReservationId"
+  "status" | "currentStage" | "progress" | "stageCursor" | "attempt" | "unitAttempts" | "inputFingerprint" | "quotaReservationId"
   | "quotaReservation" | "telemetry" | "lease" | "lessonId" | "error" | "expiresAt"
 >>;
+
+export type GenerationJobCheckpoint = {
+  expectedStage: GenerationJobStage;
+  expectedPosition: number;
+  artifacts?: Array<{ key: GenerationArtifactKey; payload: unknown }>;
+  patch: GenerationJobPatch;
+};
+
+export type GenerationCheckpointLease = {
+  job: GenerationJob;
+  epoch: number;
+  lease: GenerationJobLease;
+};
 
 export class GenerationJobConflictError extends Error {
   code: string;
@@ -108,6 +123,30 @@ function normalizeJobTelemetry(value: unknown): NonNullable<GenerationJob["telem
   return { entries };
 }
 
+function generationSchemaVersion(value: unknown): typeof GENERATION_JOB_SCHEMA_VERSION {
+  if (value == null || value === GENERATION_JOB_SCHEMA_VERSION) return GENERATION_JOB_SCHEMA_VERSION;
+  throw new GenerationJobConflictError("Phiên bản dữ liệu tạo giáo án chưa được hỗ trợ.", "GENERATION_SCHEMA_UNSUPPORTED");
+}
+
+function generationPipelineVersion(value: unknown): GenerationJob["pipelineVersion"] {
+  if (value == null || value === STAGED_V1_PIPELINE_VERSION) return STAGED_V1_PIPELINE_VERSION;
+  if (value === STAGED_V2_PIPELINE_VERSION) return STAGED_V2_PIPELINE_VERSION;
+  throw new GenerationJobConflictError("Phiên bản quy trình tạo giáo án chưa được hỗ trợ.", "GENERATION_PIPELINE_UNSUPPORTED");
+}
+
+function normalizeLeaseEpoch(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return value;
+  throw new GenerationJobConflictError("Mã khóa tạo giáo án không hợp lệ.", "GENERATION_LEASE_EPOCH_INVALID");
+}
+
+function normalizeUnitAttempts(value: unknown): Record<string, number> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return Object.fromEntries(Object.entries(value).filter(([, attempt]) => (
+    typeof attempt === "number" && Number.isSafeInteger(attempt) && attempt >= 0
+  ))) as Record<string, number>;
+}
+
 function normalizeJob(id: string, data: Record<string, unknown>): GenerationJob {
   const inputSummary = data.inputSummary as GenerationJob["inputSummary"];
   const progress = data.progress as GenerationJobProgress;
@@ -129,8 +168,8 @@ function normalizeJob(id: string, data: Record<string, unknown>): GenerationJob 
   } satisfies GenerationJobLease : null;
   return {
     id,
-    schemaVersion: GENERATION_JOB_SCHEMA_VERSION,
-    pipelineVersion: STAGED_GENERATION_PIPELINE_VERSION,
+    schemaVersion: generationSchemaVersion(data.schemaVersion),
+    pipelineVersion: generationPipelineVersion(data.pipelineVersion),
     uid: String(data.uid || ""),
     status: data.status as GenerationJobStatus,
     currentStage: data.currentStage as GenerationJobStage,
@@ -140,6 +179,7 @@ function normalizeJob(id: string, data: Record<string, unknown>): GenerationJob 
       total: Math.max(0, Number(rawStageCursor?.total || 0)),
     },
     attempt: Math.max(0, Number(data.attempt || 0)),
+    unitAttempts: normalizeUnitAttempts(data.unitAttempts),
     inputSummary,
     inputFingerprint: String(data.inputFingerprint || ""),
     quotaReservationId: data.quotaReservationId
@@ -148,6 +188,7 @@ function normalizeJob(id: string, data: Record<string, unknown>): GenerationJob 
     quotaReservation,
     telemetry: normalizeJobTelemetry(data.telemetry),
     lease,
+    leaseEpoch: normalizeLeaseEpoch(data.leaseEpoch),
     lessonId: data.lessonId ? String(data.lessonId) : null,
     error: (data.error || null) as GenerationJobError | null,
     createdAt: asDate(data.createdAt),
@@ -167,23 +208,26 @@ function artifactRef(jobId: string, key: GenerationArtifactKey) {
 }
 
 function newGenerationJob(input: GenerationJobCreateInput, id: string, now: Date): GenerationJob {
+  const pipelineVersion = generationPipelineVersion(input.pipelineVersion ?? STAGED_GENERATION_PIPELINE_VERSION);
   const inputSummary = summarizeGenerationJobInput(input.input);
   return {
     id,
     schemaVersion: GENERATION_JOB_SCHEMA_VERSION,
-    pipelineVersion: STAGED_GENERATION_PIPELINE_VERSION,
+    pipelineVersion,
     uid: input.uid,
     status: "pending",
     currentStage: "initialize",
-    progress: initialGenerationJobProgress(inputSummary.periods),
+    progress: initialGenerationJobProgress(inputSummary.periods, pipelineVersion),
     stageCursor: { position: 0, total: inputSummary.assetCount },
     attempt: 0,
+    unitAttempts: {},
     inputSummary,
     inputFingerprint: input.inputFingerprint || "",
     quotaReservationId: input.quotaReservation?.operationId || null,
     quotaReservation: input.quotaReservation || null,
     telemetry: { entries: {} },
     lease: null,
+    leaseEpoch: 0,
     lessonId: null,
     error: null,
     createdAt: now,
@@ -324,6 +368,49 @@ export async function expireGenerationJobForUser(jobId: string, uid: string) {
   });
 }
 
+export async function acquireGenerationCheckpointLease(
+  jobId: string,
+  uid: string,
+  owner: string,
+  ttlMs = 90_000,
+): Promise<GenerationCheckpointLease | null> {
+  const ref = jobRef(jobId);
+  const safeOwner = assertSafeDocumentId(owner, "Generation lease owner");
+  const safeTtlMs = Number.isFinite(ttlMs) ? Math.min(300_000, Math.max(10_000, Math.floor(ttlMs))) : 90_000;
+  return getFirebaseDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists || snapshot.get("uid") !== uid) return null;
+    const job = normalizeJob(snapshot.id, snapshot.data() as Record<string, unknown>);
+    const now = new Date();
+    if (["completed", "failed", "cancelled"].includes(job.status)) return null;
+    if (job.expiresAt.getTime() <= now.getTime()) return null;
+    if (job.lease && job.lease.owner !== safeOwner && job.lease.expiresAt.getTime() > now.getTime()) return null;
+
+    const currentEpoch = typeof job.leaseEpoch === "number" ? job.leaseEpoch : 0;
+    if (currentEpoch >= Number.MAX_SAFE_INTEGER) {
+      throw new GenerationJobConflictError("Mã khóa tạo giáo án đã chạm ngưỡng tối đa.", "GENERATION_LEASE_EPOCH_OVERFLOW");
+    }
+    const nextEpoch = currentEpoch + 1;
+    const lease: GenerationJobLease = { owner: safeOwner, expiresAt: new Date(now.getTime() + safeTtlMs) };
+    const latestJob: GenerationJob = {
+      ...job,
+      lease,
+      leaseEpoch: nextEpoch,
+      updatedAt: now,
+    };
+    transaction.set(ref, stripUndefinedDeep({
+      lease,
+      leaseEpoch: nextEpoch,
+      updatedAt: now,
+    }), { merge: true });
+    return {
+      job: latestJob,
+      epoch: nextEpoch,
+      lease,
+    };
+  });
+}
+
 export async function acquireGenerationJobLease(
   jobId: string,
   uid: string,
@@ -337,11 +424,13 @@ export async function acquireGenerationJobLease(
     const snapshot = await transaction.get(ref);
     if (!snapshot.exists || snapshot.get("uid") !== uid) return null;
     const job = normalizeJob(snapshot.id, snapshot.data() as Record<string, unknown>);
+    const now = new Date();
     if (["completed", "failed", "cancelled"].includes(job.status)) return null;
-    if (job.lease && job.lease.owner !== safeOwner && job.lease.expiresAt.getTime() > Date.now()) return null;
+    if (job.expiresAt.getTime() <= now.getTime()) return null;
+    if (job.lease && job.lease.owner !== safeOwner && job.lease.expiresAt.getTime() > now.getTime()) return null;
 
-    const lease: GenerationJobLease = { owner: safeOwner, expiresAt: new Date(Date.now() + safeTtlMs) };
-    transaction.set(ref, { lease, updatedAt: new Date() }, { merge: true });
+    const lease: GenerationJobLease = { owner: safeOwner, expiresAt: new Date(now.getTime() + safeTtlMs) };
+    transaction.set(ref, { lease, updatedAt: now }, { merge: true });
     return lease;
   });
 }
@@ -370,10 +459,95 @@ export async function updateLeasedGenerationJob(
   return getFirebaseDb().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
     if (!snapshot.exists || snapshot.get("uid") !== uid) return false;
-    const lease = snapshot.get("lease") as { owner?: unknown } | null | undefined;
-    if (!lease || String(lease.owner || "") !== safeOwner) return false;
-    if (["completed", "failed", "cancelled"].includes(String(snapshot.get("status") || ""))) return false;
-    transaction.set(ref, stripUndefinedDeep({ ...patch, updatedAt: new Date() }), { merge: true });
+    const job = normalizeJob(snapshot.id, snapshot.data() as Record<string, unknown>);
+    const now = new Date();
+    if (["completed", "failed", "cancelled"].includes(job.status)) return false;
+    if (job.expiresAt.getTime() <= now.getTime()) return false;
+    if (!job.lease || job.lease.owner !== safeOwner || job.lease.expiresAt.getTime() <= now.getTime()) return false;
+    transaction.set(ref, stripUndefinedDeep({ ...patch, updatedAt: now }), { merge: true });
+    return true;
+  });
+}
+
+export async function commitGenerationJobCheckpoint(
+  jobId: string,
+  uid: string,
+  owner: string,
+  epoch: number,
+  checkpoint: GenerationJobCheckpoint,
+): Promise<boolean> {
+  const ref = jobRef(jobId);
+  const safeOwner = assertSafeDocumentId(owner, "Generation lease owner");
+  if (typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch <= 0) {
+    return false;
+  }
+
+  // Early validation of size and sequence before opening transaction
+  const preparedArtifacts = (checkpoint.artifacts || []).map((artifact) => {
+    const payloadBytes = assertGenerationArtifactSize(artifact.payload);
+    const sequence = generationArtifactSequence(artifact.key);
+    return {
+      ref: artifactRef(jobId, artifact.key),
+      kind: artifact.key.kind,
+      sequence,
+      payload: artifact.payload,
+      payloadBytes,
+    };
+  });
+
+  return getFirebaseDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists || snapshot.get("uid") !== uid) return false;
+    const job = normalizeJob(snapshot.id, snapshot.data() as Record<string, unknown>);
+    const now = new Date();
+
+    if (["completed", "failed", "cancelled"].includes(job.status)) return false;
+    if (job.expiresAt.getTime() <= now.getTime()) return false;
+    if (!job.lease || job.lease.owner !== safeOwner || job.lease.expiresAt.getTime() <= now.getTime()) return false;
+    if (job.leaseEpoch !== epoch) return false;
+    if (job.currentStage !== checkpoint.expectedStage || job.stageCursor.position !== checkpoint.expectedPosition) {
+      return false;
+    }
+
+    // Read existing artifact snapshots concurrently to preserve creation timestamps
+    const artifactSnapshots = await Promise.all(preparedArtifacts.map((prepared) => transaction.get(prepared.ref)));
+
+    // Re-check deadlines after async artifact reads to guarantee stale workers whose lease
+    // or job expired during network/read delay never perform writes
+    const postReadNow = new Date();
+    if (job.expiresAt.getTime() <= postReadNow.getTime()) return false;
+    if (job.lease.expiresAt.getTime() <= postReadNow.getTime()) return false;
+
+    // Artifact expiry must NEVER outlive the parent job
+    const artifactExpiresAt = new Date(Math.min(
+      job.expiresAt.getTime(),
+      postReadNow.getTime() + generationJobTtlMs(),
+    ));
+
+    for (let index = 0; index < preparedArtifacts.length; index += 1) {
+      const prepared = preparedArtifacts[index];
+      const existingArtifactSnapshot = artifactSnapshots[index];
+      if (existingArtifactSnapshot.exists) {
+        generationSchemaVersion(existingArtifactSnapshot.get("schemaVersion"));
+      }
+      transaction.set(prepared.ref, stripUndefinedDeep({
+        schemaVersion: GENERATION_JOB_SCHEMA_VERSION,
+        jobId,
+        kind: prepared.kind,
+        sequence: prepared.sequence,
+        payload: prepared.payload,
+        payloadBytes: prepared.payloadBytes,
+        createdAt: existingArtifactSnapshot.exists ? existingArtifactSnapshot.get("createdAt") : postReadNow,
+        updatedAt: postReadNow,
+        expiresAt: artifactExpiresAt,
+      }));
+    }
+
+    transaction.set(ref, stripUndefinedDeep({
+      ...checkpoint.patch,
+      updatedAt: postReadNow,
+    }), { merge: true });
+
     return true;
   });
 }
@@ -381,34 +555,83 @@ export async function updateLeasedGenerationJob(
 export async function writeGenerationJobArtifact<T>(jobId: string, key: GenerationArtifactKey, payload: T) {
   const payloadBytes = assertGenerationArtifactSize(payload);
   const sequence = generationArtifactSequence(key);
-  const ref = artifactRef(jobId, key);
-  const now = new Date();
-  const defaultExpiresAt = new Date(now.getTime() + generationJobTtlMs());
+  const jRef = jobRef(jobId);
+  const aRef = artifactRef(jobId, key);
+
   await getFirebaseDb().runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    transaction.set(ref, stripUndefinedDeep({
+    const parentJobSnapshot = await transaction.get(jRef);
+    if (!parentJobSnapshot.exists) {
+      throw new GenerationJobConflictError(
+        "Không thể lưu trữ artifact khi yêu cầu tạo giáo án không tồn tại.",
+        "GENERATION_JOB_NOT_FOUND",
+      );
+    }
+    const parentJob = normalizeJob(parentJobSnapshot.id, parentJobSnapshot.data() as Record<string, unknown>);
+    const now = new Date();
+
+    if (["completed", "failed", "cancelled"].includes(parentJob.status)) {
+      throw new GenerationJobConflictError(
+        "Yêu cầu tạo giáo án đã ở trạng thái kết thúc.",
+        "GENERATION_JOB_TERMINAL",
+      );
+    }
+    if (parentJob.expiresAt.getTime() <= now.getTime()) {
+      throw new GenerationJobConflictError(
+        "Yêu cầu tạo giáo án đã hết hạn.",
+        "GENERATION_JOB_EXPIRED",
+      );
+    }
+    if (parentJob.pipelineVersion === STAGED_V2_PIPELINE_VERSION && key.kind !== "input") {
+      throw new GenerationJobConflictError(
+        "Quy trình staged-v2 yêu cầu lưu artifact qua commitGenerationJobCheckpoint.",
+        "GENERATION_CHECKPOINT_REQUIRED",
+      );
+    }
+
+    const artifactSnapshot = await transaction.get(aRef);
+    if (artifactSnapshot.exists) {
+      generationSchemaVersion(artifactSnapshot.get("schemaVersion"));
+    }
+
+    const postReadNow = new Date();
+    if (parentJob.expiresAt.getTime() <= postReadNow.getTime()) {
+      throw new GenerationJobConflictError(
+        "Yêu cầu tạo giáo án đã hết hạn trong quá trình lưu trữ artifact.",
+        "GENERATION_JOB_EXPIRED",
+      );
+    }
+
+    // Artifact TTL is bounded by parent job TTL
+    const artifactExpiresAt = new Date(Math.min(
+      parentJob.expiresAt.getTime(),
+      postReadNow.getTime() + generationJobTtlMs(),
+    ));
+
+    transaction.set(aRef, stripUndefinedDeep({
       schemaVersion: GENERATION_JOB_SCHEMA_VERSION,
       jobId,
       kind: key.kind,
       sequence,
       payload,
       payloadBytes,
-      createdAt: snapshot.exists ? snapshot.get("createdAt") : now,
-      updatedAt: now,
-      expiresAt: snapshot.exists ? snapshot.get("expiresAt") || defaultExpiresAt : defaultExpiresAt,
+      createdAt: artifactSnapshot.exists ? artifactSnapshot.get("createdAt") : postReadNow,
+      updatedAt: postReadNow,
+      expiresAt: artifactExpiresAt,
     }));
   });
-  return ref.id;
+
+  return aRef.id;
 }
 
 export async function readGenerationJobArtifact<T>(jobId: string, key: GenerationArtifactKey) {
   const snapshot = await artifactRef(jobId, key).get();
   if (!snapshot.exists) return null;
   const data = snapshot.data() as Record<string, unknown>;
+  const schemaVersion = generationSchemaVersion(data.schemaVersion);
   return {
     id: snapshot.id,
     jobId: String(data.jobId || jobId),
-    schemaVersion: GENERATION_JOB_SCHEMA_VERSION,
+    schemaVersion,
     kind: key.kind,
     sequence: data.sequence == null ? null : Math.max(1, Number(data.sequence)),
     payload: data.payload as T,

@@ -3,7 +3,10 @@ import type { SubscriptionPlan } from "@/lib/model-strategy";
 import type { SecurityGenerationCallMetric } from "@shared/security-contract";
 
 export const GENERATION_JOB_SCHEMA_VERSION = 1;
-export const STAGED_GENERATION_PIPELINE_VERSION = "staged-v1";
+export const STAGED_V1_PIPELINE_VERSION = "staged-v1";
+export const STAGED_V2_PIPELINE_VERSION = "staged-v2";
+export const STAGED_GENERATION_PIPELINE_VERSION = STAGED_V2_PIPELINE_VERSION;
+export type GenerationPipelineVersion = typeof STAGED_V1_PIPELINE_VERSION | typeof STAGED_V2_PIPELINE_VERSION;
 export const MAX_GENERATION_ARTIFACT_BYTES = 900 * 1024;
 
 export const GENERATION_JOB_STATUSES = [
@@ -19,11 +22,19 @@ export const GENERATION_JOB_STAGES = [
   "initialize",
   "ocr",
   "source-preparation",
+  "source-facts",
+  "lesson-map",
   "blueprint",
+  "section-outcomes",
+  "section-materials",
+  "period-blueprint",
   "period-generation",
+  "period-phase",
+  "section-assessment",
   "assembly",
   "subject-validation",
   "repair",
+  "phase-repair",
   "final-validation",
   "persistence",
   "quota-settlement",
@@ -35,11 +46,19 @@ export const GENERATION_ARTIFACT_KINDS = [
   "ocr-page",
   "ocr",
   "source-context",
+  "source-facts",
+  "lesson-map",
   "blueprint",
+  "section-outcomes",
+  "section-materials",
+  "period-blueprint",
   "period",
+  "period-phase",
+  "section-assessment",
   "assembly",
   "validation",
   "repair",
+  "phase-repair",
   "final",
 ] as const;
 
@@ -54,6 +73,7 @@ export type GenerationJobProgress = {
   totalUnits: number;
   currentPeriod: number | null;
   totalPeriods: number;
+  currentPhase?: string;
 };
 
 export type GenerationJobStageCursor = {
@@ -105,19 +125,21 @@ export type GenerationJobTelemetry = {
 export type GenerationJob = {
   id: string;
   schemaVersion: typeof GENERATION_JOB_SCHEMA_VERSION;
-  pipelineVersion: typeof STAGED_GENERATION_PIPELINE_VERSION;
+  pipelineVersion: GenerationPipelineVersion;
   uid: string;
   status: GenerationJobStatus;
   currentStage: GenerationJobStage;
   progress: GenerationJobProgress;
   stageCursor: GenerationJobStageCursor;
   attempt: number;
+  unitAttempts?: Record<string, number>;
   inputSummary: GenerationJobInputSummary;
   inputFingerprint: string;
   quotaReservationId: string | null;
   quotaReservation: GenerationJobQuotaReservation | null;
   telemetry?: GenerationJobTelemetry;
   lease: GenerationJobLease | null;
+  leaseEpoch?: number;
   lessonId: string | null;
   error: GenerationJobError | null;
   createdAt: Date;
@@ -131,6 +153,7 @@ export type GenerationJobCreateInput = {
   input: LessonInput;
   inputFingerprint?: string;
   quotaReservation?: GenerationJobQuotaReservation | null;
+  pipelineVersion?: GenerationPipelineVersion;
   expiresAt?: Date;
 };
 
@@ -175,13 +198,16 @@ export function summarizeGenerationJobInput(input: LessonInput): GenerationJobIn
   };
 }
 
-export function initialGenerationJobProgress(periods: number): GenerationJobProgress {
+export function initialGenerationJobProgress(
+  periods: number,
+  version: GenerationPipelineVersion = STAGED_V1_PIPELINE_VERSION,
+): GenerationJobProgress {
   const totalPeriods = positiveInteger(periods);
   return {
     percent: 0,
     message: "Đang chuẩn bị yêu cầu tạo giáo án.",
     completedUnits: 0,
-    totalUnits: Math.max(10, 9 + totalPeriods),
+    totalUnits: version === STAGED_V2_PIPELINE_VERSION ? 13 + 5 * totalPeriods : Math.max(10, 9 + totalPeriods),
     currentPeriod: null,
     totalPeriods,
   };
@@ -189,6 +215,7 @@ export function initialGenerationJobProgress(periods: number): GenerationJobProg
 
 export function generationArtifactSequence(key: GenerationArtifactKey) {
   return key.kind === "ocr-page" || key.kind === "period" || key.kind === "repair"
+    || key.kind === "period-blueprint" || key.kind === "period-phase" || key.kind === "phase-repair"
     ? positiveInteger(key.sequence)
     : null;
 }

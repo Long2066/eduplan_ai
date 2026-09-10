@@ -66,6 +66,7 @@ export async function createStagedGenerationJob(
   input: LessonInput,
   idempotencyKey: string,
   security?: GenerationSecurityContext,
+  pipelineVersion?: GenerationJob["pipelineVersion"],
 ) {
   const jobId = generationJobDocumentId(user.uid, idempotencyKey);
   const fingerprint = generationInputFingerprint(input);
@@ -94,6 +95,7 @@ export async function createStagedGenerationJob(
       input,
       inputFingerprint: fingerprint,
       quotaReservation: asJobReservation(reservation),
+      ...(pipelineVersion ? { pipelineVersion } : {}),
     });
     if (!creation.created) {
       // The reservation belongs to the job that won the create transaction.
@@ -208,6 +210,7 @@ export function serializeGenerationJob(job: GenerationJob) {
     progress: job.progress,
     stageCursor: job.stageCursor,
     attempt: job.attempt,
+    ...(job.unitAttempts ? { unitAttempts: job.unitAttempts } : {}),
     inputSummary: job.inputSummary,
     lessonId: job.lessonId,
     error: job.error,

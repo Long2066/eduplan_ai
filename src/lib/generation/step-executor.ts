@@ -872,6 +872,12 @@ export async function advanceStagedGenerationJob(uid: string, jobId: string, ocr
   if (!job) {
     throw new GenerationJobRequestError("Không tìm thấy yêu cầu tạo giáo án.", "GENERATION_JOB_NOT_FOUND", 404);
   }
+
+  // ponytail: v2 dispatch — all v2 jobs use fenced checkpoint executor; upgrade to shared entry when v1 removed
+  if (job.pipelineVersion === "staged-v2") {
+    const { advanceStagedGenerationJobV2 } = await import("@/lib/generation/step-executor-v2");
+    return advanceStagedGenerationJobV2(uid, jobId, ocrAsset);
+  }
   if (!["completed", "failed", "cancelled"].includes(job.status) && job.expiresAt.getTime() <= Date.now()) {
     const expired = await expireStagedGenerationJobIfNeeded(uid, jobId);
     if (expired) return expired;

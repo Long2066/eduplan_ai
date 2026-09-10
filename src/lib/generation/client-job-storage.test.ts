@@ -77,4 +77,15 @@ describe("active staged generation storage", () => {
     clearActiveStagedGeneration("user-1", "job-1", storage);
     expect(readActiveStagedGeneration("user-1", storage)).toBeNull();
   });
+
+  it("discards corrupted or incomplete checkpoint objects", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      ACTIVE_STAGED_JOB_STORAGE_KEY,
+      JSON.stringify({ uid: "user-1", job: { id: "job-1", status: "waiting_next_step" } }),
+    );
+
+    expect(readActiveStagedGeneration("user-1", storage)).toBeNull();
+    expect(storage.removeItem).toHaveBeenCalledWith(ACTIVE_STAGED_JOB_STORAGE_KEY);
+  });
 });

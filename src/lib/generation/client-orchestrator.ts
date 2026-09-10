@@ -1,12 +1,19 @@
-import type {
-  GenerationJobError,
-  GenerationJobProgress,
-  GenerationJobStage,
-  GenerationJobStageCursor,
-  GenerationJobStatus,
+import {
+  GENERATION_JOB_STAGES,
+  GENERATION_JOB_STATUSES,
+  type GenerationJobError,
+  type GenerationJobProgress,
+  type GenerationJobStage,
+  type GenerationJobStageCursor,
+  type GenerationJobStatus,
 } from "@/lib/generation/job-types";
 import { sortGenerationOcrAssets } from "@/lib/generation/ocr-asset-order";
+import { createServerAuthSession } from "@/lib/auth-client";
 import type { LessonInput, LessonPlan, UploadedAsset } from "@/types/lesson";
+
+export type ClientGenerationProgress = Omit<GenerationJobProgress, "currentPhase"> & {
+  currentPhase?: string | null;
+};
 
 export type ClientGenerationJob = {
   id: string;
@@ -14,9 +21,10 @@ export type ClientGenerationJob = {
   pipelineVersion: string;
   status: GenerationJobStatus;
   currentStage: GenerationJobStage;
-  progress: GenerationJobProgress;
+  progress: ClientGenerationProgress;
   stageCursor: GenerationJobStageCursor;
   attempt: number;
+  unitAttempts?: Record<string, number>;
   inputSummary: {
     subject: string;
     grade: string;
@@ -30,6 +38,43 @@ export type ClientGenerationJob = {
   updatedAt: string;
   expiresAt: string;
 };
+
+function record(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function nonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+export function isClientGenerationJob(value: unknown): value is ClientGenerationJob {
+  if (!record(value)) return false;
+  const { progress, stageCursor, inputSummary, error, unitAttempts } = value;
+  return typeof value.id === "string" && value.id.trim().length > 0
+    && nonNegativeInteger(value.schemaVersion) && value.schemaVersion > 0
+    && typeof value.pipelineVersion === "string" && value.pipelineVersion.trim().length > 0
+    && GENERATION_JOB_STATUSES.includes(value.status as GenerationJobStatus)
+    && GENERATION_JOB_STAGES.includes(value.currentStage as GenerationJobStage)
+    && record(stageCursor) && nonNegativeInteger(stageCursor.position) && nonNegativeInteger(stageCursor.total)
+    && stageCursor.position <= stageCursor.total
+    && nonNegativeInteger(value.attempt)
+    && record(progress) && typeof progress.message === "string"
+    && typeof progress.percent === "number" && Number.isFinite(progress.percent)
+    && nonNegativeInteger(progress.completedUnits) && nonNegativeInteger(progress.totalUnits)
+    && nonNegativeInteger(progress.totalPeriods)
+    && (progress.currentPeriod === null || (nonNegativeInteger(progress.currentPeriod) && progress.currentPeriod > 0))
+    && (progress.currentPhase == null || typeof progress.currentPhase === "string")
+    && record(inputSummary)
+    && [inputSummary.subject, inputSummary.grade, inputSummary.lessonTitle].every((item) => typeof item === "string")
+    && nonNegativeInteger(inputSummary.periods) && inputSummary.periods > 0
+    && nonNegativeInteger(inputSummary.assetCount)
+    && (value.lessonId === null || (typeof value.lessonId === "string" && value.lessonId.length > 0))
+    && (error === null || (record(error) && typeof error.code === "string"
+      && typeof error.message === "string" && typeof error.retryable === "boolean"
+      && GENERATION_JOB_STAGES.includes(error.stage as GenerationJobStage)))
+    && (unitAttempts === undefined || (record(unitAttempts) && Object.values(unitAttempts).every(nonNegativeInteger)))
+    && [value.createdAt, value.updatedAt, value.expiresAt].every((item) => typeof item === "string" && Number.isFinite(Date.parse(item)));
+}
 
 export type StagedGenerationResult = {
   job: ClientGenerationJob;
@@ -72,12 +117,25 @@ type ResumeOptions = ClientRequestOptions & {
 export class StagedGenerationApiError extends Error {
   code: string;
   status: number;
+  details?: unknown;
+  quotaRefunded?: boolean;
+  retryable?: boolean;
 
-  constructor(message: string, code = "STAGED_GENERATION_REQUEST_FAILED", status = 500) {
+  constructor(
+    message: string,
+    code = "STAGED_GENERATION_REQUEST_FAILED",
+    status = 500,
+    details?: unknown,
+    quotaRefunded?: boolean,
+    retryable?: boolean,
+  ) {
     super(message);
     this.name = "STAGED_GENERATION_API_ERROR";
     this.code = code;
     this.status = status;
+    this.details = details;
+    this.quotaRefunded = quotaRefunded;
+    this.retryable = retryable;
   }
 }
 
@@ -107,9 +165,11 @@ async function requestJson<T>(
   url: string,
   init: RequestInit,
   fetcher: Fetcher = fetch,
+  allowSessionBootstrap = true,
 ): Promise<T> {
   let response: Response;
   try {
+    init.signal?.throwIfAborted();
     response = await fetcher(url, init);
   } catch (error) {
     if (init.signal?.aborted) throw error;
@@ -120,28 +180,46 @@ async function requestJson<T>(
     );
   }
 
-  const responseText = await response.text();
-  let result: Record<string, unknown> = {};
-  if (responseText) {
-    try {
-      result = JSON.parse(responseText) as Record<string, unknown>;
-    } catch {
-      throw new StagedGenerationApiError(
-        response.status === 504
-          ? "Máy chủ đã hết thời gian xử lý bước hiện tại."
-          : "Máy chủ trả phản hồi không hợp lệ (HTTP " + response.status + ").",
-        response.status === 504 ? "GENERATION_STEP_TIMEOUT" : "INVALID_SERVER_RESPONSE",
-        response.status,
-      );
-    }
+  const bearerToken = new Headers(init.headers).get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (response.status === 401 && allowSessionBootstrap && bearerToken) {
+    await createServerAuthSession({
+      user: { getIdToken: async () => bearerToken },
+      fetcher: (sessionUrl, sessionInit) => fetcher(sessionUrl, { ...sessionInit, signal: init.signal }),
+    });
+    return requestJson<T>(url, init, fetcher, false);
+  }
+
+  let result: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(await response.text());
+    if (!record(parsed)) throw new Error("Expected an object");
+    result = parsed;
+  } catch (error) {
+    if (init.signal?.aborted) throw error;
+    throw new StagedGenerationApiError(
+      response.status === 504
+        ? "Máy chủ đã hết thời gian xử lý bước hiện tại."
+        : "Máy chủ trả phản hồi không hợp lệ (HTTP " + response.status + ").",
+      response.status === 504 ? "GENERATION_STEP_TIMEOUT" : "INVALID_SERVER_RESPONSE",
+      response.status,
+    );
   }
 
   if (!response.ok) {
+    const errorDetails = result.details ?? result.errorDetails;
+    const quotaRefunded = typeof result.quotaRefunded === "boolean" ? result.quotaRefunded : undefined;
+    const retryable = typeof result.retryable === "boolean" ? result.retryable : undefined;
     throw new StagedGenerationApiError(
       typeof result.error === "string" ? result.error : "Yêu cầu thất bại (HTTP " + response.status + ").",
       typeof result.code === "string" ? result.code : "STAGED_GENERATION_REQUEST_FAILED",
       response.status,
+      errorDetails,
+      quotaRefunded,
+      retryable,
     );
+  }
+  if (url.startsWith("/api/lesson/generation-jobs") && !isClientGenerationJob(result.job)) {
+    throw new StagedGenerationApiError("Máy chủ trả tiến trình không hợp lệ. Điểm lưu hiện tại vẫn được giữ lại.", "INVALID_SERVER_RESPONSE", response.status);
   }
   return result as T;
 }
@@ -240,19 +318,21 @@ function terminalStatus(status: GenerationJobStatus) {
 
 function retryableRequestError(error: unknown) {
   if (!(error instanceof StagedGenerationApiError)) return false;
+  if (typeof error.retryable === "boolean") return error.retryable;
   return error.status === 0
     || error.status >= 500
     || [
       "GENERATION_JOB_BUSY",
       "GENERATION_JOB_LEASE_LOST",
-      "GENERATION_JOB_TERMINAL",
       "GENERATION_STEP_TIMEOUT",
       "GENERATION_STEP_FAILED",
     ].includes(error.code);
 }
 
-function jobPositionKey(job: ClientGenerationJob) {
-  return job.currentStage + ":" + job.stageCursor.position + ":" + job.status;
+export function jobPositionKey(
+  job: Pick<ClientGenerationJob, "currentStage" | "stageCursor">,
+) {
+  return `${job.currentStage}:${job.stageCursor.position}`;
 }
 
 function waitForRetry(ms: number, signal?: AbortSignal) {
@@ -269,6 +349,18 @@ function waitForRetry(ms: number, signal?: AbortSignal) {
   });
 }
 
+export function isJobBlockedByNonRetryableError(
+  job: Pick<ClientGenerationJob, "currentStage" | "error">,
+): boolean {
+  if (!job.error || job.error.retryable !== false) return false;
+  // If the job has reached quota settlement, allow settlement to finalize or refund
+  // even if an earlier content stage generated a non-retryable error.
+  if (job.currentStage === "quota-settlement") {
+    return job.error.stage === "quota-settlement";
+  }
+  return true;
+}
+
 export async function continueStagedGeneration(
   options: ContinueOptions,
 ): Promise<StagedGenerationResult> {
@@ -281,6 +373,9 @@ export async function continueStagedGeneration(
   options.onJob?.(job);
 
   while (!terminalStatus(job.status)) {
+    if (isJobBlockedByNonRetryableError(job)) {
+      throw new StagedGenerationTerminalError(job);
+    }
     try {
       const ocrAsset = job.currentStage === "ocr"
         ? ocrAssets[job.stageCursor.position]
@@ -294,18 +389,39 @@ export async function continueStagedGeneration(
       }
       const nextJob = await advanceStagedGenerationJobClient(job.id, { ...options, ocrAsset });
       const nextPositionKey = jobPositionKey(nextJob);
-      retriesAtPosition = nextPositionKey === positionKey ? retriesAtPosition : 0;
+      if (nextPositionKey === positionKey) {
+        retriesAtPosition += 1;
+        if (terminalStatus(nextJob.status) || isJobBlockedByNonRetryableError(nextJob)) {
+          job = nextJob;
+          options.onJob?.(job);
+          throw new StagedGenerationTerminalError(job);
+        }
+        if (retriesAtPosition > maxAutomaticRetries) {
+          job = nextJob;
+          options.onJob?.(job);
+          throw new StagedGenerationApiError(
+            nextJob.error?.message || "Quá nhiều lần thử liên tiếp không có tiến triển mới tại bước hiện tại.",
+            nextJob.error?.code || "GENERATION_STALLED_AT_STEP",
+            422,
+          );
+        }
+      } else {
+        retriesAtPosition = 0;
+      }
       positionKey = nextPositionKey;
       job = nextJob;
       if (job.currentStage !== "ocr") ocrAssets = [];
       options.onJob?.(job);
     } catch (error) {
+      if (error instanceof StagedGenerationTerminalError) throw error;
       if (!retryableRequestError(error) || retriesAtPosition >= maxAutomaticRetries) throw error;
       retriesAtPosition += 1;
       await waitForRetry(retryDelayMs * retriesAtPosition, options.signal);
       job = await getStagedGenerationJobClient(job.id, options);
       const nextPositionKey = jobPositionKey(job);
-      if (nextPositionKey !== positionKey) retriesAtPosition = 0;
+      if (nextPositionKey !== positionKey) {
+        retriesAtPosition = 0;
+      }
       positionKey = nextPositionKey;
       options.onJob?.(job);
     }

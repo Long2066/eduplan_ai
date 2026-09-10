@@ -26,12 +26,14 @@ import {
 import {
   StagedGenerationTerminalError,
   cancelStagedGenerationJobClient,
+  isJobBlockedByNonRetryableError,
   resumeStagedGeneration,
   startStagedGeneration,
   type ClientGenerationJob,
   type StagedGenerationResult,
 } from "@/lib/generation/client-orchestrator";
 import {
+  ClientGenerationConfigError,
   configuredClientGenerationPipelineMode,
   loadEffectiveClientGenerationPipelineMode,
 } from "@/lib/generation/client-pipeline-mode";
@@ -338,38 +340,15 @@ export default function Home() {
     }
   }
 
+  const [pipelineConfigError, setPipelineConfigError] = useState<string>("");
+
   useEffect(() => {
     return () => generationRunnerRef.current?.abort();
   }, []);
 
+  // Always attempt to restore a running/saved staged job for the current user,
+  // regardless of subsequent flag changes, so progress and ID/version are preserved.
   useEffect(() => {
-    if (CLIENT_GENERATION_PIPELINE_MODE !== "staged") {
-      setGenerationPipelineMode("legacy");
-      setPipelineConfigLoaded(true);
-      return;
-    }
-    if (!user?.emailVerified || user.disabled) {
-      setGenerationPipelineMode("legacy");
-      setPipelineConfigLoaded(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    setPipelineConfigLoaded(false);
-    void loadEffectiveClientGenerationPipelineMode({
-      publicMode: CLIENT_GENERATION_PIPELINE_MODE,
-      signal: controller.signal,
-    }).then((mode) => {
-      if (controller.signal.aborted) return;
-      setGenerationPipelineMode(mode);
-      setPipelineConfigLoaded(true);
-      if (mode === "legacy") setGenerationJob(null);
-    });
-    return () => controller.abort();
-  }, [user?.uid, user?.emailVerified, user?.disabled]);
-
-  useEffect(() => {
-    if (generationPipelineMode !== "staged" || !pipelineConfigLoaded) return;
     if (!user) {
       resumedUserRef.current = null;
       return;
@@ -383,8 +362,50 @@ export default function Home() {
       clearActiveStagedGeneration(user.uid, stored.job.id);
       return;
     }
-    void handleResumeStagedGeneration(stored.job.id);
-  }, [generationPipelineMode, pipelineConfigLoaded, user]);
+    // Only auto-resume if the job is not non-retryable
+    if (!stored.job.error || stored.job.error.retryable !== false) {
+      void handleResumeStagedGeneration(stored.job.id);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (CLIENT_GENERATION_PIPELINE_MODE !== "staged") {
+      setGenerationPipelineMode("legacy");
+      setPipelineConfigLoaded(true);
+      setPipelineConfigError("");
+      return;
+    }
+    if (!user?.emailVerified || user.disabled) {
+      setGenerationPipelineMode("legacy");
+      setPipelineConfigLoaded(false);
+      setPipelineConfigError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setPipelineConfigLoaded(false);
+    setPipelineConfigError("");
+    void loadEffectiveClientGenerationPipelineMode({
+      publicMode: CLIENT_GENERATION_PIPELINE_MODE,
+      signal: controller.signal,
+    })
+      .then((mode) => {
+        if (controller.signal.aborted) return;
+        setGenerationPipelineMode(mode);
+        setPipelineConfigLoaded(true);
+        setPipelineConfigError("");
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        const msg =
+          err instanceof ClientGenerationConfigError
+            ? err.message
+            : "Không thể tải cấu hình quy trình tạo giáo án nhiều bước. Vui lòng kiểm tra kết nối và thử lại.";
+        setPipelineConfigError(msg);
+        setPipelineConfigLoaded(false);
+      });
+    return () => controller.abort();
+  }, [user?.uid, user?.emailVerified, user?.disabled]);
 
   async function handleGenerate() {
     if (generationRunnerRef.current) return;
@@ -707,6 +728,38 @@ export default function Home() {
 
           {/* Right: Preview */}
           <div className="fixed-preview-pane xl:flex xl:min-h-0 xl:flex-col xl:overflow-hidden">
+            {/* Config error banner */}
+            {pipelineConfigError ? (
+              <div className="toast-banner mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold leading-5 text-amber-900 shadow-sm">
+                <span className="flex-1">{pipelineConfigError}</span>
+                <button
+                  type="button"
+                  className="rounded-lg border border-amber-400 bg-white px-3 py-1 text-xs font-bold text-amber-800 shadow-xs hover:bg-amber-100"
+                  onClick={() => {
+                    setPipelineConfigError("");
+                    setPipelineConfigLoaded(false);
+                    void loadEffectiveClientGenerationPipelineMode({
+                      publicMode: CLIENT_GENERATION_PIPELINE_MODE,
+                    })
+                      .then((mode) => {
+                        setGenerationPipelineMode(mode);
+                        setPipelineConfigLoaded(true);
+                      })
+                      .catch((err) => {
+                        setPipelineConfigError(
+                          err instanceof ClientGenerationConfigError
+                            ? err.message
+                            : "Không thể tải cấu hình. Vui lòng thử lại sau.",
+                        );
+                        setPipelineConfigLoaded(false);
+                      });
+                  }}
+                >
+                  Tải lại cấu hình
+                </button>
+              </div>
+            ) : null}
+
             {/* Error banner */}
             {generationError ? (
               <div className="toast-banner mb-2.5 shrink-0 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-5 text-red-700 shadow-sm">
@@ -714,7 +767,7 @@ export default function Home() {
               </div>
             ) : null}
 
-            {generationPipelineMode === "staged" && generationJob ? (
+            {generationJob ? (
               <GenerationProgressCard
                 job={generationJob}
                 isActive={isGenerating}

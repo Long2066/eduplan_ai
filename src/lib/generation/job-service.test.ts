@@ -47,6 +47,7 @@ import {
   cancelStagedGenerationJob,
   createStagedGenerationJob,
   getStagedGenerationJob,
+  serializeGenerationJob,
 } from "./job-service";
 
 function lessonInput(): LessonInput {
@@ -256,5 +257,34 @@ describe("generation job service", () => {
     expect(result).toBe(expired);
     expect(lifecycleMocks.expireStagedGenerationJobIfNeeded).toHaveBeenCalledWith("user-1", "job-1");
     expect(lifecycleMocks.cleanupTerminalGenerationJobInput).not.toHaveBeenCalled();
+  });
+
+  it("passes optional pipelineVersion when creating a staged job and serializes unitAttempts", async () => {
+    storeMocks.createGenerationJobIfAbsent.mockImplementation(async (input: { id: string; pipelineVersion?: string }) => ({
+      job: generationJob({
+        id: input.id,
+        pipelineVersion: (input.pipelineVersion || "staged-v2") as GenerationJob["pipelineVersion"],
+        unitAttempts: { "section-outcomes:0": 2 },
+      }),
+      created: true,
+    }));
+
+    const result = await createStagedGenerationJob(
+      { uid: "user-1", email: "teacher@example.com" },
+      lessonInput(),
+      "request-456",
+      undefined,
+      "staged-v2",
+    );
+
+    expect(storeMocks.createGenerationJobIfAbsent).toHaveBeenCalledWith(
+      expect.objectContaining({ pipelineVersion: "staged-v2" }),
+    );
+
+    const serialized = serializeGenerationJob(result.job);
+    expect(serialized.pipelineVersion).toBe("staged-v2");
+    expect((serialized as unknown as { unitAttempts?: Record<string, number> }).unitAttempts).toEqual({
+      "section-outcomes:0": 2,
+    });
   });
 });

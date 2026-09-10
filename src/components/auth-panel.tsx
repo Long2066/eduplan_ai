@@ -3,12 +3,16 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
+  getRedirectResult,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   updateProfile,
+  type User,
 } from "firebase/auth";
+import { completeFirebaseAuthSession, getGoogleAuthStrategy } from "@/lib/auth-client";
 import { getEmailActionSettings, getFirebaseClientAuth, googleAuthProvider, hasFirebaseClientConfig } from "@/lib/firebase-client";
 
 type AuthPanelProps = {
@@ -17,19 +21,18 @@ type AuthPanelProps = {
 
 type AuthMode = "login" | "register" | "reset";
 
-async function createSession() {
-  const auth = getFirebaseClientAuth();
-  const idToken = await auth.currentUser?.getIdToken(true);
-  if (!idToken) throw new Error("Không lấy được phiên đăng nhập.");
-  const response = await fetch("/api/auth/session", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!response.ok) {
-    const result = (await response.json()) as { error?: string };
-    throw new Error(result.error || "Không thể tạo phiên đăng nhập.");
+let redirectCompletionPromise: Promise<boolean> | null = null;
+
+function completeGoogleRedirectOnce(onSessionReady: AuthPanelProps["onSessionReady"]) {
+  if (!redirectCompletionPromise) {
+    redirectCompletionPromise = (async () => {
+      const result = await getRedirectResult(getFirebaseClientAuth());
+      if (!result) return false;
+      await completeFirebaseAuthSession({ user: result.user, onSessionReady });
+      return true;
+    })();
   }
+  return redirectCompletionPromise;
 }
 
 function friendlyAuthError(error: unknown) {
@@ -282,9 +285,26 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       .catch(() => undefined);
   }, []);
 
-  async function finishSession() {
-    await createSession();
-    await onSessionReady();
+  useEffect(() => {
+    if (!clientReady) return;
+
+    let active = true;
+    setIsSubmitting(true);
+    completeGoogleRedirectOnce(onSessionReady)
+      .catch((authError) => {
+        if (active) setError(friendlyAuthError(authError));
+      })
+      .finally(() => {
+        if (active) setIsSubmitting(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [clientReady, onSessionReady]);
+
+  async function finishSession(user: User) {
+    await completeFirebaseAuthSession({ user, onSessionReady });
   }
 
   async function handleEmailAuth() {
@@ -312,13 +332,13 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         if (displayName.trim()) await updateProfile(credential.user, { displayName: displayName.trim() });
         await sendEmailVerification(credential.user, getEmailActionSettings());
-        await finishSession();
+        await finishSession(credential.user);
         setMessage("Đã tạo tài khoản. Vui lòng xác minh email để bắt đầu tạo giáo án.");
         return;
       }
 
-      await signInWithEmailAndPassword(auth, email, password);
-      await finishSession();
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      await finishSession(credential.user);
     } catch (authError) {
       setError(friendlyAuthError(authError));
     } finally {
@@ -336,8 +356,13 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
     setIsSubmitting(true);
     try {
       const auth = getFirebaseClientAuth();
-      await signInWithPopup(auth, googleAuthProvider);
-      await finishSession();
+      if (getGoogleAuthStrategy() === "redirect") {
+        await signInWithRedirect(auth, googleAuthProvider);
+        return;
+      }
+
+      const credential = await signInWithPopup(auth, googleAuthProvider);
+      await finishSession(credential.user);
     } catch (authError) {
       setError(friendlyAuthError(authError));
     } finally {

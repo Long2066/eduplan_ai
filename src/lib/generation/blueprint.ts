@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import { extractAiJsonValue } from "@/lib/ai-json";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
 import { generationSubjectKind } from "@/lib/generation/subject-routing";
@@ -133,7 +133,7 @@ function compactSourceText(value: string) {
   return normalized.length > 8000 ? `${normalized.slice(0, 8000)}...` : normalized;
 }
 
-function buildSourceFactsPrompt(
+export function buildSourceFactsPrompt(
   input: LessonInput,
   subjectKind: StagedBlueprintArtifact["subjectKind"],
   sourceText: string,
@@ -183,7 +183,7 @@ Schema JSON cần trả:
 }`;
 }
 
-function buildLessonMapPrompt(
+export function buildLessonMapPrompt(
   input: LessonInput,
   subjectKind: StagedBlueprintArtifact["subjectKind"],
   sourceFacts: Record<string, unknown>,
@@ -238,7 +238,7 @@ Schema JSON cần trả:
 }`;
 }
 
-function buildLockedBlueprintContext(
+export function buildLockedBlueprintContext(
   input: LessonInput,
   sourceTruth: SourceTruth | undefined,
   sourceFacts: Record<string, unknown>,
@@ -287,7 +287,7 @@ function assertLessonMap(input: LessonInput, lessonMap: Record<string, unknown>)
   });
 }
 
-function lockedPipelineLessonTitle(
+export function lockedPipelineLessonTitle(
   input: LessonInput,
   sourceTruth: SourceTruth | undefined,
 ) {

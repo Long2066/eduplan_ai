@@ -34,6 +34,8 @@ describe("generation pipeline config route", () => {
     await expect(response.json()).resolves.toEqual({
       pipelineMode: "staged",
       stagedAvailable: true,
+      pipelineVersion: "staged-v2",
+      reason: "allowlisted",
     });
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
@@ -50,6 +52,8 @@ describe("generation pipeline config route", () => {
     await expect(response.json()).resolves.toEqual({
       pipelineMode: "legacy",
       stagedAvailable: false,
+      pipelineVersion: "staged-v2",
+      reason: "not_allowlisted",
     });
   });
 });

@@ -205,7 +205,7 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
 
 function AiLoadingPreview() {
   return (
-    <section className="animate-fade-in rounded-2xl border border-surface-200 bg-surface-0 p-5 shadow-soft xl:h-full xl:min-h-0 xl:overflow-hidden">
+    <section className="a4-loading-preview animate-fade-in rounded-2xl border border-surface-200 bg-surface-0 p-5 shadow-soft xl:h-full xl:min-h-0 xl:overflow-hidden">
       <div className="a4-preview-shell">
         <article className="a4-page">
           <div className="skeleton-line animate-shimmer-slow w-1/3" />

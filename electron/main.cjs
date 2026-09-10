@@ -47,6 +47,7 @@ function isAllowedAuthPopup(targetUrl) {
       hostname === "apis.google.com" ||
       hostname === "www.googleapis.com" ||
       hostname === "oauth2.googleapis.com" ||
+      hostname === "eduplan-ai.id.vn" ||
       hostname.endsWith(".firebaseapp.com") ||
       hostname.endsWith(".web.app")
     );

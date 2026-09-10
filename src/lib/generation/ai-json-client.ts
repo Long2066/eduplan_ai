@@ -5,6 +5,7 @@ import {
   GENERATION_SAVE_RESERVE_MS,
   GenerationTimeoutError,
   abortSignalForRequest,
+  beginGenerationAiCall,
   currentGenerationContext,
   recordGenerationCall,
   remainingGenerationMs,
@@ -35,10 +36,59 @@ export function waitForAiRetry(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function normalizeOpenAiError(raw: string, status?: number) {
+function parseSyntacticallyCompleteJson<T>(raw: string): T {
+  const trimmed = raw.trim();
+  let candidate = trimmed;
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced) candidate = fenced[1].trim();
+  if ((!candidate.startsWith("{") || !candidate.endsWith("}")) && (!candidate.startsWith("[") || !candidate.endsWith("]"))) {
+    throw new Error("AI trả về phản hồi bị cắt ngang hoặc không trọn vẹn cú pháp JSON. Hãy tạo lại ở bước kế tiếp.");
+  }
+  try {
+    const parsed = JSON.parse(candidate) as unknown;
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Cấu trúc phản hồi AI phải là object hoặc array hợp lệ.");
+    }
+    return parsed as T;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Cú pháp JSON không hoàn chỉnh.";
+    throw new Error(`AI trả về phản hồi chưa đúng cú pháp JSON nguyên vẹn (${message}).`);
+  }
+}
+
+export function aiResponseCompletionError(data: unknown, useResponsesApi: boolean, maxOutputTokens?: number) {
+  const response = data && typeof data === "object" ? data as {
+    error?: unknown;
+    incomplete_details?: unknown;
+    output?: Array<{ status?: unknown }>;
+    choices?: Array<{ finish_reason?: unknown; message?: { refusal?: unknown } }>;
+  } : {};
+  if (response.error) return "Nhà cung cấp AI trả về lỗi thay vì nội dung đã hoàn tất.";
+  if (useResponsesApi) {
+    const details = inspectOpenAiResponsesOutput(data);
+    if (details.status === "incomplete") return describeOpenAiResponsesEmptyOutput(data, maxOutputTokens);
+    if (details.status !== "completed" || response.incomplete_details
+      || response.output?.some((item) => item.status != null && item.status !== "completed")) {
+      return `AI chưa xác nhận hoàn tất phản hồi (status: ${details.status}).`;
+    }
+  } else {
+    const choice = response.choices?.[0];
+    if (choice?.finish_reason === "length") {
+      return "AI đã chạm giới hạn token đầu ra trước khi hoàn tất nội dung (finish_reason: length).";
+    }
+    if (choice?.finish_reason !== "stop" || choice.message?.refusal) {
+      return `AI chưa xác nhận hoàn tất nội dung (finish_reason: ${String(choice?.finish_reason ?? "unknown")}).`;
+    }
+  }
+  return null;
+}
+
+export function normalizeOpenAiError(raw: string, status?: number, singleAttempt = false) {
   console.error("[EduPlan AI] OpenAI API error response:", { status, raw });
   if (status && status >= 500) {
-    return "OpenAI đang lỗi tạm thời hoặc quá tải (5xx/Cloudflare). App đã thử lại tự động; vui lòng bấm tạo lại sau ít phút nếu lỗi còn xảy ra.";
+    return singleAttempt
+      ? "OpenAI đang lỗi tạm thời hoặc quá tải (5xx/Cloudflare). Vui lòng thử lại ở yêu cầu kế tiếp."
+      : "OpenAI đang lỗi tạm thời hoặc quá tải (5xx/Cloudflare). App đã thử lại tự động; vui lòng bấm tạo lại sau ít phút nếu lỗi còn xảy ra.";
   }
   if (/rate.?limit|429/i.test(raw)) {
     return "OpenAI đang bị giới hạn tốc độ/quota. Hãy chờ một lát rồi thử lại hoặc kiểm tra billing/quota của OpenAI key.";
@@ -55,10 +105,18 @@ export function normalizeOpenAiError(raw: string, status?: number) {
   return raw || `OpenAI failed with ${status || "unknown status"}`;
 }
 
-export function normalizeOpenAiFetchError(error: unknown, model: string, timeoutMs = OPENAI_REQUEST_TIMEOUT_MS) {
+export function normalizeOpenAiFetchError(
+  error: unknown,
+  model: string,
+  timeoutMs = OPENAI_REQUEST_TIMEOUT_MS,
+  singleAttempt = false,
+) {
   const message = error instanceof Error ? error.message : String(error || "fetch failed");
   if (/abort|timeout|timed out/i.test(message)) {
-    return `AI xử lý quá lâu và đã hết thời gian chờ (${Math.round(timeoutMs / 1000)} giây) với model ${model}. Hệ thống sẽ thử tuyến dự phòng nếu có.`;
+    const nextStep = singleAttempt
+      ? "Hãy thử lại ở yêu cầu kế tiếp."
+      : "Hệ thống sẽ thử tuyến dự phòng nếu có.";
+    return `AI xử lý quá lâu và đã hết thời gian chờ (${Math.round(timeoutMs / 1000)} giây) với model ${model}. ${nextStep}`;
   }
   if (/fetch failed|network|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket|terminated/i.test(message)) {
     return `Không kết nối ổn định tới nhà cung cấp AI khi gọi model ${model}. Hãy thử lại sau ít phút.`;
@@ -82,11 +140,17 @@ export async function fetchAiJsonContent(
       maxOutputTokens: strategy.fallbackMaxOutputTokens ?? strategy.maxOutputTokens,
     });
   }
+  const policy = currentGenerationContext()?.aiPolicy;
+  const selectedAttempts = policy?.singleAttempt
+    ? [policy.useFallback && attempts.length > 1 ? attempts[1] : attempts[0]]
+    : attempts;
   let primaryMessage = "AI không phản hồi.";
   let lastMessage = primaryMessage;
-  for (let selectedIndex = 0; selectedIndex < attempts.length; selectedIndex += 1) {
-    const selected = attempts[selectedIndex];
-    const fallbackUsed = selectedIndex > 0;
+  for (let selectedIndex = 0; selectedIndex < selectedAttempts.length; selectedIndex += 1) {
+    const selected = selectedAttempts[selectedIndex];
+    const fallbackUsed = policy?.singleAttempt
+      ? Boolean(policy.useFallback && attempts.length > 1)
+      : selectedIndex > 0;
     const apiKey = selected.provider === "openrouter" ? process.env.OPENROUTER_API_KEY : process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error(selected.provider === "openrouter"
@@ -96,27 +160,31 @@ export async function fetchAiJsonContent(
     const configuredRetries = selected.provider === "openrouter"
       ? openRouterTransientRetries()
       : OPENAI_TRANSIENT_RETRIES;
-    const configuredTimeoutMs = selected.provider === "openrouter"
+    const configuredTimeoutMs = policy?.requestTimeoutMs ?? (selected.provider === "openrouter"
       ? openRouterRequestTimeoutMs(selected.stage)
-      : selected.timeoutMs || OPENAI_REQUEST_TIMEOUT_MS;
+      : selected.timeoutMs || OPENAI_REQUEST_TIMEOUT_MS);
     const remainingBeforeAttempt = remainingGenerationMs() - GENERATION_SAVE_RESERVE_MS;
     if (remainingBeforeAttempt < (fallbackUsed ? MIN_FALLBACK_BUDGET_MS : 5_000)) {
       lastMessage = "Không còn đủ thời gian an toàn để gọi model AI tiếp theo.";
       break;
     }
     const requestTimeoutMs = Math.max(1_000, Math.min(configuredTimeoutMs, remainingBeforeAttempt));
-    const maxRetries = fallbackUsed || attempts.length > 1 ? 0 : configuredRetries;
+    const maxRetries = policy?.singleAttempt || fallbackUsed || attempts.length > 1 ? 0 : configuredRetries;
+    const maxOutputTokens = selected.maxOutputTokens;
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       const useResponsesApi = usesOpenAiResponsesApi(selected);
+      const openRouterTokens = selected.provider === "openrouter"
+        ? Math.min(openRouterMaxTokens(selected.stage), maxOutputTokens || 16_000)
+        : undefined;
       const requestBody = useResponsesApi
         ? buildOpenAiResponsesJsonRequest(selected, messages)
         : {
             model: selected.model,
             response_format: { type: "json_object" },
             ...(selected.provider === "openrouter" ? {
-              max_tokens: openRouterMaxTokens(selected.stage),
+              max_tokens: openRouterTokens,
               provider: openRouterProviderPreferences(),
-            } : {}),
+            } : (maxOutputTokens ? { max_tokens: maxOutputTokens } : {})),
             temperature: selected.temperature,
             messages,
           };
@@ -141,6 +209,7 @@ export async function fetchAiJsonContent(
           : useResponsesApi
             ? "https://api.openai.com/v1/responses"
             : "https://api.openai.com/v1/chat/completions";
+        beginGenerationAiCall();
         const response = await fetch(endpoint, {
           method: "POST",
           headers,
@@ -149,15 +218,34 @@ export async function fetchAiJsonContent(
         });
         if (response.ok) {
           const data = (await response.json()) as {
-            choices?: Array<{ message?: { content?: string } }>;
+            status?: string;
+            choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
             usage?: Record<string, unknown>;
           };
+          const completionError = policy?.singleAttempt
+            ? aiResponseCompletionError(data, useResponsesApi, selected.maxOutputTokens)
+            : null;
+
+          if (completionError) {
+            recordGenerationCall({
+              scope: selected.stage, provider: selected.provider, model: selected.model, fallbackUsed,
+              outcome: "invalid_output", elapsedMs: Date.now() - startedAt, ...normalizeAiUsage(data),
+            });
+            lastMessage = completionError;
+            break;
+          }
+
           const content = useResponsesApi
             ? extractOpenAiResponsesText(data)
             : data.choices?.[0]?.message?.content || "";
+
           if (content) {
             try {
-              extractAiJsonValue<unknown>(content);
+              if (policy?.singleAttempt) {
+                parseSyntacticallyCompleteJson<unknown>(content);
+              } else {
+                extractAiJsonValue<unknown>(content);
+              }
               recordGenerationCall({
                 scope: selected.stage,
                 provider: selected.provider,
@@ -231,7 +319,7 @@ export async function fetchAiJsonContent(
           outputTokens: 0,
           totalTokens: 0,
         });
-        lastMessage = normalizeOpenAiError(text, response.status);
+        lastMessage = normalizeOpenAiError(text, response.status, Boolean(policy?.singleAttempt));
         const retryable = selected.provider === "openrouter"
           ? isOpenRouterTransientStatus(response.status)
           : response.status === 429 || response.status >= 500;
@@ -255,7 +343,7 @@ export async function fetchAiJsonContent(
           totalTokens: 0,
         });
         if (generationTimedOut) throw new GenerationTimeoutError();
-        lastMessage = normalizeOpenAiFetchError(error, selected.model, requestTimeoutMs);
+        lastMessage = normalizeOpenAiFetchError(error, selected.model, requestTimeoutMs, Boolean(policy?.singleAttempt));
         const retryable = selected.provider !== "openrouter" || isOpenRouterTransientError(error);
         if (retryable && attempt < maxRetries
           && remainingGenerationMs() > requestTimeoutMs + GENERATION_SAVE_RESERVE_MS) {
@@ -275,7 +363,7 @@ export async function fetchAiJsonContent(
       remainingMs: remainingGenerationMs(),
     });
   }
-  if (attempts.length > 1 && primaryMessage !== lastMessage) {
+  if (!policy?.singleAttempt && attempts.length > 1 && primaryMessage !== lastMessage) {
     throw new Error(`Model chính: ${primaryMessage}; model dự phòng: ${lastMessage}`);
   }
   throw new Error(lastMessage);

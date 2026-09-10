@@ -64,6 +64,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   const [uploadError, setUploadError] = useState("");
   const [isOptimizingImages, setIsOptimizingImages] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const uploadBoxRef = useRef<HTMLDivElement | null>(null);
   const advancedInput = advancedDraft || input;
   const advancedSelectedFacilities = advancedInput.facilities === "auto" ? [] : advancedInput.facilities;
@@ -336,11 +337,26 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
                   accept=".jpg,.jpeg,.jfif,.png,image/jpeg,image/png"
                   onChange={handleFileInputChange}
                 />
+                <input
+                  ref={cameraInputRef}
+                  className="hidden"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileInputChange}
+                />
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
                   <button
                     type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="btn-secondary px-4 py-2 text-[13px] sm:hidden"
+                  >
+                    Chụp ảnh
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => uploadInputRef.current?.click()}
-                    className="btn-secondary px-4 py-2 text-[13px]"
+                    className="btn-secondary hidden px-4 py-2 text-[13px] sm:inline-flex"
                   >
                     Tải lên từ PC
                   </button>

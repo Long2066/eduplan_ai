@@ -2,11 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const firebaseMocks = vi.hoisted(() => {
   const data: Record<string, unknown> = {};
+  const jobData: Record<string, unknown> = {
+    uid: "user-1",
+    status: "pending",
+    pipelineVersion: "staged-v1",
+    expiresAt: new Date("2026-08-20T00:00:00.000Z"),
+  };
   const artifactSnapshot = {
     exists: false,
     id: "input",
     data: () => data,
     get: (field: string) => data[field],
+  };
+  const jobSnapshot = {
+    exists: true,
+    id: "job-1",
+    data: () => jobData,
+    get: (field: string) => jobData[field],
   };
   const artifactRef = {
     id: "input",
@@ -18,12 +30,13 @@ const firebaseMocks = vi.hoisted(() => {
   const jobRef = {
     id: "job-1",
     collection: vi.fn(() => artifactsCollection),
+    get: vi.fn(async () => jobSnapshot),
   };
   const jobsCollection = {
     doc: vi.fn(() => jobRef),
   };
   const transaction = {
-    get: vi.fn(async () => artifactSnapshot),
+    get: vi.fn(async (ref: { id: string }) => (ref.id === "job-1" ? jobSnapshot : artifactSnapshot)),
     set: vi.fn((_ref: unknown, value: Record<string, unknown>) => {
       Object.assign(data, value);
     }),
@@ -32,7 +45,7 @@ const firebaseMocks = vi.hoisted(() => {
     collection: vi.fn(() => jobsCollection),
     runTransaction: vi.fn(async (callback: (tx: typeof transaction) => unknown) => callback(transaction)),
   };
-  return { data, artifactSnapshot, artifactRef, transaction, db };
+  return { data, jobData, artifactSnapshot, jobSnapshot, artifactRef, jobRef, transaction, db };
 });
 
 vi.mock("@/lib/firebase-admin", () => ({
@@ -48,6 +61,10 @@ describe("generation artifact expiry", () => {
   beforeEach(() => {
     for (const key of Object.keys(firebaseMocks.data)) delete firebaseMocks.data[key];
     firebaseMocks.artifactSnapshot.exists = false;
+    firebaseMocks.jobSnapshot.exists = true;
+    firebaseMocks.jobData.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    firebaseMocks.jobData.status = "pending";
+    firebaseMocks.jobData.pipelineVersion = "staged-v1";
     vi.clearAllMocks();
   });
 
@@ -60,6 +77,10 @@ describe("generation artifact expiry", () => {
         kind: "input",
         expiresAt: expect.any(Date),
       }),
+    );
+    const written = firebaseMocks.transaction.set.mock.calls[0][1];
+    expect((written.expiresAt as Date).getTime()).toBeLessThanOrEqual(
+      (firebaseMocks.jobData.expiresAt as Date).getTime(),
     );
   });
 

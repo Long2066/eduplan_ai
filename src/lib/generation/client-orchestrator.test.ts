@@ -202,4 +202,75 @@ describe("staged generation client orchestrator", () => {
     });
     expect(fetcher).toHaveBeenCalledOnce();
   });
+
+  it("stops immediately on non-retryable error even if returned with status 200", async () => {
+    const stalledJob = job("section-outcomes", {
+      status: "waiting_next_step",
+      pipelineVersion: "staged-v2",
+      error: {
+        code: "GENERATION_UNIT_RETRY_LIMIT",
+        message: "Đã thử 3 lần không đạt chuẩn đầu ra.",
+        stage: "section-outcomes",
+        retryable: false,
+      },
+    });
+    const fetcher = vi.fn(async () => jsonResponse({ job: stalledJob })) as unknown as typeof fetch;
+
+    await expect(resumeStagedGeneration({
+      jobId: "job-1",
+      authToken: "token",
+      fetcher,
+      retryDelayMs: 0,
+    })).rejects.toBeInstanceOf(StagedGenerationTerminalError);
+
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("terminates and does not loop infinitely on repeated 200 responses with no progress", async () => {
+    const unchangedJob = job("period-phase", {
+      status: "waiting_next_step",
+      pipelineVersion: "staged-v2",
+      stageCursor: { position: 2, total: 8 },
+    });
+    const fetcher = vi.fn(async () => jsonResponse({ job: unchangedJob })) as unknown as typeof fetch;
+
+    await expect(resumeStagedGeneration({
+      jobId: "job-1",
+      authToken: "token",
+      fetcher,
+      retryDelayMs: 0,
+      maxAutomaticRetries: 2,
+    })).rejects.toMatchObject({
+      code: "GENERATION_STALLED_AT_STEP",
+      status: 422,
+    });
+
+    // 1 call to get initial job + 3 advance calls (initial attempt + 2 retries) = 4 total calls
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("preserves backend error details and quotaRefunded information", async () => {
+    const fetcher = vi.fn(async () => jsonResponse({
+      job: job("section-materials"),
+    }))
+      .mockImplementationOnce(async () => jsonResponse({ job: job("section-materials") }))
+      .mockImplementationOnce(async () => jsonResponse({
+        error: "Giáo án không đủ điều kiện hoàn lượt.",
+        code: "GENERATION_POLICY_VIOLATION",
+        details: { reason: "toxic_content" },
+        quotaRefunded: false,
+      }, 400)) as unknown as typeof fetch;
+
+    await expect(resumeStagedGeneration({
+      jobId: "job-1",
+      authToken: "token",
+      fetcher,
+      retryDelayMs: 0,
+    })).rejects.toMatchObject({
+      code: "GENERATION_POLICY_VIOLATION",
+      status: 400,
+      details: { reason: "toxic_content" },
+      quotaRefunded: false,
+    });
+  });
 });

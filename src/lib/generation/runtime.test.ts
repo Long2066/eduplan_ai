@@ -38,4 +38,20 @@ describe("generation runtime", () => {
       vi.useRealTimers();
     }
   });
+
+  it("enforces one-AI-call guard under singleAttempt policy", async () => {
+    const { beginGenerationAiCall } = await import("./runtime");
+    await withGenerationDeadline(
+      "single-call-test",
+      async () => {
+        expect(() => beginGenerationAiCall()).not.toThrow();
+        expect(() => beginGenerationAiCall()).toThrow(/chỉ được gọi AI một lần/);
+      },
+      (context) => {
+        context.aiPolicy = { singleAttempt: true, useFallback: false };
+      },
+      10_000,
+    );
+  });
 });
+
