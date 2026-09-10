@@ -1,7 +1,7 @@
 import "server-only";
 import { extractAiJsonValue } from "@/lib/ai-json";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
-import { makeStagedAnchor } from "@/lib/generation/section-validation";
+import { stagedArtifactAnchor } from "@/lib/generation/section-validation";
 import {
   STAGED_PHASE_LABELS,
   stagedActivityId,
@@ -146,13 +146,12 @@ Trả về duy nhất JSON:
     },
   };
 
-  const anchor = makeStagedAnchor(payload);
-  return {
+  const artifact: StagedPhaseArtifact = {
     version: 2,
     kind: "period-phase",
     subjectKind: sourceFacts.subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: {
       outcomes: outcomes.anchor,
       materials: materials.anchor,
@@ -170,6 +169,8 @@ Trả về duy nhất JSON:
     input: phaseInput,
     handoff: payload.handoff,
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
 
 export async function repairStagedPhase(
@@ -236,10 +237,10 @@ Yêu cầu:
       handoff: parsed.handoff || currentPhase.handoff,
     };
 
-    const anchor = makeStagedAnchor(payload, currentPhase.anchor.revision + 1);
+    const nextRevision = currentPhase.anchor.revision + 1;
     const artifact: StagedPhaseArtifact = {
       ...currentPhase,
-      anchor,
+      anchor: { revision: nextRevision, hash: "" },
       model: res.model,
       provider: res.provider,
       fallbackUsed: res.fallbackUsed,
@@ -248,6 +249,7 @@ Yêu cầu:
       sourceIds: payload.sourceIds,
       handoff: payload.handoff,
     };
+    artifact.anchor = stagedArtifactAnchor(artifact, nextRevision);
     return { artifact, repaired: true, issues: [] };
   } catch (err) {
     return { artifact: currentPhase, repaired: false, issues };

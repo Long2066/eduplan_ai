@@ -1,9 +1,9 @@
-﻿import "server-only";
+import "server-only";
 import { extractAiJsonValue } from "@/lib/ai-json";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
 import { generationSubjectKind } from "@/lib/generation/subject-routing";
 import { sourceTruthPromptContext } from "@/lib/generation/source-truth";
-import { makeStagedAnchor } from "@/lib/generation/section-validation";
+import { stagedArtifactAnchor } from "@/lib/generation/section-validation";
 import {
   type GenerateStagedAssessmentOptions,
   type GenerateStagedLessonMapOptions,
@@ -110,13 +110,12 @@ Trả về duy nhất JSON:
     }];
   }
 
-  const anchor = makeStagedAnchor(parsed);
-  return {
+  const artifact: StagedSourceFactsArtifact = {
     version: 2,
     kind: "source-facts",
     subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: {},
     model: res.model,
     provider: res.provider,
@@ -126,6 +125,8 @@ Trả về duy nhất JSON:
     classification: sourceContext.vietnamese ? undefined : undefined,
     facts: parsed,
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
 
 export async function generateStagedOutcomes(
@@ -183,19 +184,20 @@ Trả về duy nhất JSON:
     }];
   }
 
-  const anchor = makeStagedAnchor(parsed);
-  return {
+  const artifact: StagedOutcomesArtifact = {
     version: 2,
     kind: "section-outcomes",
     subjectKind: sourceFacts.subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: { source: sourceFacts.anchor },
     model: res.model,
     provider: res.provider,
     fallbackUsed: res.fallbackUsed,
     outcomes: parsed,
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
 
 export async function generateStagedLessonMap(
@@ -243,19 +245,20 @@ Trả về duy nhất JSON:
   ]);
   const parsed = extractAiJsonValue<StagedLessonMap>(res.content);
   parsed.lessonTitle = identity.lessonTitle;
-  const anchor = makeStagedAnchor(parsed);
-  return {
+  const artifact: StagedLessonMapArtifact = {
     version: 2,
     kind: "lesson-map",
     subjectKind: sourceFacts.subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: { source: sourceFacts.anchor, outcomes: outcomes.anchor },
     model: res.model,
     provider: res.provider,
     fallbackUsed: res.fallbackUsed,
     lessonMap: parsed,
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
 
 export async function generateStagedPeriodBlueprint(
@@ -308,13 +311,12 @@ Trả về duy nhất JSON:
   ]);
   const parsed = extractAiJsonValue<StagedCompactPeriodBlueprint>(res.content);
   parsed.periodNumber = periodNumber;
-  const anchor = makeStagedAnchor(parsed);
-  return {
+  const artifact: StagedPeriodBlueprintArtifact = {
     version: 2,
     kind: "period-blueprint",
     subjectKind: sourceFacts.subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: { outcomes: outcomes.anchor, lessonMap: lessonMap.anchor },
     model: res.model,
     provider: res.provider,
@@ -322,6 +324,8 @@ Trả về duy nhất JSON:
     periodNumber,
     periodBlueprint: parsed,
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
 
 export async function generateStagedMaterials(
@@ -355,13 +359,12 @@ Trả về duy nhất JSON:
     { role: "user", content: prompt },
   ]);
   const parsed = extractAiJsonValue<{ materials: LessonPlan["materials"]; items: StagedMaterial[] }>(res.content);
-  const anchor = makeStagedAnchor(parsed);
-  return {
+  const artifact: StagedMaterialsArtifact = {
     version: 2,
     kind: "section-materials",
     subjectKind: sourceFacts.subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: {
       source: sourceFacts.anchor,
       outcomes: outcomes.anchor,
@@ -374,6 +377,8 @@ Trả về duy nhất JSON:
     materials: parsed.materials,
     items: parsed.items || [],
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
 
 export async function generateStagedAssessment(
@@ -411,13 +416,12 @@ Trả về duy nhất JSON:
     { role: "user", content: prompt },
   ]);
   const parsed = extractAiJsonValue<{ assessment: LessonPlan["assessment"]; alignment: any[] }>(res.content);
-  const anchor = makeStagedAnchor(parsed);
-  return {
+  const artifact: StagedAssessmentArtifact = {
     version: 2,
     kind: "section-assessment",
     subjectKind: sourceFacts.subjectKind,
     identity,
-    anchor,
+    anchor: { revision: 1, hash: "" },
     dependencies: {
       outcomes: outcomes.anchor,
       materials: materials.anchor,
@@ -429,4 +433,6 @@ Trả về duy nhất JSON:
     assessment: parsed.assessment,
     alignment: parsed.alignment || [],
   };
+  artifact.anchor = stagedArtifactAnchor(artifact);
+  return artifact;
 }
