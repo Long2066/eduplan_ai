@@ -111,8 +111,12 @@ export function getPlanModelStrategy(planValue: unknown): PlanModelStrategy {
   }
 
   const model = (process.env.PLUS_MODEL || "gpt-5.6-terra").trim();
+  const blueprintModel = (process.env.PLUS_BLUEPRINT_MODEL || model).trim();
+  const detailModel = (process.env.PLUS_DETAIL_MODEL || model).trim();
+  const repairModel = (process.env.PLUS_REPAIR_MODEL || model).trim();
   const configuredFallback = (process.env.PLUS_FALLBACK_MODEL || process.env.OPENAI_FALLBACK_MODEL || "gpt-5.4-mini").trim();
-  const fallbackModel = configuredFallback && configuredFallback !== model ? configuredFallback : undefined;
+  const getFallback = (stageModel: string) =>
+    configuredFallback && configuredFallback !== stageModel ? configuredFallback : undefined;
   const prefix = "PLUS";
   const blueprintEffort = reasoningEffort(process.env[`${prefix}_BLUEPRINT_REASONING_EFFORT`] || process.env[`${prefix}_REASONING_EFFORT`], "low");
   const detailEffort = reasoningEffort(process.env[`${prefix}_DETAIL_REASONING_EFFORT`] || process.env[`${prefix}_REASONING_EFFORT`], "low");
@@ -128,8 +132,8 @@ export function getPlanModelStrategy(planValue: unknown): PlanModelStrategy {
   const repairMaxOutputTokens = positiveInteger(process.env.PLUS_REPAIR_MAX_OUTPUT_TOKENS, 12_000);
   return {
     plan,
-    blueprint: openAiStage("blueprint", model, 0.35, fallbackModel, blueprintEffort, blueprintTimeoutMs, blueprintMaxOutputTokens, fallbackEffort, fallbackTimeoutMs, fallbackMaxOutputTokens),
-    detail: openAiStage("detail", model, 0.6, fallbackModel, detailEffort, detailTimeoutMs, detailMaxOutputTokens, fallbackEffort, fallbackTimeoutMs, fallbackMaxOutputTokens),
-    repair: openAiStage("repair", model, 0.45, fallbackModel, repairEffort, repairTimeoutMs, repairMaxOutputTokens, fallbackEffort, fallbackTimeoutMs, fallbackMaxOutputTokens),
+    blueprint: openAiStage("blueprint", blueprintModel, 0.35, getFallback(blueprintModel), blueprintEffort, blueprintTimeoutMs, blueprintMaxOutputTokens, fallbackEffort, fallbackTimeoutMs, fallbackMaxOutputTokens),
+    detail: openAiStage("detail", detailModel, 0.6, getFallback(detailModel), detailEffort, detailTimeoutMs, detailMaxOutputTokens, fallbackEffort, fallbackTimeoutMs, fallbackMaxOutputTokens),
+    repair: openAiStage("repair", repairModel, 0.45, getFallback(repairModel), repairEffort, repairTimeoutMs, repairMaxOutputTokens, fallbackEffort, fallbackTimeoutMs, fallbackMaxOutputTokens),
   };
 }

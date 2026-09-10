@@ -14,6 +14,9 @@ const MANAGED_KEYS = [
   "FREE_DETAIL_MODEL",
   "FREE_FALLBACK_MODEL",
   "PLUS_MODEL",
+  "PLUS_BLUEPRINT_MODEL",
+  "PLUS_DETAIL_MODEL",
+  "PLUS_REPAIR_MODEL",
   "PRO_MODEL",
   "PLUS_FALLBACK_MODEL",
   "PLUS_FALLBACK_REASONING_EFFORT",
@@ -198,6 +201,19 @@ describe("getPlanModelStrategy", () => {
       fallbackTimeoutMs: 75_000,
       fallbackMaxOutputTokens: 14_000,
     });
+  });
+
+  it("allows dedicated Plus detail, blueprint, and repair model overrides", () => {
+    for (const key of MANAGED_KEYS) delete process.env[key];
+    process.env.PLUS_MODEL = "gpt-5.6-terra";
+    process.env.PLUS_DETAIL_MODEL = "gpt-5.6-luna";
+
+    const strategy = getPlanModelStrategy("plus");
+
+    expect(strategy.blueprint.model).toBe("gpt-5.6-terra");
+    expect(strategy.detail.model).toBe("gpt-5.6-luna");
+    expect(strategy.repair.model).toBe("gpt-5.6-terra");
+    expect(strategy.detail.fallbackModel).toBe("gpt-5.4-mini");
   });
 });
 
