@@ -38,6 +38,7 @@ import {
   type StagedPhaseArtifact,
   type StagedPhaseName,
   type StagedSectionArtifacts,
+  type StagedSectionIssue,
   type StagedSectionPrefixOptions,
   type StagedSectionsAssembly,
   type StagedSourceFactsArtifact,
@@ -58,8 +59,12 @@ import {
   repairStagedPhase,
 } from "@/lib/generation/phase-generation";
 import {
+  StagedSectionValidationError,
   validateStagedSectionPrefix,
 } from "@/lib/generation/section-validation";
+import { validateStagedLesson } from "@/lib/generation/subject-validation";
+import type { StagedAssemblyArtifact } from "@/lib/generation/assembly";
+import type { StagedBlueprintArtifact } from "@/lib/generation/blueprint";
 import { prepareStagedSourceContext, type StagedSourceContext } from "@/lib/generation/source-preparation";
 import type {
   GenerationArtifactKey,
@@ -257,13 +262,13 @@ async function loadAllPeriodBlueprints(jobId: string, totalPeriods: number): Pro
 export async function loadEffectivePhases(jobId: string, totalPhases: number): Promise<StagedPhaseArtifact[]> {
   const phases: StagedPhaseArtifact[] = [];
   for (let seq = 1; seq <= totalPhases; seq += 1) {
-    const repair = await readGenerationJobArtifact<{ artifact: StagedPhaseArtifact }>(jobId, { kind: "phase-repair", sequence: seq });
-    if (repair?.payload?.artifact) {
+    const orig = await readGenerationJobArtifact<StagedPhaseArtifact>(jobId, { kind: "period-phase", sequence: seq });
+    if (!orig) throw new Error(`Không tìm thấy artifact của pha thứ ${seq}/${totalPhases}.`);
+    const repair = await readGenerationJobArtifact<{ artifact: StagedPhaseArtifact; baseAnchor?: { hash: string } }>(jobId, { kind: "phase-repair", sequence: seq });
+    if (repair?.payload?.artifact && (!repair.payload.baseAnchor || repair.payload.baseAnchor.hash === orig.payload.anchor.hash)) {
       phases.push(repair.payload.artifact);
       continue;
     }
-    const orig = await readGenerationJobArtifact<StagedPhaseArtifact>(jobId, { kind: "period-phase", sequence: seq });
-    if (!orig) throw new Error(`Không tìm thấy artifact của pha thứ ${seq}/${totalPhases}.`);
     phases.push(orig.payload);
   }
   return phases;
@@ -409,13 +414,25 @@ export async function advanceStagedGenerationJobV2(
       throw error;
     }
 
+    const nonAiStages: GenerationJobStage[] = [
+      "assembly",
+      "subject-validation",
+      "final-validation",
+      "persistence",
+      "quota-settlement",
+    ];
+    const isDeterministicStage = nonAiStages.includes(job.currentStage);
+    const isDeterministicError = error instanceof StagedSectionValidationError
+      || (error instanceof Error && (error.message.includes("SEC-") || error.message.includes("LC-STRUCT")));
+    const shouldStopRetrying = lockedPrerequisiteError || (isDeterministicStage && isDeterministicError);
+
     const isTimeout = error instanceof GenerationTimeoutError;
     const isExhausted = (currentAttempts + 1) >= MAX_UNIT_ATTEMPTS;
     const errorPatch: GenerationJobError = {
       code: lockedPrerequisiteError ? error.code : isTimeout ? "GENERATION_STEP_TIMEOUT" : "GENERATION_STEP_FAILED",
       message: error instanceof Error ? error.message : "Không thể chạy bước tạo giáo án.",
       stage: job.currentStage,
-      retryable: !lockedPrerequisiteError && !isExhausted,
+      retryable: !shouldStopRetrying && !isExhausted,
     };
 
     await commitGenerationJobCheckpoint(job.id, uid, owner, epoch, {
@@ -1091,11 +1108,12 @@ async function executeAssemblyStepV2(ctx: ExecutionContext): Promise<void> {
     assessment: assessment.payload,
   };
 
+  const hasRepairs = phases.some((p) => p.anchor.revision > 1);
   const assemblyResult: StagedSectionsAssembly = assembleStagedSections({
     ...stagedSections,
     input,
     plan: job.quotaReservation?.plan || "free",
-    repairApplied: false,
+    repairApplied: hasRepairs,
   });
 
   const artifactsToCommit: Array<{ key: GenerationArtifactKey; payload: unknown }> = [
@@ -1147,7 +1165,36 @@ async function executeSubjectValidationStepV2(ctx: ExecutionContext): Promise<vo
     assessment: assessment.payload,
   });
 
-  const repairableIssues = validation.issues.filter((issue) => issue.phase && issue.periodNumber);
+  const assembly = await readGenerationJobArtifact<StagedAssemblyArtifact>(job.id, { kind: "assembly" });
+  const blueprint = await readGenerationJobArtifact<StagedBlueprintArtifact>(job.id, { kind: "blueprint" });
+
+  const subjectAuditIssues: StagedSectionIssue[] = [];
+  if (assembly && blueprint) {
+    const subjectValidation = validateStagedLesson(input, assembly.payload, blueprint.payload);
+    const blockingErrors = subjectValidation.findings.filter((f) => f.severity === "error");
+    for (const b of blockingErrors) {
+      if (!validation.issues.some((i) => i.code === b.code && i.periodNumber === b.periodNumber)) {
+        subjectAuditIssues.push({
+          code: b.code,
+          message: b.message,
+          path: "lesson",
+          periodNumber: b.periodNumber,
+        });
+      }
+    }
+  }
+
+  const allIssues = [...validation.issues, ...subjectAuditIssues];
+  const repairableIssues = allIssues.filter((issue) => issue.phase && issue.periodNumber);
+  const nonRepairableIssues = allIssues.filter((issue) => !(issue.phase && issue.periodNumber));
+
+  if (nonRepairableIssues.length > 0 && !validation.passed) {
+    throw new StagedSectionValidationError(
+      `Kiểm định cấu trúc/nguồn không đạt: ${nonRepairableIssues.map((i) => `[${i.code}] ${i.message}`).join("; ")}`,
+      nonRepairableIssues,
+    );
+  }
+
   const needsRepair = repairableIssues.length > 0;
 
   if (needsRepair) {
@@ -1261,7 +1308,10 @@ async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
     phases: testPhases,
   });
 
-  const accepted = repairResult.repaired && testValidation.passed;
+  const targetIssues = testValidation.issues.filter(
+    (i) => i.periodNumber === targetPeriod && i.phase === targetPhase,
+  );
+  const accepted = repairResult.repaired && targetIssues.length === 0;
   const artifactsToCommit: Array<{ key: GenerationArtifactKey; payload: unknown }> = [];
 
   if (accepted) {

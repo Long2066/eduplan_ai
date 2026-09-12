@@ -19,6 +19,7 @@ const continuityRules = {
   invalidPrerequisite: { code: "LC-PLAN-04", severity: "error", autoFixable: true },
   prerequisiteOrder: { code: "LC-PLAN-05", severity: "error", autoFixable: true },
   estimatedOverload: { code: "LC-TIME-01", severity: "warning", autoFixable: true },
+  malformedPlan: { code: "LC-STRUCT-01", severity: "error", autoFixable: false },
   missingRequiredUnitEvidence: { code: "LC-COVERAGE-01", severity: "error", autoFixable: true },
   duplicatedUnitAcrossPeriods: { code: "LC-COVERAGE-02", severity: "error", autoFixable: true },
   splitClusterAcrossPeriods: { code: "LC-COVERAGE-03", severity: "error", autoFixable: true },
@@ -377,16 +378,46 @@ export function validateContinuityPlan(
 ): PedagogyAuditFinding[] {
   if (!plan) return [];
   const findings: PedagogyAuditFinding[] = [];
-  const units = new Map(plan.sourceUnits.map((unit) => [unit.unitId, unit]));
-  const clusters = new Map(plan.clusters.map((cluster) => [cluster.clusterId, cluster]));
+  if (!Array.isArray(plan.sourceUnits) || !Array.isArray(plan.clusters)) {
+    findings.push(finding(
+      continuityRules.malformedPlan,
+      "Cấu trúc continuityPlan không hợp lệ: sourceUnits hoặc clusters không phải là danh sách.",
+    ));
+    return findings;
+  }
+  const units = new Map(
+    plan.sourceUnits
+      .filter((u): u is LessonSourceUnit => Boolean(u && typeof u === "object" && typeof u.unitId === "string"))
+      .map((unit) => [unit.unitId, unit]),
+  );
+  const clusters = new Map(
+    plan.clusters
+      .filter((c): c is LessonLearningCluster => Boolean(c && typeof c === "object" && typeof c.clusterId === "string"))
+      .map((cluster) => [cluster.clusterId, cluster]),
+  );
   const unitAssignments = new Map<string, LessonLearningCluster[]>();
 
   for (const cluster of plan.clusters) {
+    if (!cluster || typeof cluster !== "object") {
+      findings.push(finding(
+        continuityRules.malformedPlan,
+        "Cụm học tập trong continuityPlan không phải đối tượng hợp lệ.",
+      ));
+      continue;
+    }
+    if (!Array.isArray(cluster.sourceUnitIds)) {
+      findings.push(finding(
+        continuityRules.malformedPlan,
+        `Cụm “${cluster.label || cluster.clusterId || "chưa đặt tên"}” thiếu danh sách sourceUnitIds hợp lệ.`,
+        { periodNumber: cluster.periodNumber },
+      ));
+      continue;
+    }
     for (const unitId of cluster.sourceUnitIds) {
-      if (!units.has(unitId)) {
+      if (!unitId || typeof unitId !== "string" || !units.has(unitId)) {
         findings.push(finding(
           continuityRules.unknownSourceUnit,
-          `Cụm “${cluster.label}” tham chiếu source unit không tồn tại: ${unitId}.`,
+          `Cụm “${cluster.label || cluster.clusterId}” tham chiếu source unit không tồn tại: ${unitId}.`,
           { periodNumber: cluster.periodNumber },
         ));
         continue;
@@ -395,7 +426,7 @@ export function validateContinuityPlan(
       assigned.push(cluster);
       unitAssignments.set(unitId, assigned);
     }
-    for (const prerequisiteId of cluster.prerequisiteClusterIds || []) {
+    for (const prerequisiteId of Array.isArray(cluster.prerequisiteClusterIds) ? cluster.prerequisiteClusterIds : []) {
       const prerequisite = clusters.get(prerequisiteId);
       if (!prerequisite) {
         findings.push(finding(
@@ -414,18 +445,19 @@ export function validateContinuityPlan(
   }
 
   for (const unit of plan.sourceUnits) {
+    if (!unit || typeof unit !== "object" || !unit.unitId) continue;
     const assignments = unitAssignments.get(unit.unitId) || [];
     if (unit.required !== false && !assignments.length) {
       findings.push(finding(
         continuityRules.missingRequiredUnitAssignment,
-        `Source unit bắt buộc chưa được đưa vào cụm học tập: “${unit.label}”.`,
+        `Source unit bắt buộc chưa được đưa vào cụm học tập: “${unit.label || unit.unitId}”.`,
         { periodNumber: unit.preferredPeriodNumber },
       ));
     }
     if (!unit.allowReuse && assignments.length > 1) {
       findings.push(finding(
         continuityRules.duplicatedUnitAssignment,
-        `Source unit “${unit.label}” bị gán vào nhiều cụm: ${assignments.map((cluster) => cluster.label).join("; ")}.`,
+        `Source unit “${unit.label || unit.unitId}” bị gán vào nhiều cụm: ${assignments.map((cluster) => cluster.label).join("; ")}.`,
         { periodNumber: assignments[0]?.periodNumber },
       ));
     }
@@ -433,7 +465,7 @@ export function validateContinuityPlan(
 
   const periodMinutes = new Map<number, number>();
   for (const cluster of plan.clusters) {
-    if (!cluster.periodNumber || !cluster.estimatedMinutes) continue;
+    if (!cluster || !cluster.periodNumber || !cluster.estimatedMinutes) continue;
     periodMinutes.set(cluster.periodNumber, (periodMinutes.get(cluster.periodNumber) || 0) + cluster.estimatedMinutes);
     if (cluster.estimatedMinutes > input.duration) {
       findings.push(finding(
@@ -464,9 +496,9 @@ function periodsForLesson(lesson: LessonPlan) {
 
 function activityUnitIds(activity: LessonPlan["activities"][number]) {
   return unique([
-    ...(activity.sourceUnitIds || []),
-    ...(activity.sourceTaskIds || []),
-    ...(activity.sourceVisualIds || []),
+    ...(Array.isArray(activity.sourceUnitIds) ? activity.sourceUnitIds : []),
+    ...(Array.isArray(activity.sourceTaskIds) ? activity.sourceTaskIds : []),
+    ...(Array.isArray(activity.sourceVisualIds) ? activity.sourceVisualIds : []),
   ].map((unitId) => stableId(unitId, "")));
 }
 
@@ -477,10 +509,18 @@ export function validateLessonContinuity(
 ): PedagogyAuditFinding[] {
   if (!plan) return [];
   const findings = [...validateContinuityPlan(plan, input)];
+  if (findings.some((f) => f.code === "LC-STRUCT-01")) {
+    return dedupeFindings(findings);
+  }
   const periods = periodsForLesson(lesson);
-  const units = new Map(plan.sourceUnits.map((unit) => [unit.unitId, unit]));
+  const units = new Map(
+    (Array.isArray(plan.sourceUnits) ? plan.sourceUnits : [])
+      .filter((u): u is LessonSourceUnit => Boolean(u && typeof u === "object" && typeof u.unitId === "string"))
+      .map((unit) => [unit.unitId, unit]),
+  );
   const clustersByUnit = new Map<string, LessonLearningCluster[]>();
-  for (const cluster of plan.clusters) {
+  for (const cluster of Array.isArray(plan.clusters) ? plan.clusters : []) {
+    if (!cluster || !Array.isArray(cluster.sourceUnitIds)) continue;
     for (const unitId of cluster.sourceUnitIds) {
       const assigned = clustersByUnit.get(unitId) || [];
       assigned.push(cluster);
@@ -492,13 +532,13 @@ export function validateLessonContinuity(
 
   for (const period of periods) {
     const number = Number(period.periodNumber || 1);
-    for (const activity of period.activities || []) {
+    for (const activity of Array.isArray(period.activities) ? period.activities : []) {
       for (const unitId of activityUnitIds(activity)) {
         const periodSet = unitPeriods.get(unitId) || new Set<number>();
         periodSet.add(number);
         unitPeriods.set(unitId, periodSet);
       }
-      for (const clusterId of unique((activity.sourceClusterIds || []).map((id) => stableId(id, "")))) {
+      for (const clusterId of unique((Array.isArray(activity.sourceClusterIds) ? activity.sourceClusterIds : []).map((id) => stableId(id, "")))) {
         const periodSet = clusterPeriods.get(clusterId) || new Set<number>();
         periodSet.add(number);
         clusterPeriods.set(clusterId, periodSet);
@@ -506,8 +546,8 @@ export function validateLessonContinuity(
     }
   }
 
-  for (const unit of plan.sourceUnits) {
-    if (unit.required === false) continue;
+  for (const unit of Array.isArray(plan.sourceUnits) ? plan.sourceUnits : []) {
+    if (!unit || unit.required === false) continue;
     const usedPeriods = [...(unitPeriods.get(unit.unitId) || [])];
     if (!usedPeriods.length) {
       const assignedPeriod = (clustersByUnit.get(unit.unitId) || [])
@@ -515,19 +555,20 @@ export function validateLessonContinuity(
         .find((number): number is number => Boolean(number));
       findings.push(finding(
         continuityRules.missingRequiredUnitEvidence,
-        `Giáo án chưa gắn hoạt động với source unit bắt buộc: “${unit.label}”.`,
+        `Giáo án chưa gắn hoạt động với source unit bắt buộc: “${unit.label || unit.unitId}”.`,
         { periodNumber: unit.preferredPeriodNumber || assignedPeriod },
       ));
     } else if (!unit.allowReuse && usedPeriods.length > 1) {
       findings.push(finding(
         continuityRules.duplicatedUnitAcrossPeriods,
-        `Source unit “${unit.label}” xuất hiện ở nhiều tiết (${usedPeriods.join(", ")}) nhưng không được đánh dấu tái sử dụng.`,
+        `Source unit “${unit.label || unit.unitId}” xuất hiện ở nhiều tiết (${usedPeriods.join(", ")}) nhưng không được đánh dấu tái sử dụng.`,
         { periodNumber: usedPeriods[0] },
       ));
     }
   }
 
-  for (const cluster of plan.clusters) {
+  for (const cluster of Array.isArray(plan.clusters) ? plan.clusters : []) {
+    if (!cluster || !Array.isArray(cluster.sourceUnitIds)) continue;
     const periodsFromClusterIds = clusterPeriods.get(cluster.clusterId) || new Set<number>();
     // Reusable evidence (typically one SGK visual) must not make a cluster look split.
     const nonReusableUnitIds = cluster.sourceUnitIds.filter((unitId) => !units.get(unitId)?.allowReuse);
@@ -537,14 +578,14 @@ export function validateLessonContinuity(
     if (cluster.mustStayTogether !== false && usedPeriods.length > 1) {
       findings.push(finding(
         continuityRules.splitClusterAcrossPeriods,
-        `Cụm “${cluster.label}” bị cắt qua nhiều tiết (${usedPeriods.join(", ")}).`,
+        `Cụm “${cluster.label || cluster.clusterId}” bị cắt qua nhiều tiết (${usedPeriods.join(", ")}).`,
         { periodNumber: usedPeriods[0] },
       ));
     }
     if (cluster.periodNumber && usedPeriods.length && usedPeriods.some((number) => number !== cluster.periodNumber)) {
       findings.push(finding(
         continuityRules.clusterInWrongPeriod,
-        `Cụm “${cluster.label}” được khóa ở tiết ${cluster.periodNumber} nhưng xuất hiện ở tiết ${usedPeriods.join(", ")}.`,
+        `Cụm “${cluster.label || cluster.clusterId}” được khóa ở tiết ${cluster.periodNumber} nhưng xuất hiện ở tiết ${usedPeriods.join(", ")}.`,
         { periodNumber: cluster.periodNumber },
       ));
     }

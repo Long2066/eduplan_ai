@@ -149,6 +149,8 @@ function buildMathActivityBlueprints(
     durationMinutes: phaseArt.activity.durationMinutes,
     mathFocus: phaseArt.activity.title || "",
     handoffToNext: phaseArt.handoff?.bridge || "",
+    sourceUnitIds: phaseArt.activity.sourceUnitIds?.length ? phaseArt.activity.sourceUnitIds : (phaseArt.sourceIds || []),
+    sourceClusterIds: phaseArt.activity.sourceClusterIds || [],
   }));
 }
 
@@ -162,6 +164,8 @@ function buildVietnameseActivityBlueprints(
     durationMinutes: phaseArt.activity.durationMinutes,
     focusSkills: phaseArt.handoff?.knowledge || [],
     handoffToNext: phaseArt.handoff?.bridge || "",
+    sourceUnitIds: phaseArt.activity.sourceUnitIds?.length ? phaseArt.activity.sourceUnitIds : (phaseArt.sourceIds || []),
+    sourceClusterIds: phaseArt.activity.sourceClusterIds || [],
   }));
 }
 
@@ -178,7 +182,9 @@ function buildNaturalSocialActivityBlueprints(
     product: phaseArt.handoff?.products?.join("; ") || "",
     handoffToNext: phaseArt.handoff?.bridge || "",
     objectiveIds: phaseArt.activity.objectiveIds || [],
-    sourceTaskIds: phaseArt.sourceIds || [],
+    sourceTaskIds: phaseArt.activity.sourceTaskIds?.length ? phaseArt.activity.sourceTaskIds : (phaseArt.sourceIds || []),
+    sourceUnitIds: phaseArt.activity.sourceUnitIds?.length ? phaseArt.activity.sourceUnitIds : (phaseArt.sourceIds || []),
+    sourceClusterIds: phaseArt.activity.sourceClusterIds || [],
   }));
 }
 
@@ -279,7 +285,9 @@ function buildCompactBlueprint(
         ...periodBlueprints.flatMap((p) => p.periodBlueprint.teachingNotes || []),
       ]),
     },
-    continuityPlan: lessonMap.lessonMap.continuityPlan,
+    continuityPlan: lessonMap.lessonMap.continuityPlan
+      ? structuredClone(lessonMap.lessonMap.continuityPlan)
+      : undefined,
   };
 
   if (subjectKind === "math") {
@@ -371,11 +379,6 @@ export function assembleStagedSections(
       .filter((art) => art.periodNumber === p)
       .sort((a, b) => (phaseRank[a.phase] ?? 99) - (phaseRank[b.phase] ?? 99));
 
-    for (const phaseArt of periodPhases) {
-      if (!phaseArt.activity.phase || phaseArt.activity.phase === phaseArt.phase) {
-        phaseArt.activity.phase = STAGED_PHASE_LABELS[phaseArt.phase] || phaseArt.phase;
-      }
-    }
     phasesByPeriod.set(p, periodPhases);
   }
 
@@ -386,7 +389,16 @@ export function assembleStagedSections(
   for (let pNum = 1; pNum <= expectedPeriods; pNum++) {
     const pBpArt = orderedPeriodBlueprints.find((bp) => bp.periodNumber === pNum)!;
     const periodPhases = phasesByPeriod.get(pNum) || [];
-    const activities: LessonActivity[] = periodPhases.map((art) => art.activity);
+    const activities: LessonActivity[] = periodPhases.map((art) => {
+      const cloned = { ...art.activity };
+      if (!cloned.phase || cloned.phase === art.phase) {
+        cloned.phase = STAGED_PHASE_LABELS[art.phase] || art.phase;
+      }
+      if ((!cloned.sourceUnitIds || cloned.sourceUnitIds.length === 0) && art.sourceIds?.length) {
+        cloned.sourceUnitIds = [...art.sourceIds];
+      }
+      return cloned;
+    });
 
     const lastPhase = periodPhases[periodPhases.length - 1];
     const handoffLearned = lastPhase?.handoff?.knowledge?.length
@@ -459,7 +471,9 @@ export function assembleStagedSections(
         )
       : sourceFacts.sourceInventory;
 
-  const continuityPlan = lessonMap.lessonMap.continuityPlan;
+  const continuityPlan = lessonMap.lessonMap.continuityPlan
+    ? structuredClone(lessonMap.lessonMap.continuityPlan)
+    : undefined;
 
   // 8. Assemble full LessonPlan conforming to schema
   const lesson: LessonPlan = {

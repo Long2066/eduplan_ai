@@ -36,8 +36,12 @@ export async function generateStagedPhase(
     title: `${phaseLabel}: ${periodBlueprint.periodBlueprint.focus}`,
     durationMinutes: phase === "explore" ? 15 : phase === "practice" ? 10 : 5,
     objectiveIds: periodBlueprint.periodBlueprint.objectiveIds,
+    sourceIds: [],
+    sourceUnitIds: [],
+    sourceClusterIds: [],
     learningProducts: ["Sản phẩm học tập của học sinh"],
     handoffToNext: "",
+    pedagogyFocus: "",
   };
 
   const phaseInput: StagedPhaseInput = {
@@ -124,22 +128,29 @@ Trả về duy nhất JSON:
     handoff: StagedPhaseHandoff;
   }>(res.content);
 
+  const phaseSourceIds = Array.isArray(parsed.sourceIds) ? parsed.sourceIds : [];
   const safeActivity = {
     ...parsed.activity,
     id: activityId,
     phase: phaseLabel,
-    durationMinutes: (parsed.activity.durationMinutes && parsed.activity.durationMinutes > 0)
+    durationMinutes: (parsed.activity?.durationMinutes && parsed.activity.durationMinutes > 0)
       ? parsed.activity.durationMinutes
       : phaseBp.durationMinutes,
     objectiveIds: parsed.activity?.objectiveIds ?? [],
-    learningProducts: parsed.activity.learningProducts || phaseBp.learningProducts || [],
-    successCriteria: (parsed.activity as any).successCriteria || [],
+    learningProducts: parsed.activity?.learningProducts || phaseBp.learningProducts || [],
+    successCriteria: (parsed.activity as any)?.successCriteria || [],
+    sourceUnitIds: Array.isArray((parsed.activity as any)?.sourceUnitIds) && (parsed.activity as any).sourceUnitIds.length > 0
+      ? (parsed.activity as any).sourceUnitIds
+      : (phaseBp.sourceUnitIds?.length ? phaseBp.sourceUnitIds : phaseSourceIds),
+    sourceClusterIds: Array.isArray((parsed.activity as any)?.sourceClusterIds) && (parsed.activity as any).sourceClusterIds.length > 0
+      ? (parsed.activity as any).sourceClusterIds
+      : (phaseBp.sourceClusterIds || []),
   };
 
   const payload = {
     activity: safeActivity,
     materialIds: parsed.materialIds || [],
-    sourceIds: parsed.sourceIds || [],
+    sourceIds: phaseSourceIds,
     handoff: parsed.handoff || {
       activityId,
       knowledge: [],
@@ -147,7 +158,7 @@ Trả về duy nhất JSON:
       pending: [],
       bridge: `Chuyển tiếp sau pha ${phaseLabel}.`,
       objectiveIds: safeActivity.objectiveIds || [],
-      sourceIds: parsed.sourceIds || [],
+      sourceIds: phaseSourceIds,
       materialIds: parsed.materialIds || [],
     },
   };
@@ -234,6 +245,8 @@ Yêu cầu:
         : currentPhase.activity.objectiveIds,
       learningProducts: parsed.activity?.learningProducts || currentPhase.activity.learningProducts,
       successCriteria: (parsed.activity as any)?.successCriteria || currentPhase.activity.successCriteria,
+      sourceUnitIds: (parsed.activity as any)?.sourceUnitIds || currentPhase.activity.sourceUnitIds,
+      sourceClusterIds: (parsed.activity as any)?.sourceClusterIds || currentPhase.activity.sourceClusterIds,
     };
 
     const payload = {

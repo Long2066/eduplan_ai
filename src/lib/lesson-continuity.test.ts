@@ -159,4 +159,30 @@ describe("lesson continuity", () => {
     expect(plan?.sourceUnits.map((unit) => unit.unitId)).toEqual(["example-1"]);
     expect(plan?.clusters.map((cluster) => cluster.clusterId)).toEqual(["addition-flow"]);
   });
+
+  it("handles malformed continuityPlan defensively without crashing", () => {
+    // b.sourceUnitIds is not iterable bug simulation
+    const malformedPlans: unknown[] = [
+      { sourceUnits: [], clusters: [{ clusterId: "c1", label: "Cụm 1" }] },
+      { sourceUnits: [], clusters: [{ clusterId: "c1", label: "Cụm 1", sourceUnitIds: null }] },
+      { sourceUnits: [], clusters: [{ clusterId: "c1", label: "Cụm 1", sourceUnitIds: {} }] },
+      { sourceUnits: [], clusters: [{ clusterId: "c1", label: "Cụm 1", sourceUnitIds: 123 }] },
+      { sourceUnits: "not an array", clusters: [] },
+      { sourceUnits: [], clusters: "not an array" },
+    ];
+
+    for (const badPlan of malformedPlans) {
+      expect(() => {
+        const findings = validateContinuityPlan(badPlan as any, { periods: 1, duration: 35 });
+        expect(findings.some((f) => f.code === "LC-STRUCT-01")).toBe(true);
+      }).not.toThrow();
+
+      expect(() => {
+        const value = lesson([[activity()]]);
+        value.meta.continuityPlan = badPlan as any;
+        const findings = validateLessonContinuity(value, { periods: 1, duration: 35 });
+        expect(findings.some((f) => f.code === "LC-STRUCT-01")).toBe(true);
+      }).not.toThrow();
+    }
+  });
 });

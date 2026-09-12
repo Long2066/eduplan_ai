@@ -450,6 +450,116 @@ export function validateStagedSectionPrefix(
           });
         }
       }
+
+      // Validate continuityPlan on LessonMap
+      const continuityPlan = lessonMap.lessonMap?.continuityPlan;
+      if (!continuityPlan || typeof continuityPlan !== "object") {
+        issues.push({
+          code: "SEC-MAP-CONTINUITY-MISSING",
+          message: "Bản đồ bài học thiếu cấu trúc continuityPlan hợp lệ",
+          path: "lessonMap.lessonMap.continuityPlan",
+        });
+      } else {
+        if (!Array.isArray(continuityPlan.sourceUnits)) {
+          issues.push({
+            code: "SEC-MAP-CONTINUITY-UNITS",
+            message: "continuityPlan.sourceUnits phải là mảng",
+            path: "lessonMap.lessonMap.continuityPlan.sourceUnits",
+          });
+        }
+        if (!Array.isArray(continuityPlan.clusters)) {
+          issues.push({
+            code: "SEC-MAP-CONTINUITY-CLUSTERS",
+            message: "continuityPlan.clusters phải là mảng",
+            path: "lessonMap.lessonMap.continuityPlan.clusters",
+          });
+        }
+        if (Array.isArray(continuityPlan.sourceUnits) && Array.isArray(continuityPlan.clusters)) {
+          const unitIds = new Set<string>();
+          for (let uIdx = 0; uIdx < continuityPlan.sourceUnits.length; uIdx++) {
+            const unit = continuityPlan.sourceUnits[uIdx];
+            if (!unit || typeof unit !== "object" || typeof unit.unitId !== "string" || !unit.unitId.trim()) {
+              issues.push({
+                code: "SEC-MAP-CONTINUITY-UNIT-ID",
+                message: `Source unit thứ ${uIdx + 1} thiếu unitId hợp lệ`,
+                path: `lessonMap.lessonMap.continuityPlan.sourceUnits[${uIdx}].unitId`,
+              });
+              continue;
+            }
+            if (validSourceIds.size > 0 && !validSourceIds.has(unit.unitId)) {
+              issues.push({
+                code: "SEC-MAP-CONTINUITY-UNKNOWN-UNIT",
+                message: `Source unit ${unit.unitId} không tồn tại trong Mục Nguồn`,
+                path: `lessonMap.lessonMap.continuityPlan.sourceUnits[${uIdx}].unitId`,
+              });
+            }
+            unitIds.add(unit.unitId);
+          }
+
+          for (let cIdx = 0; cIdx < continuityPlan.clusters.length; cIdx++) {
+            const cluster = continuityPlan.clusters[cIdx];
+            if (!cluster || typeof cluster !== "object" || typeof cluster.clusterId !== "string" || !cluster.clusterId.trim()) {
+              issues.push({
+                code: "SEC-MAP-CONTINUITY-CLUSTER-ID",
+                message: `Cluster thứ ${cIdx + 1} thiếu clusterId hợp lệ`,
+                path: `lessonMap.lessonMap.continuityPlan.clusters[${cIdx}].clusterId`,
+              });
+              continue;
+            }
+            if (!Array.isArray(cluster.sourceUnitIds)) {
+              issues.push({
+                code: "SEC-MAP-CONTINUITY-CLUSTER-SOURCES",
+                message: `Cụm “${cluster.label || cluster.clusterId}” thiếu danh sách sourceUnitIds hợp lệ`,
+                path: `lessonMap.lessonMap.continuityPlan.clusters[${cIdx}].sourceUnitIds`,
+              });
+            } else {
+              for (const uId of cluster.sourceUnitIds) {
+                if (typeof uId !== "string" || (unitIds.size > 0 && !unitIds.has(uId))) {
+                  issues.push({
+                    code: "SEC-MAP-CONTINUITY-CLUSTER-UNIT-REF",
+                    message: `Cụm “${cluster.label || cluster.clusterId}” tham chiếu unitId không tồn tại: ${uId}`,
+                    path: `lessonMap.lessonMap.continuityPlan.clusters[${cIdx}].sourceUnitIds`,
+                  });
+                }
+              }
+            }
+            if (cluster.periodNumber !== undefined && (typeof cluster.periodNumber !== "number" || cluster.periodNumber < 1 || cluster.periodNumber > expectedPeriods)) {
+              issues.push({
+                code: "SEC-MAP-CONTINUITY-CLUSTER-PERIOD",
+                message: `Cụm “${cluster.label || cluster.clusterId}” có periodNumber không hợp lệ: ${cluster.periodNumber}`,
+                path: `lessonMap.lessonMap.continuityPlan.clusters[${cIdx}].periodNumber`,
+              });
+            }
+          }
+        }
+      }
+
+      if (lessonMap.lessonMap?.sourceAllocation !== undefined) {
+        if (!Array.isArray(lessonMap.lessonMap.sourceAllocation)) {
+          issues.push({
+            code: "SEC-MAP-SOURCE-ALLOC-NOT-ARRAY",
+            message: "sourceAllocation phải là mảng",
+            path: "lessonMap.lessonMap.sourceAllocation",
+          });
+        } else {
+          lessonMap.lessonMap.sourceAllocation.forEach((alloc, aIdx) => {
+            if (!alloc || typeof alloc !== "object" || (validSourceIds.size > 0 && !validSourceIds.has(alloc.sourceId))) {
+              issues.push({
+                code: "SEC-MAP-SOURCE-ALLOC-INVALID",
+                message: `Phân bổ nguồn thứ ${aIdx + 1} tham chiếu sourceId không tồn tại: ${alloc?.sourceId}`,
+                path: `lessonMap.lessonMap.sourceAllocation[${aIdx}].sourceId`,
+              });
+            }
+            if (typeof alloc?.periodNumber !== "number" || alloc.periodNumber < 1 || alloc.periodNumber > expectedPeriods) {
+              issues.push({
+                code: "SEC-MAP-SOURCE-ALLOC-PERIOD",
+                message: `Phân bổ nguồn thứ ${aIdx + 1} có periodNumber không hợp lệ: ${alloc?.periodNumber}`,
+                path: `lessonMap.lessonMap.sourceAllocation[${aIdx}].periodNumber`,
+              });
+            }
+          });
+        }
+      }
     }
   }
 
@@ -670,7 +780,7 @@ export function validateStagedSectionPrefix(
         seenMatIds.add(item.id);
         validMaterialIds.add(item.id);
 
-        for (const objId of item.objectiveIds || []) {
+        for (const objId of Array.isArray(item.objectiveIds) ? item.objectiveIds : []) {
           if (!validObjectiveIds.has(objId)) {
             issues.push({
               code: "SEC-MAT-INVALID-OBJ",
@@ -680,7 +790,7 @@ export function validateStagedSectionPrefix(
             });
           }
         }
-        for (const srcId of item.sourceIds || []) {
+        for (const srcId of Array.isArray(item.sourceIds) ? item.sourceIds : []) {
           if (!validSourceIds.has(srcId)) {
             issues.push({
               code: "SEC-MAT-INVALID-SRC",
@@ -847,18 +957,19 @@ export function validateStagedSectionPrefix(
       }
 
       const dur = Number(act.durationMinutes || 0);
-      if (dur <= 0) {
+      if (!Number.isFinite(dur) || dur <= 0) {
         issues.push({
           code: "SEC-PHASE-DURATION",
-          message: `Tiết ${pNum} Pha ${phaseName} thiếu thời lượng hợp lệ (${dur} phút)`,
+          message: `Tiết ${pNum} Pha ${phaseName} thiếu thời lượng hợp lệ (${act.durationMinutes} phút)`,
           path: `phases[${actId}].activity.durationMinutes`,
           periodNumber: pNum,
           phase: phaseName,
         });
+      } else {
+        periodMinutesMap.set(pNum, (periodMinutesMap.get(pNum) || 0) + dur);
       }
-      periodMinutesMap.set(pNum, (periodMinutesMap.get(pNum) || 0) + dur);
 
-      if (!Array.isArray(act.teacherActions) || act.teacherActions.length === 0 || !act.teacherActions.some((a) => a && a.trim())) {
+      if (!Array.isArray(act.teacherActions) || act.teacherActions.length === 0 || !act.teacherActions.some((a) => typeof a === "string" && a.trim())) {
         issues.push({
           code: "SEC-PHASE-ACTIONS-EMPTY",
           message: `Tiết ${pNum} Pha ${phaseName} thiếu hoạt động của giáo viên (teacherActions)`,
@@ -867,7 +978,7 @@ export function validateStagedSectionPrefix(
           phase: phaseName,
         });
       }
-      if (!Array.isArray(act.studentActions) || act.studentActions.length === 0 || !act.studentActions.some((a) => a && a.trim())) {
+      if (!Array.isArray(act.studentActions) || act.studentActions.length === 0 || !act.studentActions.some((a) => typeof a === "string" && a.trim())) {
         issues.push({
           code: "SEC-PHASE-ACTIONS-EMPTY",
           message: `Tiết ${pNum} Pha ${phaseName} thiếu hoạt động của học sinh (studentActions)`,
@@ -909,7 +1020,7 @@ export function validateStagedSectionPrefix(
         }
       }
 
-      for (const matId of phaseArt.materialIds || []) {
+      for (const matId of Array.isArray(phaseArt.materialIds) ? phaseArt.materialIds : []) {
         if (!validMaterialIds.has(matId)) {
           issues.push({
             code: "SEC-PHASE-INVALID-MAT",
@@ -921,7 +1032,7 @@ export function validateStagedSectionPrefix(
         }
       }
 
-      for (const srcId of phaseArt.sourceIds || []) {
+      for (const srcId of Array.isArray(phaseArt.sourceIds) ? phaseArt.sourceIds : []) {
         if (!validSourceIds.has(srcId)) {
           issues.push({
             code: "SEC-PHASE-INVALID-SRC",
@@ -1008,21 +1119,30 @@ export function validateStagedSectionPrefix(
     }
 
     if (phases && assessment.dependencies.phases) {
-      const expectedPhaseHashes = phases.map((p) => p.anchor.hash);
-      const actualPhaseHashes = assessment.dependencies.phases.map((p) => p.hash);
-      if (
-        actualPhaseHashes.length !== expectedPhaseHashes.length ||
-        !actualPhaseHashes.every((h, i) => h === expectedPhaseHashes[i])
-      ) {
+      if (!Array.isArray(assessment.dependencies.phases)) {
         issues.push({
           code: "SEC-DEP-ASSESS-PHASES",
-          message: "Mục Đánh giá không trỏ đúng danh sách hash của các pha đã hoàn thành",
+          message: "Mục Đánh giá dependencies.phases phải là một danh sách",
           path: "assessment.dependencies.phases",
         });
+      } else {
+        const expectedPhaseHashes = phases.map((p) => p.anchor.hash);
+        const actualPhaseHashes = assessment.dependencies.phases.map((p) => p?.hash);
+        if (
+          actualPhaseHashes.length !== expectedPhaseHashes.length ||
+          !actualPhaseHashes.every((h, i) => h === expectedPhaseHashes[i])
+        ) {
+          issues.push({
+            code: "SEC-DEP-ASSESS-PHASES",
+            message: "Mục Đánh giá không trỏ đúng danh sách hash của các pha đã hoàn thành",
+            path: "assessment.dependencies.phases",
+          });
+        }
       }
     }
 
-    for (const align of assessment.alignment || []) {
+    for (const align of Array.isArray(assessment.alignment) ? assessment.alignment : []) {
+      if (!align || typeof align !== "object") continue;
       if (!validObjectiveIds.has(align.objectiveId)) {
         issues.push({
           code: "SEC-ASSESS-INVALID-OBJ",
@@ -1031,8 +1151,8 @@ export function validateStagedSectionPrefix(
           objectiveId: align.objectiveId,
         });
       }
-      for (const actId of align.activityIds || []) {
-        if (phases && !phases.some((p) => p.activity.id === actId)) {
+      for (const actId of Array.isArray(align.activityIds) ? align.activityIds : []) {
+        if (phases && !phases.some((p) => p.activity?.id === actId)) {
           issues.push({
             code: "SEC-ASSESS-INVALID-ACT",
             message: `Đánh giá tham chiếu activityId không tồn tại: ${actId}`,

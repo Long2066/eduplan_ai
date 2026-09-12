@@ -555,4 +555,32 @@ describe("staged-v2 validation and assembly", () => {
     const incRes = validateStagedSections({ ...fixtures, phases: incidentalPhases });
     expect(incRes.issues.filter((i) => i.code.includes("OBJ-UNCOVERED") || i.code.includes("INVALID-OBJ"))).toEqual([]);
   });
+
+  it("validates continuityPlan structure on lessonMap strictly without crashing", () => {
+    const fixtures = createValidSectionFixtures();
+
+    // 1. Missing continuityPlan
+    const noContinuityMap = JSON.parse(JSON.stringify(fixtures.lessonMap));
+    delete noContinuityMap.lessonMap.continuityPlan;
+    const res1 = validateStagedSections({ ...fixtures, lessonMap: noContinuityMap });
+    expect(res1.issues.some((i) => i.code === "SEC-MAP-CONTINUITY-MISSING")).toBe(true);
+
+    // 2. Cluster without sourceUnitIds array
+    const badClusterMap = JSON.parse(JSON.stringify(fixtures.lessonMap));
+    badClusterMap.lessonMap.continuityPlan = {
+      sourceUnits: [{ unitId: "src-1", label: "Nguồn 1" }],
+      clusters: [{ clusterId: "c1", label: "Cụm 1", sourceUnitIds: "invalid" }],
+    };
+    const res2 = validateStagedSections({ ...fixtures, lessonMap: badClusterMap });
+    expect(res2.issues.some((i) => i.code === "SEC-MAP-CONTINUITY-CLUSTER-SOURCES")).toBe(true);
+
+    // 3. Cluster with unknown unitId
+    const unknownUnitMap = JSON.parse(JSON.stringify(fixtures.lessonMap));
+    unknownUnitMap.lessonMap.continuityPlan = {
+      sourceUnits: [{ unitId: "src-1", label: "Nguồn 1" }],
+      clusters: [{ clusterId: "c1", label: "Cụm 1", sourceUnitIds: ["src-999"] }],
+    };
+    const res3 = validateStagedSections({ ...fixtures, lessonMap: unknownUnitMap });
+    expect(res3.issues.some((i) => i.code === "SEC-MAP-CONTINUITY-CLUSTER-UNIT-REF")).toBe(true);
+  });
 });

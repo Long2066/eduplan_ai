@@ -219,7 +219,10 @@ ${JSON.stringify(outcomes.outcomes.objectiveMetadata.map((o) => ({ id: o.id, sta
 Nhiệm vụ:
 - BẮT BUỘC: Phân bổ TẤT CẢ 100% objectiveId ("obj-1",...) trong Yêu cầu cần đạt đã khóa vào các tiết (từ tiết 1 đến ${identity.periods}). Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào (kể cả Phẩm chất (qualities) và năng lực chung).
 - Mỗi tiết phải có trọng tâm, continuityIn, continuityOut.
-- Phân bổ sourceIds đã có ("src-1",...) cho từng tiết.${feedbackInstruction}
+- Phân bổ sourceIds đã có ("src-1",...) cho từng tiết.
+- BẮT BUỘC thiết lập kế hoạch liên kết mạch bài học (continuityPlan):
+  + "sourceUnits": Lập danh sách các đơn vị nguồn tương ứng với sourceEvidence đã khóa. Mỗi đơn vị có "unitId" khớp chính xác với "src-..." đã có, "label", "required" (true/false), "allowReuse" (true/false), "preferredPeriodNumber" (1..${identity.periods}).
+  + "clusters": Gom nhóm các sourceUnits theo mạch học tập. Mỗi cụm có "clusterId" (ví dụ "cluster-1"), "label", "sourceUnitIds" (bắt buộc là mảng string các unitId, không được để trống), "periodNumber" (1..${identity.periods}), "estimatedMinutes" (khoảng 10-25 phút, tổng trong tiết không vượt ${identity.duration} phút).${feedbackInstruction}
 
 Trả về duy nhất JSON:
 {
@@ -227,7 +230,14 @@ Trả về duy nhất JSON:
   "lessonOverview": string,
   "logicSpine": string[],
   "sourceAllocation": [{ "sourceId": string, "periodNumber": number, "purpose": string, "allowReuse": boolean }],
-  "continuityPlan": { "sourceUnits": [], "clusters": [] },
+  "continuityPlan": {
+    "sourceUnits": [
+      { "unitId": "src-1", "label": string, "required": boolean, "allowReuse": boolean, "preferredPeriodNumber": number }
+    ],
+    "clusters": [
+      { "clusterId": "cluster-1", "label": string, "sourceUnitIds": ["src-1"], "periodNumber": number, "estimatedMinutes": number }
+    ]
+  },
   "periods": [
     {
       "periodNumber": number,
@@ -249,6 +259,12 @@ Trả về duy nhất JSON:
   ]);
   const parsed = extractAiJsonValue<StagedLessonMap>(res.content);
   parsed.lessonTitle = identity.lessonTitle;
+  if (!parsed.continuityPlan || typeof parsed.continuityPlan !== "object") {
+    parsed.continuityPlan = { sourceUnits: [], clusters: [] };
+  }
+  if (!Array.isArray(parsed.continuityPlan.sourceUnits)) parsed.continuityPlan.sourceUnits = [];
+  if (!Array.isArray(parsed.continuityPlan.clusters)) parsed.continuityPlan.clusters = [];
+
   const artifact: StagedLessonMapArtifact = {
     version: 2,
     kind: "lesson-map",
@@ -274,6 +290,8 @@ export async function generateStagedPeriodBlueprint(
     || { periodNumber, focus: `Tiết ${periodNumber}`, objectiveIds: outcomes.outcomes.objectiveMetadata.map((o) => o.id), sourceIds: [] };
 
   const allocatedObjs = outcomes.outcomes.objectiveMetadata.filter((o) => (periodMap.objectiveIds || []).includes(o.id));
+  const allocatedClusters = (lessonMap.lessonMap.continuityPlan?.clusters || [])
+    .filter((c) => c.periodNumber === periodNumber);
   const feedbackInstruction = options.feedback
     ? `\nPHẢN HỒI CẦN SỬA ĐỔI TỪ LẦN TRƯỚC:\n${options.feedback}\nBẮT BUỘC: Sửa triệt để các lỗi trên, phân bổ đủ mọi mục tiêu của tiết vào các pha tương ứng. Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.`
     : "";
@@ -283,11 +301,12 @@ Trọng tâm tiết: ${periodMap.focus}.
 YCCĐ phân bổ cho tiết này (kèm nội dung chi tiết):
 ${JSON.stringify(allocatedObjs.map((o) => ({ id: o.id, statement: o.statement, category: o.category })))}
 Dữ kiện nguồn phân bổ: ${JSON.stringify(periodMap.sourceIds)}.
+Cụm học tập phân bổ cho tiết này: ${JSON.stringify(allocatedClusters.map((c) => ({ id: c.clusterId, label: c.label, sourceUnitIds: c.sourceUnitIds })))}.
 
 Yêu cầu:
 - Thiết kế khung gọn gàng cho 4 pha bắt buộc: warmup, explore, practice, apply.
 - BẮT BUỘC: hợp objectiveIds của 4 pha phải bao phủ 100% mọi YCCĐ của tiết này (${JSON.stringify(periodMap.objectiveIds)}). Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.
-- Với mỗi pha, xác định: activityId (p${periodNumber}-warmup, p${periodNumber}-explore, p${periodNumber}-practice, p${periodNumber}-apply), title, durationMinutes (tổng 4 pha xấp xỉ ${identity.duration} phút), objectiveIds liên quan, handoffToNext.${feedbackInstruction}
+- Với mỗi pha, xác định: activityId (p${periodNumber}-warmup, p${periodNumber}-explore, p${periodNumber}-practice, p${periodNumber}-apply), title, durationMinutes (tổng 4 pha xấp xỉ ${identity.duration} phút), objectiveIds liên quan, sourceIds, sourceUnitIds, sourceClusterIds, handoffToNext.${feedbackInstruction}
 
 Trả về duy nhất JSON:
 {
@@ -306,8 +325,8 @@ Trả về duy nhất JSON:
       "title": string,
       "objectiveIds": string[],
       "sourceIds": string[],
-      "sourceUnitIds": [],
-      "sourceClusterIds": [],
+      "sourceUnitIds": string[],
+      "sourceClusterIds": string[],
       "durationMinutes": number,
       "learningProducts": string[],
       "handoffToNext": string,
@@ -322,6 +341,12 @@ Trả về duy nhất JSON:
   ]);
   const parsed = extractAiJsonValue<StagedCompactPeriodBlueprint>(res.content);
   parsed.periodNumber = periodNumber;
+  if (Array.isArray(parsed.phases)) {
+    for (const ph of parsed.phases) {
+      if (!Array.isArray(ph.sourceUnitIds)) ph.sourceUnitIds = [];
+      if (!Array.isArray(ph.sourceClusterIds)) ph.sourceClusterIds = [];
+    }
+  }
   const artifact: StagedPeriodBlueprintArtifact = {
     version: 2,
     kind: "period-blueprint",

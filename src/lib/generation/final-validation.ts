@@ -37,11 +37,14 @@ const FATAL_EXACT_CODES = new Set([
   "STAGED-STRUCT-04",
   "STAGED-TITLE-01",
   "STAGED-TITLE-02",
+  "LC-STRUCT-01",
 ]);
 
 function isFatalFinding(finding: PedagogyAuditFinding) {
   if (finding.severity !== "error") return false;
-  return FATAL_EXACT_CODES.has(finding.code);
+  if (FATAL_EXACT_CODES.has(finding.code)) return true;
+  if (finding.code.startsWith("LC-STRUCT") || finding.code.startsWith("STAGED-STRUCT")) return true;
+  return false;
 }
 
 function finalTitleFindings(
