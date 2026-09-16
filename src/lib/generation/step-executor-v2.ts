@@ -1,6 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { finalizeStagedLesson, type StagedFinalArtifact } from "@/lib/generation/final-validation";
+import {
+  findSimpleArithmeticMismatch,
+  normalizeMathContentDeep,
+} from "@/lib/math-content";
 import { GenerationJobRequestError } from "@/lib/generation/job-input";
 import {
   acquireGenerationCheckpointLease,
@@ -1226,6 +1230,118 @@ async function executeSubjectValidationStepV2(ctx: ExecutionContext): Promise<vo
   });
 }
 
+function phaseFromActivityIndex(index: number): StagedPhaseName {
+  return STAGED_PHASES[Math.max(0, Math.min(STAGED_PHASES.length - 1, index))];
+}
+
+function phaseForFinding(finalArtifact: StagedFinalArtifact, periodNumber?: number, activityId?: string) {
+  if (!periodNumber || !activityId) return undefined;
+  const activityIndex = (finalArtifact.lesson.periodPlans || [])
+    .find((period) => period.periodNumber === periodNumber)
+    ?.activities.findIndex((activity) => activity.id === activityId);
+  return typeof activityIndex === "number" && activityIndex >= 0 ? phaseFromActivityIndex(activityIndex) : undefined;
+}
+
+function finalRepairIssues(finalArtifact: StagedFinalArtifact): StagedSectionIssue[] {
+  return dedupeRepairIssues((finalArtifact.findings || [])
+    .filter((finding) => finding.severity === "error" && finding.autoFixable === true && finding.periodNumber)
+    .map((finding) => ({
+      code: finding.code,
+      message: finding.message,
+      path: "lesson",
+      periodNumber: finding.periodNumber,
+      phase: typeof finding.activityIndex === "number"
+        ? phaseFromActivityIndex(finding.activityIndex)
+        : phaseForFinding(finalArtifact, finding.periodNumber, finding.activityId),
+      activityId: finding.activityId,
+    })));
+}
+
+function arithmeticIssueForActivity(
+  periodNumber: number,
+  phase: StagedPhaseName,
+  activity: StagedAssemblyArtifact["lesson"]["activities"][number],
+): StagedSectionIssue | null {
+  const fields = [
+    activity.objective,
+    ...(activity.inputOrMaterials || []),
+    ...(activity.teacherActions || []),
+    ...(activity.studentActions || []),
+    ...(activity.learningProducts || []),
+    ...(activity.successCriteria || []),
+    activity.expectedAnswer || "",
+    ...(activity.acceptableResponses || []),
+    ...(activity.commonErrors || []),
+    ...(activity.teacherFeedback || []),
+    ...(activity.errorFeedback || []).flatMap((item) => [item.error, ...(item.feedback || [])]),
+    ...(activity.supportForStudentsNeedingHelp || []),
+    ...(activity.extensionForEarlyFinishers || []),
+  ];
+  for (const field of fields) {
+    const mismatch = findSimpleArithmeticMismatch(field);
+    if (mismatch) {
+      return {
+        code: "MATH-ARITHMETIC-MISMATCH",
+        message: `Phép tính sai cần sửa: ${mismatch.equation}; kết quả đúng là ${mismatch.computed}.`,
+        path: "lesson",
+        periodNumber,
+        phase,
+        activityId: activity.id,
+      };
+    }
+  }
+  return null;
+}
+
+function firstArithmeticIssue(assembly: StagedAssemblyArtifact): StagedSectionIssue | null {
+  const scopes = assembly.lesson.periodPlans?.length
+    ? assembly.lesson.periodPlans
+    : [{ periodNumber: 1, activities: assembly.lesson.activities || [] }];
+  for (const period of scopes) {
+    for (let activityIndex = 0; activityIndex < (period.activities || []).length; activityIndex += 1) {
+      const issue = arithmeticIssueForActivity(
+        period.periodNumber,
+        phaseFromActivityIndex(activityIndex),
+        period.activities[activityIndex],
+      );
+      if (issue) return issue;
+    }
+  }
+  return null;
+}
+
+function dedupeRepairIssues(issues: StagedSectionIssue[]) {
+  const seen = new Set<string>();
+  return issues.filter((issue): issue is StagedSectionIssue & { periodNumber: number; phase: StagedPhaseName } => {
+    if (!issue.periodNumber || !issue.phase) return false;
+    const key = `${issue.code}|${issue.periodNumber}|${issue.phase}|${issue.activityId || ""}|${issue.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function finalRepairTargets(finalArtifact: StagedFinalArtifact, assembly?: StagedAssemblyArtifact): StagedSectionIssue[] {
+  const issues = finalRepairIssues(finalArtifact);
+  const arithmeticIssue = assembly?.subjectKind === "math" ? firstArithmeticIssue(assembly) : null;
+  if (arithmeticIssue && !issues.some((issue) =>
+    issue.periodNumber === arithmeticIssue.periodNumber
+    && issue.phase === arithmeticIssue.phase
+    && (issue.code === "MATH-QUALITY-13" || issue.code === arithmeticIssue.code)
+  )) {
+    issues.push(arithmeticIssue);
+  }
+  return dedupeRepairIssues(issues);
+}
+
+function hasUnrepairableFatalFinding(finalArtifact: StagedFinalArtifact) {
+  return finalArtifact.findings.some((finding) =>
+    finding.severity === "error"
+    && finalArtifact.fatalCodes.includes(finding.code)
+    && finding.autoFixable !== true,
+  );
+}
+
 async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
   const { job, uid, owner, epoch } = ctx;
   const persistedInput = await requiredInputArtifact(job.id);
@@ -1252,7 +1368,21 @@ async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
     assessment: assessment?.payload,
   });
 
-  const repairableIssues = validation.issues.filter((issue) => issue.phase && issue.periodNumber);
+  const assembly = await readGenerationJobArtifact<StagedAssemblyArtifact>(job.id, { kind: "assembly" });
+  const blueprint = await readGenerationJobArtifact<StagedBlueprintArtifact>(job.id, { kind: "blueprint" });
+  const assemblyPayload = assembly?.payload && assembly.payload.subjectKind === "math"
+    ? normalizeMathContentDeep(assembly.payload)
+    : assembly?.payload;
+  const currentFinalArtifact = assemblyPayload && blueprint
+    ? finalizeStagedLesson(input, assemblyPayload, blueprint.payload)
+    : null;
+  const finalTargets = currentFinalArtifact && !hasUnrepairableFatalFinding(currentFinalArtifact)
+    ? finalRepairTargets(currentFinalArtifact, assemblyPayload)
+    : [];
+  const repairableIssues = dedupeRepairIssues([
+    ...validation.issues,
+    ...finalTargets,
+  ]);
   const position = Math.min(Math.max(0, job.stageCursor.position), repairableIssues.length);
 
   if (position >= repairableIssues.length || repairableIssues.length === 0) {
@@ -1356,21 +1486,34 @@ async function executeFinalValidationStepV2(ctx: ExecutionContext): Promise<void
   const blueprint = await readGenerationJobArtifact<any>(job.id, { kind: "blueprint" });
   if (!assembly || !blueprint) throw new Error("Không tìm thấy artifact assembly hoặc blueprint để kiểm tra cuối.");
 
-  const finalArtifact = finalizeStagedLesson(input, assembly.payload, blueprint.payload);
+  const assemblyPayload = input.subject.trim().toLowerCase() === "toán" || input.subject.trim().toLowerCase() === "toan"
+    ? normalizeMathContentDeep(assembly.payload)
+    : assembly.payload;
+  const finalArtifact = finalizeStagedLesson(input, assemblyPayload, blueprint.payload);
+
+  const repairTargets = !finalArtifact.canPersist && !hasUnrepairableFatalFinding(finalArtifact)
+    ? finalRepairTargets(finalArtifact, assemblyPayload)
+    : [];
+  const nextStage = repairTargets.length ? "phase-repair" : finalArtifact.canPersist ? "persistence" : "quota-settlement";
 
   await commitGenerationJobCheckpoint(job.id, uid, owner, epoch, {
     expectedStage: "final-validation",
     expectedPosition: 0,
-    artifacts: [{ key: { kind: "final" }, payload: finalArtifact }],
+    artifacts: [
+      { key: { kind: "assembly" }, payload: assemblyPayload },
+      { key: { kind: "final" }, payload: finalArtifact },
+    ],
     patch: {
       status: "waiting_next_step",
-      currentStage: finalArtifact.canPersist ? "persistence" : "quota-settlement",
-      stageCursor: { position: 0, total: 1 },
+      currentStage: nextStage,
+      stageCursor: repairTargets.length ? { position: 0, total: repairTargets.length } : { position: 0, total: 1 },
       progress: progressAfterUnit(
         job,
-        finalArtifact.canPersist
-          ? "Kiểm tra cuối hoàn tất. Đang chờ lưu giáo án vào tài khoản."
-          : "Giáo án không đạt kiểm tra cuối. Đang chuyển sang hoàn lượt.",
+        repairTargets.length
+          ? `Kiểm tra cuối phát hiện ${repairTargets.length} lỗi sửa được. Đang chuyển sang sửa cục bộ.`
+          : finalArtifact.canPersist
+            ? "Kiểm tra cuối hoàn tất. Đang chờ lưu giáo án vào tài khoản."
+            : "Giáo án không đạt kiểm tra cuối. Đang chuyển sang hoàn lượt.",
       ),
       error: null,
     },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  findSimpleArithmeticMismatch,
   latexToReadableText,
   mathContentToReadableText,
   normalizeMathContent,
@@ -41,11 +42,22 @@ describe("math-content", () => {
   });
 
   it("survives JSON escaping and multiple inline formulas", () => {
-    const source = String.raw`So sánh \(a_1 \in A\) và \(a_1 \neq b_2\).`;
+    const source = String.raw`So sánh \\(a_1 \\in A\\) và \\(a_1 \\neq b_2\\).`;
     const parsed = JSON.parse(JSON.stringify({ value: source })) as { value: string };
     expect(parsed.value).toBe(source);
     expect(parseMathContent(parsed.value).filter((segment) => segment.type === "inline-math")).toHaveLength(2);
     expect(validateMathContent(parsed.value)).toEqual([]);
+  });
+
+  it("repairs over-escaped delimiters and underlined blanks from AI JSON", () => {
+    const source = String.raw`Điền số vào \\(2 \\times 7 = 14\\̲\\).`;
+    expect(normalizeMathContent(source)).toBe(String.raw`Điền số vào \(2 \times 7 = 14\).`);
+    expect(validateMathContent(source)).toEqual([]);
+  });
+
+  it("detects simple arithmetic mismatches for final repair routing", () => {
+    expect(findSimpleArithmeticMismatch("GV ghi \\(2 + 2 = 6\\)."))
+      .toMatchObject({ equation: "2 + 2 = 6", expression: "2 + 2", stated: "6", computed: 4 });
   });
 
   it("deep-normalizes only string values without changing schema", () => {

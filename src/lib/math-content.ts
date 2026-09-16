@@ -15,6 +15,62 @@ const forbiddenLatexCommand = /\\(?:def|gdef|edef|xdef|newcommand|renewcommand|p
 const rawLatexCommand = /\\(?:frac|dfrac|tfrac|sqrt|times|div|cdot|pm|leq|geq|neq|begin\s*\{(?:array|aligned|matrix|cases)\})/;
 const plainFormulaPattern = /(?:^|[\s:;(])(?:(?:[A-Za-z]\s*=\s*)?\d+(?:[.,]\d+)?\s*(?:[+×÷=<>]|<=|>=|!=)\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*[−–—-]\s*\d+(?:[.,]\d+)?\s*=)/;
 
+function repairOverEscapedMathSource(value: string) {
+  return value
+    .replace(/\\+\u0332/g, "")
+    .replace(/\\\\\(/g, String.raw`\(`)
+    .replace(/\\\\\)/g, String.raw`\)`)
+    .replace(/\\\\\[/g, String.raw`\[`)
+    .replace(/\\\\\]/g, String.raw`\]`);
+}
+
+function repairOverEscapedLatexCommands(value: string) {
+  return value.replace(/\\+\u0332/g, "").replace(/\\\\([A-Za-z])/g, "\\$1");
+}
+
+function numericValue(value: string) {
+  return Number(value.replace(",", "."));
+}
+
+const arithmeticEquationPattern = /(-?\d+(?:[.,]\d+)?(?:\s*(?:\\times|\\div|[+×÷]|[−–—-])\s*-?\d+(?:[.,]\d+)?)+)\s*=\s*(-?\d+(?:[.,]\d+)?)/g;
+const arithmeticTokenPattern = /-?\d+(?:[.,]\d+)?|\\times|\\div|[+×÷]|[−–—-]/g;
+
+function computeArithmeticExpression(expression: string) {
+  const tokens = expression.match(arithmeticTokenPattern) || [];
+  if (tokens.length < 3 || tokens.length % 2 === 0) return null;
+  let current = numericValue(tokens[0] ?? "");
+  if (!Number.isFinite(current)) return null;
+  const values: number[] = [];
+  const ops: string[] = [];
+  for (let index = 1; index < tokens.length; index += 2) {
+    const op = tokens[index];
+    const right = numericValue(tokens[index + 1] ?? "");
+    if (!op || !Number.isFinite(right)) return null;
+    if (op === "×" || op === String.raw`\times`) current *= right;
+    else if (op === "÷" || op === String.raw`\div`) {
+      if (right === 0) return null;
+      current /= right;
+    } else {
+      values.push(current);
+      ops.push(/[−–—-]/.test(op) ? "-" : "+");
+      current = right;
+    }
+  }
+  values.push(current);
+  return values.slice(1).reduce((total, value, index) => ops[index] === "-" ? total - value : total + value, values[0] ?? 0);
+}
+
+export function findSimpleArithmeticMismatch(value: string) {
+  for (const match of repairOverEscapedMathSource(String(value || "")).matchAll(arithmeticEquationPattern)) {
+    const computed = computeArithmeticExpression(match[1]);
+    const stated = numericValue(match[2]);
+    if (computed !== null && Number.isFinite(stated) && Math.abs(stated - computed) > 1e-9) {
+      return { equation: match[0], expression: match[1], stated: match[2], computed };
+    }
+  }
+  return null;
+}
+
 function normalizeUnicodeSquareRoot(value: string) {
   return value
     .replace(/√\s*\(([^()]+)\)/g, String.raw`\sqrt{$1}`)
@@ -22,7 +78,7 @@ function normalizeUnicodeSquareRoot(value: string) {
 }
 
 export function normalizeLatexExpression(expression: string) {
-  return normalizeUnicodeSquareRoot(expression)
+  return normalizeUnicodeSquareRoot(repairOverEscapedLatexCommands(expression))
     .replace(/[−–—]/g, "-")
     .replace(/×/g, String.raw`\times `)
     .replace(/÷/g, String.raw`\div `)
@@ -36,7 +92,7 @@ export function normalizeLatexExpression(expression: string) {
 }
 
 export function parseMathContent(source: string): MathContentSegment[] {
-  const value = String(source || "");
+  const value = repairOverEscapedMathSource(String(source || ""));
   if (!value) return [{ type: "text", value: "" }];
   const segments: MathContentSegment[] = [];
   let cursor = 0;
@@ -89,7 +145,7 @@ function delimiterIssues(value: string) {
 }
 
 export function validateMathContent(value: string, options: { requireDelimitedFormulas?: boolean } = {}) {
-  const source = String(value || "");
+  const source = repairOverEscapedMathSource(String(value || ""));
   const issues: MathContentIssue[] = [];
   if (/(^|[^\\])\$\$?|```(?:latex|tex|math)?/i.test(source)) {
     issues.push({ code: "legacy-delimiter", message: "Không dùng $...$, $$...$$ hoặc code fence; hãy dùng \\(...\\) / \\[...\\]." });
@@ -121,8 +177,8 @@ export function validateMathContent(value: string, options: { requireDelimitedFo
 }
 
 export function normalizeMathContent(value: string) {
-  return parseMathContent(value).map((segment) => {
-    if (segment.type === "text") return segment.value;
+  return parseMathContent(repairOverEscapedMathSource(value)).map((segment) => {
+    if (segment.type === "text") return repairOverEscapedMathSource(segment.value);
     const delimiters = segment.type === "inline-math" ? [String.raw`\(`, String.raw`\)`] : [String.raw`\[`, String.raw`\]`];
     return `${delimiters[0]}${normalizeLatexExpression(segment.value)}${delimiters[1]}`;
   }).join("");
