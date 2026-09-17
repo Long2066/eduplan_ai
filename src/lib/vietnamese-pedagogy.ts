@@ -622,3 +622,334 @@ export function getCheckerFlagsForType(lessonType: VietnameseLessonType): {
     requiresPhonics: lessonType === "phonics",
   };
 }
+
+// ─── GRADE-SPECIFIC DETAILED WORKFLOWS (LỚP 1–5) ───
+
+export type VietnameseGradeWorkflow = {
+  id: string;
+  grade: number;
+  label: string;
+  applicableTypes: VietnameseLessonType[];
+  stepsSummary: string[];
+  mandatoryStepsByPeriod?: Record<number, string[]>;
+  pedagogicalFocus: string[];
+};
+
+export const vietnameseGradeWorkflows: Record<string, VietnameseGradeWorkflow> = {
+  // LỚP 1
+  "grade1-phonics-2p": {
+    id: "grade1-phonics-2p",
+    grade: 1,
+    label: "Lớp 1: Dạng bài Âm - Chữ - Vần (2 tiết)",
+    applicableTypes: ["phonics", "handwriting"],
+    stepsSummary: [
+      "Tiết 1: 1. Ôn và khởi động; 2. Nhận biết (quan sát tranh, câu nhận biết, giới thiệu âm/chữ/vần mới); 3. Đọc (luyện đọc âm/vần, đánh vần, đọc trơn tiếng/từ khóa); 4. Viết bảng (GV viết mẫu quy trình, HS viết bảng con, nhận xét sửa lỗi).",
+      "Tiết 2: 1. Viết vở (tô/viết âm, chữ, vần, từ ngữ vào Vở tập viết); 2. Đọc câu/đoạn (đọc thầm tìm tiếng chứa vần mới, GV đọc mẫu, HS luyện đọc và trả lời câu hỏi); 3. Nói theo tranh (quan sát tranh, thảo luận nhóm, trả lời câu hỏi hoặc đóng vai); 4. Củng cố (tìm từ ngữ mới, đặt câu, dặn dò).",
+    ],
+    mandatoryStepsByPeriod: {
+      1: [
+        "Khởi động: trò chơi ôn bài cũ, tạo tâm thế",
+        "Nhận biết: quan sát tranh, nghe/đọc câu nhận biết, chỉ ra âm/chữ/vần mới",
+        "Luyện đọc: đọc âm/vần mới, đánh vần, ghép tiếng, đọc trơn tiếng/từ khóa",
+        "Luyện viết bảng: GV viết mẫu điểm đặt bút/nét nối/cỡ chữ, HS viết bảng con",
+      ],
+      2: [
+        "Luyện viết vở: tô và viết âm/chữ/vần/từ ngữ vào Vở tập viết, đúng tư thế",
+        "Luyện đọc câu/đoạn: đọc thầm tìm tiếng có vần mới, GV đọc mẫu, luyện đọc trơn và tìm hiểu nội dung đơn giản",
+        "Nói theo tranh: thảo luận nhóm, nói 1-2 câu theo chủ đề tranh hoặc đóng vai",
+        "Vận dụng/Củng cố: tìm tiếng/từ mới ngoài bài, dặn dò thực hành",
+      ],
+    },
+    pedagogicalFocus: [
+      "Lớp 1 học vần: không dùng câu hỏi suy luận sâu hay phân tích tu từ",
+      "Viết bảng con ở tiết 1, viết vào vở tập viết ở tiết 2",
+      "Đọc từ âm/vần → tiếng → từ ngữ → câu/đoạn ứng dụng",
+      "Hoạt động nói gắn trực tiếp với tranh và chủ đề gần gũi",
+    ],
+  },
+  "grade1-reading-4p": {
+    id: "grade1-reading-4p",
+    grade: 1,
+    label: "Lớp 1: Dạng bài Đọc hiểu văn bản (4 tiết - Tập 2)",
+    applicableTypes: ["reading", "composition", "spelling"],
+    stepsSummary: [
+      "Tiết 1: Ôn/khởi động → GV đọc mẫu toàn văn bản → HS luyện đọc từ khó, đọc nối tiếp câu/đoạn, giải nghĩa từ khó, đọc toàn bài.",
+      "Tiết 2: Trả lời câu hỏi đọc hiểu (làm việc nhóm/lớp) → Viết vào vở câu trả lời (hướng dẫn viết hoa, dấu câu).",
+      "Tiết 3: Chọn từ ngữ để hoàn thiện câu và viết vào vở → Quan sát tranh và nói/kể chuyện (dùng từ gợi ý, đóng vai kể lại).",
+      "Tiết 4: Nghe viết (hướng dẫn chữ dễ sai, đọc từng cụm từ viết chính tả đoạn ngắn, soát lỗi) → Làm bài tập/mở rộng → Củng cố.",
+    ],
+    mandatoryStepsByPeriod: {
+      1: ["Ôn và khởi động", "Luyện đọc thành tiếng: đọc mẫu, đọc nối tiếp câu/đoạn, sửa phát âm từ khó"],
+      2: ["Trả lời câu hỏi đọc hiểu văn bản", "Viết vào vở câu trả lời đúng quy cách chữ hoa và dấu câu"],
+      3: ["Chọn từ ngữ hoàn thiện câu và viết vào vở", "Quan sát tranh và nói/kể chuyện"],
+      4: ["Nghe viết chính tả đoạn ngắn và soát lỗi", "Bài tập chính tả/mở rộng và củng cố"],
+    },
+    pedagogicalFocus: [
+      "Tiết 1 tập trung đọc đúng, đọc trơn văn bản",
+      "Tiết 2 tập trung đọc hiểu và viết câu trả lời",
+      "Tiết 3 luyện tập dùng từ ngữ và nói theo tranh",
+      "Tiết 4 rèn nghe - viết và củng cố toàn bài",
+    ],
+  },
+  "grade1-review-2p": {
+    id: "grade1-review-2p",
+    grade: 1,
+    label: "Lớp 1: Dạng bài Ôn tập và Kể chuyện (2 tiết)",
+    applicableTypes: ["phonics", "speaking-listening", "mixed"],
+    stepsSummary: [
+      "Tiết 1: Khởi động → Đọc âm, tiếng, từ ngữ ôn tập → Đọc câu/đoạn ứng dụng → Tô và viết cụm từ ứng dụng/chữ số vào vở.",
+      "Tiết 2: Kể chuyện (GV kể toàn bộ lần 1; GV kể từng đoạn kèm câu hỏi lần 2; HS dựa tranh/gợi ý kể lại từng đoạn hoặc cả câu chuyện) → Củng cố.",
+    ],
+    mandatoryStepsByPeriod: {
+      1: ["Khởi động", "Đọc âm, tiếng, từ ngữ", "Đọc câu/đoạn", "Viết cụm từ ứng dụng vào vở"],
+      2: ["Nghe kể chuyện 2 lượt (toàn bộ và từng đoạn)", "HS kể lại theo tranh gợi ý", "Củng cố/liên hệ"],
+    },
+    pedagogicalFocus: [
+      "Tiết 1 ôn luyện kĩ năng đọc và viết cơ bản",
+      "Tiết 2 rèn nghe - kể chuyện: bắt buộc GV kể mẫu 2 lượt rõ ràng",
+    ],
+  },
+
+  // LỚP 2
+  "grade2-reading": {
+    id: "grade2-reading",
+    grade: 2,
+    label: "Lớp 2: Mạch Đọc văn bản",
+    applicableTypes: ["reading"],
+    stepsSummary: [
+      "1. Khởi động: quan sát tranh, nghe bài hát/video ngắn liên quan chủ đề bài đọc.",
+      "2. Đọc văn bản: GV giới thiệu/đọc mẫu toàn bài; hướng dẫn luyện đọc từ ngữ khó, câu dài; chia đoạn; HS luyện đọc nối tiếp đoạn, đọc nhóm, đọc toàn bài.",
+      "3. Trả lời câu hỏi: làm việc cá nhân/nhóm trả lời câu hỏi đọc hiểu; GV mở rộng nhẹ nhàng, hỗ trợ HS yếu.",
+      "4. Luyện tập sau bài đọc: bài tập từ ngữ/câu hoặc luyện đọc lại, đọc thầm theo yêu cầu.",
+    ],
+    pedagogicalFocus: [
+      "Luyện đọc câu dài có ngắt nghỉ /; giải nghĩa từ ngữ đơn giản trong ngữ cảnh",
+      "Sau trả lời câu hỏi có thể mở rộng liên hệ thực tế phù hợp",
+      "HS yếu được hỗ trợ câu hỏi ngắn; HS đọc trơn đọc to rõ",
+    ],
+  },
+  "grade2-composition": {
+    id: "grade2-composition",
+    grade: 2,
+    label: "Lớp 2: Mạch Luyện viết đoạn",
+    applicableTypes: ["composition"],
+    stepsSummary: [
+      "1. Hoạt động mở đầu: trò chơi/hát dẫn dắt giới thiệu bài.",
+      "2. Hoạt động hình thành kiến thức: Hoạt động 1 (Nói theo tranh/gợi ý trước khi viết) → Hoạt động 2 (Hướng dẫn viết đoạn văn: làm việc chung đọc yêu cầu, làm việc nhóm trao đổi ý, viết cá nhân vào vở, đổi bài soát lỗi, nhận xét sửa bài).",
+      "3. Củng cố, dặn dò: nhận xét tiết học, nhắc nhở chỉnh sửa.",
+    ],
+    pedagogicalFocus: [
+      "Phải cho HS nói trước khi viết đoạn 3–5 câu",
+      "Có khung gợi ý câu hỏi/từ ngữ trợ giúp",
+      "HS viết xong có bước đổi vở soát lỗi hoặc tự soát",
+    ],
+  },
+  "grade2-handwriting": {
+    id: "grade2-handwriting",
+    grade: 2,
+    label: "Lớp 2: Mạch Tập viết (Chữ hoa & Ứng dụng)",
+    applicableTypes: ["handwriting"],
+    stepsSummary: [
+      "1. Viết chữ hoa: quan sát mẫu chữ hoa (độ cao, độ rộng, các nét), quan sát GV viết mẫu/trình chiếu, HS viết bảng con/giấy nháp, tự nhận xét và viết vào Vở tập viết.",
+      "2. Viết ứng dụng: đọc câu ứng dụng, quan sát GV viết mẫu từ chứa chữ hoa đầu câu, hướng dẫn khoảng cách nét nối/dấu chấm cuối câu, HS viết vào Vở tập viết, nhận xét góp ý.",
+    ],
+    pedagogicalFocus: [
+      "Phân tích nét và cỡ chữ của chữ hoa mục tiêu",
+      "GV viết mẫu trên bảng trước khi HS thực hành",
+      "Kết hợp viết chữ hoa rời và viết câu ứng dụng có chữ hoa",
+    ],
+  },
+  "grade2-spelling": {
+    id: "grade2-spelling",
+    grade: 2,
+    label: "Lớp 2: Mạch Viết chính tả (Nghe - viết & Bài tập)",
+    applicableTypes: ["spelling"],
+    stepsSummary: [
+      "1. Nghe - viết: nêu yêu cầu, đọc cả đoạn, gọi HS đọc lại, hướng dẫn từ khó/chữ dễ sai, đọc từng cụm từ ngắn cho HS viết, đọc lại toàn đoạn soát bài, đổi vở soát lỗi, GV chữa bài trên lớp.",
+      "2. Hoàn thành bài tập chính tả: bài tập phân biệt âm/vần/dấu thanh (chung hoặc lựa chọn a/b), chữa bài và chốt đáp án đúng.",
+    ],
+    pedagogicalFocus: [
+      "Đọc từng cụm từ ngắn 2-3 chữ vừa sức học sinh lớp 2",
+      "Phân tích từ khó trước khi bắt đầu nghe viết",
+      "Có bước đổi vở kiểm tra chéo và bài tập phân biệt âm/vần",
+    ],
+  },
+  "grade2-reading-extension": {
+    id: "grade2-reading-extension",
+    grade: 2,
+    label: "Lớp 2: Mạch Đọc mở rộng",
+    applicableTypes: ["reading", "speaking-listening"],
+    stepsSummary: [
+      "1. Hoạt động mở đầu: kiểm tra chuẩn bị bài đọc của HS, dẫn dắt vào tiết học.",
+      "2. Hoạt động đọc mở rộng: HS chia sẻ tên bài/câu chuyện đã chuẩn bị → đọc thầm/đọc nhóm 4 → viết nội dung quan trọng/thú vị vào phiếu đọc sách → thi đọc trước lớp → GV hỏi mở rộng (Vì sao em chọn? Em thích nhất điều gì? Rút ra bài học gì?).",
+      "3. Củng cố, dặn dò: hướng dẫn tìm sách đọc ở góc thư viện, dặn dò tiết sau.",
+    ],
+    pedagogicalFocus: [
+      "Tập cho HS thói quen ghi phiếu đọc sách đơn giản",
+      "Chia sẻ sách báo đã đọc với bạn cùng lớp",
+    ],
+  },
+
+  // LỚP 3
+  "grade3-reading": {
+    id: "grade3-reading",
+    grade: 3,
+    label: "Lớp 3: Quy trình dạy Tiết Đọc",
+    applicableTypes: ["reading"],
+    stepsSummary: [
+      "1. Khởi động: tranh ảnh, câu hỏi, trò chơi, bài hát, chia sẻ trải nghiệm gắn với chủ điểm bài đọc.",
+      "2. Khám phá văn bản: Hoạt động 1 (Luyện đọc thành tiếng: đọc mẫu, chia đoạn, đọc nối tiếp câu/đoạn, luyện từ khó/câu dài, đọc nhóm); Hoạt động 2 (Tìm hiểu nghĩa từ ngữ: qua tranh ảnh, ngữ cảnh, đặt câu); Hoạt động 3 (Đọc hiểu văn bản: đọc thầm, tìm thông tin, trả lời câu hỏi trực tiếp, suy luận nội dung, nhân vật, bài học).",
+      "3. Luyện tập: hệ thống hóa nội dung, luyện tập từ ngữ/câu gắn với bài đọc, hoàn thành phiếu học tập hoặc bài tập SGK.",
+      "4. Vận dụng: liên hệ bản thân/thực tế, nói điều học được, viết 1-2 câu cảm nghĩ, tìm thêm thông tin.",
+    ],
+    pedagogicalFocus: [
+      "Tách bạch 3 hoạt động trong Khám phá: Luyện đọc thành tiếng → Nghĩa từ ngữ → Đọc hiểu",
+      "Cấu trúc tuần học lớp 3 thường tích hợp: Đọc + Nói-nghe (3 tiết đầu) hoặc Đọc + Viết chữ hoa/Đọc mở rộng (4 tiết sau)",
+      "Vận dụng yêu cầu liên hệ bản thân hoặc viết 1-2 câu cảm nghĩ",
+    ],
+  },
+
+  // LỚP 4
+  "grade4-reading-7steps": {
+    id: "grade4-reading-7steps",
+    grade: 4,
+    label: "Lớp 4: Quy trình 7 bước dạy Bài Đọc",
+    applicableTypes: ["reading"],
+    stepsSummary: [
+      "Bước 1: Khởi động, kết nối (tạo hứng thú bằng tranh/câu hỏi/trò chơi/video/chia sẻ trải nghiệm).",
+      "Bước 2: Đọc mẫu và hướng dẫn giọng đọc (GV/HS đọc tốt đọc mẫu, hướng dẫn giọng, tốc độ, ngắt nghỉ, nhấn giọng).",
+      "Bước 3: Luyện đọc đúng (đọc nối tiếp câu/đoạn/khổ, sửa phát âm, ngắt nghỉ câu dài, luyện cặp/nhóm).",
+      "Bước 4: Giải nghĩa từ ngữ (ngữ cảnh, tranh ảnh, từ điển, đặt câu, tìm từ gần nghĩa/trái nghĩa).",
+      "Bước 5: Tìm hiểu bài (trả lời câu hỏi đọc hiểu, tìm chi tiết, hiểu nội dung/nhân vật/ý nghĩa, GV chốt ý).",
+      "Bước 6: Luyện đọc lại, đọc diễn cảm (chọn đoạn tiêu biểu, đọc cá nhân/cặp/nhóm, chú ý cảm xúc/nhịp thơ/mạch lạc).",
+      "Bước 7: Vận dụng sau đọc (liên hệ cuộc sống, nói điều học được, viết cảm nghĩ, tìm hiểu thêm thông tin).",
+    ],
+    pedagogicalFocus: [
+      "Bắt buộc có Bước 6: Luyện đọc lại và đọc diễn cảm đoạn tiêu biểu",
+      "Bước 4 giải nghĩa từ qua ngữ cảnh và từ điển/từ gần nghĩa",
+      "Đọc hiểu bám bằng chứng chi tiết và rút ra ý nghĩa đoạn/bài",
+    ],
+  },
+  "grade4-speaking-listening-7steps": {
+    id: "grade4-speaking-listening-7steps",
+    grade: 4,
+    label: "Lớp 4: Quy trình 7 bước Nói và Nghe",
+    applicableTypes: ["speaking-listening"],
+    stepsSummary: [
+      "1. Khởi động, giới thiệu chủ đề nói.",
+      "2. Xác định yêu cầu nói và nghe (đọc SGK, xác định chủ đề, nói rõ ràng mạch lạc, nhìn người nghe, nhiệm vụ người nghe).",
+      "3. Chuẩn bị ý nói (quan sát tranh, gợi ý, nhớ lại trải nghiệm, ghi chú ngắn).",
+      "4. Thực hành nói (trình bày cá nhân, cặp đôi hoặc nhóm trước lớp; GV quan sát hỗ trợ).",
+      "5. Nghe và phản hồi (lắng nghe tôn trọng, nhận xét, hỏi lại, bổ sung ý kiến lịch sự).",
+      "6. Nhận xét, đánh giá (GV và HS đánh giá theo tiêu chí đã thống nhất).",
+      "7. Vận dụng (áp dụng kĩ năng nói-nghe vào đời sống, giao tiếp ở nhà).",
+    ],
+    pedagogicalFocus: [
+      "Quy định rõ tiêu chí cả cho NGƯỜI NÓI và NGƯỜI NGHE",
+      "Người nghe có nhiệm vụ lắng nghe, hỏi lại, nhận xét lịch sự",
+    ],
+  },
+
+  // LỚP 5
+  "grade5-reading-8steps": {
+    id: "grade5-reading-8steps",
+    grade: 5,
+    label: "Lớp 5: Quy trình 8 bước dạy Bài Đọc",
+    applicableTypes: ["reading"],
+    stepsSummary: [
+      "Bước 1: Khởi động, kết nối vào bài (tranh ảnh, câu hỏi, trò chơi, tình huống kết nối chủ điểm).",
+      "Bước 2: Đọc mẫu, định hướng giọng đọc (xác định cảm xúc: vui tươi/xúc động/trang trọng; tốc độ, nhấn giọng).",
+      "Bước 3: Đọc nối tiếp đoạn/khổ (luyện từ khó, câu dài, hướng dẫn ngắt nghỉ, nhấn giọng).",
+      "Bước 4: Giải nghĩa từ ngữ, hình ảnh (dựa chú thích/ngữ cảnh, tìm từ đồng nghĩa/trái nghĩa, đặt câu, hình ảnh trực quan).",
+      "Bước 5: Tìm hiểu nội dung bài đọc (trả lời câu hỏi đọc hiểu, tìm thông tin, giải thích chi tiết, nhận xét suy luận).",
+      "Bước 6: Nêu nội dung, ý nghĩa của văn bản (xác định nội dung chính, thông điệp tác giả muốn gửi gắm, GV chốt ngắn gọn).",
+      "Bước 7: Luyện đọc lại, đọc diễn cảm (chọn đoạn tiêu biểu, đọc phân vai/cá nhân, giọng đọc phù hợp, thể hiện cảm xúc).",
+      "Bước 8: Vận dụng sau đọc (nói điều học được, liên hệ bản thân, viết cảm nghĩ, hành động việc làm phù hợp).",
+    ],
+    pedagogicalFocus: [
+      "Bước 6 tách riêng: Nêu nội dung, ý nghĩa và thông điệp của văn bản",
+      "Bước 7 đọc diễn cảm nâng cao (thể hiện sắc thái cảm xúc, nhịp điệu, phân vai)",
+      "Bước 5 đòi hỏi suy luận, nhận xét, liên hệ thực tế nhiều hơn các lớp dưới",
+    ],
+  },
+  "grade5-speaking-listening-7steps": {
+    id: "grade5-speaking-listening-7steps",
+    grade: 5,
+    label: "Lớp 5: Quy trình 7 bước Nói và Nghe",
+    applicableTypes: ["speaking-listening"],
+    stepsSummary: [
+      "1. Giới thiệu chủ đề nói và nghe (tình huống, mục đích giao tiếp).",
+      "2. Xác định yêu cầu và tiêu chí (nói đúng chủ đề, mạch lạc, tự tin; người nghe chăm chú, ghi chép).",
+      "3. Chuẩn bị ý nói (quan sát tranh, trải nghiệm, tìm thông tin, lập dàn ý ngắn).",
+      "4. Thực hành nói (nói theo cặp/nhóm/trước lớp; trình bày ý kiến, tranh luận/thuyết trình đơn giản).",
+      "5. Nghe và phản hồi (lắng nghe, đặt câu hỏi phản biện, bổ sung ý kiến lịch sự).",
+      "6. Nhận xét, đánh giá (tuyên dương, góp ý theo tiêu chí rõ ràng).",
+      "7. Vận dụng (thực hành giao tiếp trong học tập và đời sống).",
+    ],
+    pedagogicalFocus: [
+      "Mức độ nói và nghe cao hơn: trình bày quan điểm, giải thích lí lẽ, phản hồi văn minh",
+    ],
+  },
+};
+
+/**
+ * Trả về quy trình chuẩn phù hợp nhất với lớp và kiểu bài Tiếng Việt đã phân loại.
+ */
+export function getVietnameseGradeWorkflow(
+  input: LessonInput,
+  classification: VietnameseLessonClassification,
+): VietnameseGradeWorkflow | null {
+  const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10);
+  const type = classification.primaryType;
+  const periods = Math.max(1, Number(input.periods || 1));
+  const title = (input.lessonTitle || "").toLowerCase();
+
+  if (gradeNum === 1) {
+    if (type === "phonics" || /âm|vần|chữ/i.test(title)) {
+      return vietnameseGradeWorkflows["grade1-phonics-2p"];
+    }
+    if (periods >= 3 || /tập\s*2|đọc hiểu|bài đọc/i.test(title)) {
+      return vietnameseGradeWorkflows["grade1-reading-4p"];
+    }
+    if (/ôn tập|kể chuyện/i.test(title)) {
+      return vietnameseGradeWorkflows["grade1-review-2p"];
+    }
+    return vietnameseGradeWorkflows["grade1-phonics-2p"];
+  }
+
+  if (gradeNum === 2) {
+    if (type === "handwriting" || /tập viết|chữ hoa/i.test(title)) {
+      return vietnameseGradeWorkflows["grade2-handwriting"];
+    }
+    if (type === "spelling" || /chính tả|nghe[- ]viết/i.test(title)) {
+      return vietnameseGradeWorkflows["grade2-spelling"];
+    }
+    if (type === "composition" || /viết đoạn/i.test(title)) {
+      return vietnameseGradeWorkflows["grade2-composition"];
+    }
+    if (/đọc mở rộng/i.test(title)) {
+      return vietnameseGradeWorkflows["grade2-reading-extension"];
+    }
+    return vietnameseGradeWorkflows["grade2-reading"];
+  }
+
+  if (gradeNum === 3) {
+    return vietnameseGradeWorkflows["grade3-reading"];
+  }
+
+  if (gradeNum === 4) {
+    if (type === "speaking-listening" || /nói và nghe|kể chuyện/i.test(title)) {
+      return vietnameseGradeWorkflows["grade4-speaking-listening-7steps"];
+    }
+    return vietnameseGradeWorkflows["grade4-reading-7steps"];
+  }
+
+  if (gradeNum === 5) {
+    if (type === "speaking-listening" || /nói và nghe|kể chuyện/i.test(title)) {
+      return vietnameseGradeWorkflows["grade5-speaking-listening-7steps"];
+    }
+    return vietnameseGradeWorkflows["grade5-reading-8steps"];
+  }
+
+  return null;
+}

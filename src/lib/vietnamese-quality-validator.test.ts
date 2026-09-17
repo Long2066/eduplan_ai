@@ -668,4 +668,32 @@ describe("validateVietnameseLesson", () => {
     ], ["Kể đúng trình tự."]);
     expect(codes(lesson, input)).toContain("TV-QUALITY-44");
   });
+
+  it("phát hiện thiếu bước quy trình theo lớp (TV-QUALITY-45)", () => {
+    // Lớp 1 tiết 1 bài âm-vần thiếu viết bảng con
+    const inputL1 = inputFor("Bài 1. Âm a", "Lớp 1");
+    const lessonL1 = lessonFor(inputL1.lessonTitle, inputL1.grade, [
+      activity({
+        inputOrMaterials: ["Âm a, tiếng ba, vần a."],
+        teacherActions: ["GV dạy đọc âm a và ghép tiếng."],
+        studentActions: ["HS đọc âm a."],
+        learningProducts: ["Đọc đúng tiếng."],
+        successCriteria: ["Đọc đúng."],
+      }),
+    ], ["Đọc đúng âm a."]);
+    expect(codes(lessonL1, inputL1)).toContain("TV-QUALITY-45");
+
+    // Lớp 4 bài đọc thiếu luyện đọc lại / đọc diễn cảm
+    const inputL4 = inputFor("Bài đọc: Cây bàng", "Lớp 4");
+    const lessonL4 = lessonFor(inputL4.lessonTitle, inputL4.grade, [
+      activity({
+        inputOrMaterials: ["Bài đọc Cây bàng."],
+        teacherActions: ["GV cho HS đọc bài và trả lời câu hỏi đọc hiểu."],
+        studentActions: ["HS đọc bài và tìm chi tiết."],
+        learningProducts: ["Câu trả lời đọc hiểu."],
+        successCriteria: ["Tìm được chi tiết."],
+      }),
+    ], ["Đọc đúng tốc độ.", "Tìm được chi tiết."]);
+    expect(codes(lessonL4, inputL4)).toContain("TV-QUALITY-45");
+  });
 });

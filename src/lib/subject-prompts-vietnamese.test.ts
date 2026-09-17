@@ -1,4 +1,4 @@
-﻿/**
+/**
  * subject-prompts-vietnamese.test.ts
  * Phase B tests for Vietnamese blueprint, period and local-repair prompts.
  */
@@ -116,6 +116,22 @@ describe("buildVietnamesePeriodPrompt", () => {
     expect(prompt).toContain("Kiểu bài tiết này: Đọc (Tập đọc / Đọc hiểu)");
     expect(prompt).toContain("tìm chi tiết");
     expect(prompt).toContain("nêu ý chính");
+    expect(prompt).toContain("Quy trình 7 bước dạy Bài Đọc");
+    expect(prompt).toContain("Bước 6: Luyện đọc lại, đọc diễn cảm");
+  });
+
+  it("embeds grade 1 phonics 2-period workflow correctly", () => {
+    const input = makeInput({ grade: "Lớp 1", lessonTitle: "Bài 42. ao eo", periods: 2 });
+    const classification = classifyVietnameseLesson(input, "ao eo");
+    const period1: VietnamesePeriodBlueprint = { periodNumber: 1, focus: "Học vần ao, eo", lessonType: "phonics" };
+    const period2: VietnamesePeriodBlueprint = { periodNumber: 2, focus: "Luyện đọc đoạn và nói", lessonType: "phonics" };
+    const blueprint: VietnameseLessonBlueprint = { lessonTitle: input.lessonTitle, classification, periods: [period1, period2] };
+    const prompt1 = buildVietnamesePeriodPrompt(input, "ao eo", blueprint, period1, null);
+    const prompt2 = buildVietnamesePeriodPrompt(input, "ao eo", blueprint, period2, null);
+
+    expect(prompt1).toContain("Lớp 1: Dạng bài Âm - Chữ - Vần (2 tiết)");
+    expect(prompt1).toContain("Luyện viết bảng: GV viết mẫu điểm đặt bút/nét nối/cỡ chữ, HS viết bảng con");
+    expect(prompt2).toContain("Luyện viết vở: tô và viết âm/chữ/vần/từ ngữ vào Vở tập viết, đúng tư thế");
   });
 });
 

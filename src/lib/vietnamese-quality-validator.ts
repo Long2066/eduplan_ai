@@ -80,6 +80,7 @@ export const vietnameseQualityRules = {
   unlabeledExtensionTask: { code: "TV-QUALITY-42", severity: "warning", autoFixable: true },
   productCriteriaMismatch: { code: "TV-QUALITY-43", severity: "warning", autoFixable: true },
   missingStoryListeningRounds: { code: "TV-QUALITY-44", severity: "warning", autoFixable: true },
+  missingGradeWorkflowStep: { code: "TV-QUALITY-45", severity: "warning", autoFixable: true },
 } as const satisfies Record<string, VietnameseRule>;
 
 const typeRequirements: Record<Exclude<VietnameseLessonType, "mixed">, Requirement[]> = {
@@ -642,6 +643,41 @@ function gradeMismatchMessage(type: VietnameseLessonType, grade: number, text: s
   return "";
 }
 
+function missingGradeWorkflowIssues(scope: Scope, grade: number, lessonType: VietnameseLessonType): string[] {
+  const issues: string[] = [];
+  const text = scopeText(scope);
+  const pNum = scope.periodNumber || 1;
+
+  // Lớp 1 bài âm/vần: Tiết 1 cần viết bảng con, Tiết 2 cần viết vở
+  if (grade === 1 && lessonType === "phonics") {
+    if (pNum === 1 && !/bảng con|viết bảng/i.test(text)) {
+      issues.push("Tiết 1 bài âm-vần lớp 1 cần có hoạt động viết bảng con");
+    }
+    if (pNum === 2 && !/vở tập viết|vở|viết vở/i.test(text)) {
+      issues.push("Tiết 2 bài âm-vần lớp 1 cần có hoạt động viết vào vở tập viết");
+    }
+  }
+
+  // Lớp 4 bài đọc: cần bước đọc lại/đọc diễn cảm
+  if (grade === 4 && lessonType === "reading") {
+    if (!/đọc lại|diễn cảm|đọc nối tiếp|luyện đọc lại/i.test(text)) {
+      issues.push("Quy trình 7 bước bài đọc lớp 4 cần có bước luyện đọc lại/đọc diễn cảm");
+    }
+  }
+
+  // Lớp 5 bài đọc: cần bước nêu nội dung/ý nghĩa và đọc diễn cảm
+  if (grade === 5 && lessonType === "reading") {
+    if (!/ý nghĩa|thông điệp|nội dung chính|nội dung bài|tác giả muốn/i.test(text)) {
+      issues.push("Quy trình 8 bước bài đọc lớp 5 cần có bước xác định nội dung, ý nghĩa văn bản");
+    }
+    if (!/đọc lại|diễn cảm|phân vai|luyện đọc lại/i.test(text)) {
+      issues.push("Quy trình 8 bước bài đọc lớp 5 cần có bước luyện đọc lại/đọc diễn cảm đoạn tiêu biểu");
+    }
+  }
+
+  return issues;
+}
+
 function passiveActionLocation(scope: Scope) {
   return allActivityLocations(scope).find(({ activity }) => {
     const teacher = (activity.teacherActions || []).join(" ");
@@ -1082,6 +1118,14 @@ export function validateVietnameseLesson(lesson: LessonPlan, input: LessonInput)
         { periodNumber: scope.periodNumber },
       ));
     }
+
+    missingGradeWorkflowIssues(scope, grade, lessonType).forEach((issueMsg) => {
+      findings.push(finding(
+        vietnameseQualityRules.missingGradeWorkflowStep,
+        `${label}: ${issueMsg}.`,
+        { periodNumber: scope.periodNumber },
+      ));
+    });
 
     const timeMessage = insufficientTypeTimeMessage(scope, grade, lessonType);
     if (timeMessage) {

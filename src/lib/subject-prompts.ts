@@ -2,7 +2,7 @@ import { getPedagogyProfile, gradeBandFor } from "./pedagogy-profiles";
 import { buildPhaseQualityPromptBlock } from "./lesson-phase-quality";
 import { getNaturalSocialPedagogyProfile } from "./natural-social-pedagogy";
 import { formatNaturalSocialStartupPromptBlock, selectNaturalSocialStartup } from "./natural-social-startup";
-import { classifyVietnameseLesson, vietnameseLessonTypeProfiles } from "./vietnamese-pedagogy";
+import { classifyVietnameseLesson, getVietnameseGradeWorkflow, vietnameseLessonTypeProfiles } from "./vietnamese-pedagogy";
 import type {
   LessonInput,
   LessonPlan,
@@ -1298,6 +1298,16 @@ ${vietnameseGradeBandGuidance(input)}
 
 ${vietnameseLessonTypeGuidance(classification)}
 
+${(() => {
+  const wf = getVietnameseGradeWorkflow(input, classification);
+  if (!wf) return "";
+  return `Quy trình dạy học bắt buộc theo lớp (${wf.label}):
+- Trọng tâm sư phạm:
+${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}
+- Chuỗi các bước theo quy trình chuẩn:
+${wf.stepsSummary.map((s) => `  * ${s}`).join("\n")}
+`;
+})()}
 Quy tắc bắt buộc:
 - Bám đúng văn bản, từ ngữ, câu hỏi, mẫu chữ hoặc nhiệm vụ trong ảnh SGK.
 - Khi ảnh SGK không đủ rõ, dùng mô tả trung tính và ghi phần chưa chắc vào sourceInventory.uncertain; không bịa chi tiết, không đưa cụm xác minh thô vào nội dung giáo án/Word.
@@ -1437,6 +1447,16 @@ Kiểu bài tiết này: ${typeProfile?.label || period.lessonType || "mixed"}
 ${typeProfile ? `Chuỗi dạy học bắt buộc:
 ${typeProfile.mandatorySequence.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
 
+${(() => {
+  const wf = getVietnameseGradeWorkflow(input, blueprint.classification);
+  if (!wf) return "";
+  const periodSteps = wf.mandatoryStepsByPeriod?.[period.periodNumber];
+  return `Quy trình bắt buộc của khối lớp (${wf.label}):
+- Trọng tâm khối:
+${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}
+${periodSteps ? `- Các bước dạy trọng tâm cho TIẾT ${period.periodNumber}:\n${periodSteps.map((s) => `  * ${s}`).join("\n")}` : `- Toàn bộ tiến trình theo lớp:\n${wf.stepsSummary.map((s) => `  * ${s}`).join("\n")}`}
+`;
+})()}
 Quy tắc đặc thù kiểu bài:
 - Bắt buộc chép cụ thể ngữ liệu/nhiệm vụ vào giáo án; không chỉ ghi "theo SGK".
 - Bắt buộc bao phủ các nhiệm vụ trong sourceInventory.requiredTasks thuộc tiết này; không được bỏ sót nhiệm vụ có dấu sao/chữ nhỏ như học thuộc lòng, đặt câu, viết vào vở hoặc đọc mở rộng.
@@ -1578,6 +1598,16 @@ Yêu cầu sửa:
 Chuẩn chất lượng 4 pha khi sửa:
 ${globalPhaseQualityGuidance("repair")}
 
+${(() => {
+  const wf = getVietnameseGradeWorkflow(input, blueprint.classification);
+  if (!wf) return "";
+  const periodSteps = wf.mandatoryStepsByPeriod?.[period.periodNumber];
+  return `Quy trình bắt buộc của khối lớp (${wf.label}):
+- Trọng tâm khối:
+${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}
+${periodSteps ? `- Trọng tâm cần bám cho TIẾT ${period.periodNumber}:\n${periodSteps.map((s) => `  * ${s}`).join("\n")}` : `- Các bước chuẩn của lớp:\n${wf.stepsSummary.map((s) => `  * ${s}`).join("\n")}`}
+`;
+})()}
 ${typeProfile ? `- Kiểu bài: ${typeProfile.label}. Không thêm ${typeProfile.checkerNotRequired.join(", ")} nếu không phải trọng tâm.` : ""}
 ${digitalCompetencyInstruction(input)}
 - Cá nhân hóa: ${JSON.stringify({ grade: input.grade, environment: input.teachingEnvironment, facilities: input.facilities, locality: localityContext(input), style: input.style })}
