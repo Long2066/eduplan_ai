@@ -1448,9 +1448,11 @@ ${typeProfile ? `Chuỗi dạy học bắt buộc:
 ${typeProfile.mandatorySequence.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
 
 ${(() => {
+  if (!blueprint.classification) return "";
   const wf = getVietnameseGradeWorkflow(input, blueprint.classification);
   if (!wf) return "";
-  const periodSteps = wf.mandatoryStepsByPeriod?.[period.periodNumber];
+  const pNum = period.periodNumber;
+  const periodSteps = pNum && wf.mandatoryStepsByPeriod ? wf.mandatoryStepsByPeriod[pNum] : undefined;
   return `Quy trình bắt buộc của khối lớp (${wf.label}):
 - Trọng tâm khối:
 ${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}
@@ -1599,9 +1601,11 @@ Chuẩn chất lượng 4 pha khi sửa:
 ${globalPhaseQualityGuidance("repair")}
 
 ${(() => {
+  if (!blueprint.classification) return "";
   const wf = getVietnameseGradeWorkflow(input, blueprint.classification);
   if (!wf) return "";
-  const periodSteps = wf.mandatoryStepsByPeriod?.[period.periodNumber];
+  const pNum = period.periodNumber;
+  const periodSteps = pNum && wf.mandatoryStepsByPeriod ? wf.mandatoryStepsByPeriod[pNum] : undefined;
   return `Quy trình bắt buộc của khối lớp (${wf.label}):
 - Trọng tâm khối:
 ${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}

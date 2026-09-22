@@ -16,6 +16,8 @@ import {
   teachingEnvironmentOptions,
 } from "@/lib/defaults";
 import { assetPreviewUrl, optimizeLessonImage } from "@/lib/client-image-processing";
+import { findTaphuanBook } from "@/lib/taphuan-catalog";
+import { TaphuanPagePickerModal } from "./taphuan-page-picker-modal";
 import type { FormErrors, LessonInput, UploadedAsset } from "@/types/lesson";
 
 type LessonFormProps = {
@@ -63,9 +65,11 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [isOptimizingImages, setIsOptimizingImages] = useState(false);
+  const [isPagePickerOpen, setIsPagePickerOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const uploadBoxRef = useRef<HTMLDivElement | null>(null);
+  const currentTaphuanBook = findTaphuanBook(input.grade, input.subject, input.bookVolume);
   const advancedInput = advancedDraft || input;
   const advancedSelectedFacilities = advancedInput.facilities === "auto" ? [] : advancedInput.facilities;
   const selectedSubjectHasVolumes = subjectSupportsBookVolume(input.subject);
@@ -311,7 +315,58 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
           </FormGroup>
 
           {/* ── GROUP 2: Nội dung đầu vào ── */}
-          <FormGroup step="2" title="Nội dung đầu vào" description="Có thể upload/dán ảnh SGK để AI đọc đúng nội dung; nếu không có ảnh, hãy nhập Tên bài cụ thể ở trên.">
+          <FormGroup step="2" title="Nội dung đầu vào" description="Có thể chọn trang SGK trực tiếp từ taphuan.nxbgd.vn hoặc upload/dán ảnh từ máy tính.">
+            {/* ── Nguồn SGK online từ taphuan.nxbgd.vn ── */}
+            {currentTaphuanBook ? (
+              <div className="rounded-2xl border border-brand-200/90 bg-gradient-to-br from-brand-50/70 via-white to-surface-50 p-4 shadow-sm transition-all">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-md bg-brand-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        Bộ sách Thống nhất
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-500">
+                        {currentTaphuanBook.grade} &bull; {currentTaphuanBook.subject}
+                        {currentTaphuanBook.volume ? ` (${currentTaphuanBook.volume})` : ""}
+                      </span>
+                    </div>
+                    <h3 className="mt-1 text-[14px] font-bold text-slate-900 line-clamp-1">
+                      {currentTaphuanBook.title}
+                    </h3>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      Nguồn: <span className="font-semibold text-slate-600">{currentTaphuanBook.source}</span> &bull; Bản quyền: <span className="font-semibold text-slate-600">{currentTaphuanBook.copyright}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <a
+                      href={currentTaphuanBook.readerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all"
+                    >
+                      Mở reader NXBGDVN &nearr;
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setIsPagePickerOpen(true)}
+                      disabled={input.uploadedAssets.length >= 10 || isOptimizingImages}
+                      className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98] shadow-brand-500/20 transition-all disabled:opacity-50"
+                    >
+                      <span className="text-sm font-extrabold">+</span>
+                      <span>Chọn trang SGK bài dạy</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-3.5 text-center">
+                <p className="text-xs text-slate-500">
+                  💡 Chọn <strong>Lớp</strong> và <strong>Môn học</strong> ở trên để mở SGK trực tiếp từ <strong>taphuan.nxbgd.vn</strong>.
+                </p>
+              </div>
+            )}
+
             <div
               className={`rounded-2xl border-2 border-dashed p-4 outline-none transition-all duration-300 focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50 ${
                 isDragActive
@@ -571,6 +626,18 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
           </span>
         </button>
       </div>
+
+      {currentTaphuanBook && isPagePickerOpen ? (
+        <TaphuanPagePickerModal
+          isOpen={isPagePickerOpen}
+          onClose={() => setIsPagePickerOpen(false)}
+          book={currentTaphuanBook}
+          remainingSlots={Math.max(0, 10 - input.uploadedAssets.length)}
+          onPagesSelected={async (files) => {
+            await addFiles(files);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

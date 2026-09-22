@@ -13,7 +13,7 @@ export const defaultLessonInput: LessonInput = {
   subject: "",
   grade: "",
   lessonTitle: "",
-  book: "",
+  book: "Bộ sách Thống nhất",
   bookVolume: "auto",
   periods: 1,
   duration: 35,
@@ -30,10 +30,7 @@ export const defaultLessonInput: LessonInput = {
 };
 
 export const bookOptions = [
-  "Kết nối tri thức với Cuộc sống",
-  "Cánh diều",
-  "Chân trời sáng tạo",
-  "Khác",
+  "Bộ sách Thống nhất",
 ];
 
 export const hometownProvinceOptions = [

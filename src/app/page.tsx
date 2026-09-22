@@ -100,6 +100,10 @@ function normalizeDraftStyle(raw: Partial<LessonInput> & { qualityLevel?: string
   return "Cơ bản";
 }
 
+function normalizeDraftBook(_book?: string): string {
+  return "Bộ sách Thống nhất";
+}
+
 function migrateDraft(raw: unknown): LessonInput {
   const parsed = raw as Partial<LessonInput>;
   return {
@@ -107,7 +111,7 @@ function migrateDraft(raw: unknown): LessonInput {
     subject: normalizeDraftSubject(parsed.subject),
     grade: normalizeDraftGrade(parsed.grade),
     lessonTitle: parsed.lessonTitle || "",
-    book: parsed.book || "",
+    book: normalizeDraftBook(parsed.book),
     bookVolume: parsed.bookVolume || "auto",
     periods: parsed.periods || defaultLessonInput.periods,
     duration: parsed.duration || defaultLessonInput.duration,
