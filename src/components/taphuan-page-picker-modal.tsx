@@ -373,25 +373,15 @@ export function TaphuanPagePickerModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/80 px-5 py-3.5">
-          <a
-            href={book.readerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] items-center text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/80 px-5 py-3.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200/60 active:scale-95 transition-colors disabled:opacity-50"
           >
-            Mở reader NXBGDVN &nearr;
-          </a>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200/60 active:scale-95 transition-colors disabled:opacity-50"
-            >
-              Hủy
-            </button>
+            Hủy
+          </button>
             <button
               type="button"
               disabled={selectedPages.length === 0 || isSubmitting}
