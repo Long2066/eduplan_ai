@@ -382,22 +382,21 @@ export function TaphuanPagePickerModal({
           >
             Hủy
           </button>
-            <button
-              type="button"
-              disabled={selectedPages.length === 0 || isSubmitting}
-              onClick={handleConfirm}
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98] shadow-brand-500/20 transition-all disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  <span>Đang nạp ảnh SGK...</span>
-                </>
-              ) : (
-                <span>Nạp {selectedPages.length} trang vào bài dạy</span>
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={selectedPages.length === 0 || isSubmitting}
+            onClick={handleConfirm}
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98] shadow-brand-500/20 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                <span>Đang nạp ảnh SGK...</span>
+              </>
+            ) : (
+              <span>Nạp {selectedPages.length} trang vào bài dạy</span>
+            )}
+          </button>
         </div>
       </div>
     </div>
