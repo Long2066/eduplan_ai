@@ -308,7 +308,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
                 </div>
 
                 {/* Actions */}
-                <div className="mt-3.5 flex flex-col gap-2">
+                <div className="mt-3.5">
                   <button
                     type="button"
                     onClick={() => setIsPagePickerOpen(true)}
@@ -325,16 +325,6 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
                       </span>
                     )}
                   </button>
-
-                  <a
-                    href={currentTaphuanBook.readerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
-                  >
-                    <span>Mở reader NXBGDVN</span>
-                    <span className="text-slate-400">↗</span>
-                  </a>
                 </div>
               </div>
             ) : (
