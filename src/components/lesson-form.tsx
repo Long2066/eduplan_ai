@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
   bookVolumeOptions,
@@ -62,13 +62,9 @@ function FormGroup({ step, title, description, children }: { step: string; title
 export function LessonForm({ input, errors, isGenerating, generationUsageLabel, onChange, onGenerate }: LessonFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedDraft, setAdvancedDraft] = useState<LessonInput | null>(null);
-  const [isDragActive, setIsDragActive] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [isOptimizingImages, setIsOptimizingImages] = useState(false);
   const [isPagePickerOpen, setIsPagePickerOpen] = useState(false);
-  const uploadInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const uploadBoxRef = useRef<HTMLDivElement | null>(null);
   const currentTaphuanBook = findTaphuanBook(input.grade, input.subject, input.bookVolume);
   const advancedInput = advancedDraft || input;
   const advancedSelectedFacilities = advancedInput.facilities === "auto" ? [] : advancedInput.facilities;
@@ -128,7 +124,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   }
 
   async function createAsset(file: File, index: number, order: number): Promise<UploadedAsset> {
-    const fallbackName = `Ảnh dán từ clipboard ${order}`;
+    const fallbackName = `Trang SGK ${order}`;
     const dataUrl = await optimizeLessonImage(file);
 
     return {
@@ -177,37 +173,8 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
     }
   }
 
-  function handleFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
-    void addFiles(event.target.files || []);
-    event.target.value = "";
-  }
-
   function removeAsset(asset: UploadedAsset) {
     patch({ uploadedAssets: input.uploadedAssets.filter((item) => item.id !== asset.id) });
-  }
-
-  function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
-    const files = Array.from(event.clipboardData.files).filter(isSupportedImage);
-    if (!files.length) return;
-    event.preventDefault();
-    void addFiles(files);
-  }
-
-  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setIsDragActive(true);
-  }
-
-  function handleDragLeave(event: React.DragEvent<HTMLDivElement>) {
-    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-      setIsDragActive(false);
-    }
-  }
-
-  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setIsDragActive(false);
-    void addFiles(event.dataTransfer.files);
   }
 
   return (
@@ -314,150 +281,155 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
             </div>
           </FormGroup>
 
-          {/* ── GROUP 2: Nội dung đầu vào ── */}
-          <FormGroup step="2" title="Nội dung đầu vào" description="Có thể chọn trang SGK trực tiếp từ taphuan.nxbgd.vn hoặc upload/dán ảnh từ máy tính.">
+          {/* ── GROUP 2: Trang SGK bài dạy ── */}
+          <FormGroup step="2" title="Trang SGK bài dạy" description="Chọn trực tiếp các trang SGK từ kho học liệu taphuan.nxbgd.vn để AI bám sát nội dung bài học.">
             {/* ── Nguồn SGK online từ taphuan.nxbgd.vn ── */}
             {currentTaphuanBook ? (
-              <div className="rounded-2xl border border-brand-200/90 bg-gradient-to-br from-brand-50/70 via-white to-surface-50 p-4 shadow-sm transition-all">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-md bg-brand-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                        Bộ sách Thống nhất
-                      </span>
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {currentTaphuanBook.grade} &bull; {currentTaphuanBook.subject}
-                        {currentTaphuanBook.volume ? ` (${currentTaphuanBook.volume})` : ""}
-                      </span>
-                    </div>
-                    <h3 className="mt-1 text-[14px] font-bold text-slate-900 line-clamp-1">
-                      {currentTaphuanBook.title}
-                    </h3>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
-                      Nguồn: <span className="font-semibold text-slate-600">{currentTaphuanBook.source}</span> &bull; Bản quyền: <span className="font-semibold text-slate-600">{currentTaphuanBook.copyright}</span>
-                    </p>
+              <div className="rounded-2xl border border-brand-200/90 bg-gradient-to-br from-brand-50/70 via-white to-surface-50 p-4 shadow-sm ring-1 ring-slate-900/5 transition-all">
+                {/* Book header info */}
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-md bg-brand-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      Bộ sách Thống nhất
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {currentTaphuanBook.grade} • {currentTaphuanBook.subject}
+                      {currentTaphuanBook.volume ? ` (${currentTaphuanBook.volume})` : ""}
+                    </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <a
-                      href={currentTaphuanBook.readerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all"
-                    >
-                      Mở reader NXBGDVN &nearr;
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => setIsPagePickerOpen(true)}
-                      disabled={input.uploadedAssets.length >= 10 || isOptimizingImages}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98] shadow-brand-500/20 transition-all disabled:opacity-50"
-                    >
-                      <span className="text-sm font-extrabold">+</span>
-                      <span>Chọn trang SGK bài dạy</span>
-                    </button>
-                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                    {currentTaphuanBook.title}
+                  </h3>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Nguồn: <span className="font-semibold text-slate-600">{currentTaphuanBook.source}</span> • Bản quyền: <span className="font-semibold text-slate-600">{currentTaphuanBook.copyright}</span>
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-3.5 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPagePickerOpen(true)}
+                    disabled={input.uploadedAssets.length >= 10 || isOptimizingImages}
+                    className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span>Chọn trang SGK bài dạy</span>
+                    {input.uploadedAssets.length > 0 && (
+                      <span className="rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-extrabold text-white">
+                        {input.uploadedAssets.length}/10
+                      </span>
+                    )}
+                  </button>
+
+                  <a
+                    href={currentTaphuanBook.readerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                  >
+                    <span>Mở reader NXBGDVN</span>
+                    <span className="text-slate-400">↗</span>
+                  </a>
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-3.5 text-center">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-center">
+                <p className="text-xs leading-relaxed text-slate-500">
                   💡 Chọn <strong>Lớp</strong> và <strong>Môn học</strong> ở trên để mở SGK trực tiếp từ <strong>taphuan.nxbgd.vn</strong>.
                 </p>
               </div>
             )}
 
-            <div
-              className={`rounded-2xl border-2 border-dashed p-4 outline-none transition-all duration-300 focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50 ${
-                isDragActive
-                  ? "scale-[1.01] border-brand-500 bg-brand-50/60 shadow-glow"
-                  : "border-slate-200 bg-surface-50 hover:border-brand-300 hover:bg-brand-50/20"
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onPaste={handlePaste}
-              tabIndex={0}
-            >
-              <Label>Ảnh SGK bài học (không bắt buộc nếu đã nhập Tên bài)</Label>
-              <div ref={uploadBoxRef} className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm" tabIndex={0}>
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-sm font-bold text-brand-600">
-                  {isDragActive ? "Thả" : "SGK"}
-                </div>
-                <input
-                  ref={uploadInputRef}
-                  className="hidden"
-                  type="file"
-                  multiple
-                  accept=".jpg,.jpeg,.jfif,.png,image/jpeg,image/png"
-                  onChange={handleFileInputChange}
-                />
-                <input
-                  ref={cameraInputRef}
-                  className="hidden"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileInputChange}
-                />
-                <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {/* ── Danh sách trang đã chọn hoặc Empty State ── */}
+            {input.uploadedAssets.length > 0 ? (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between px-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-800">Trang SGK đã chọn</span>
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">
+                      {input.uploadedAssets.length}/10 trang
+                    </span>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="btn-secondary px-4 py-2 text-[13px] sm:hidden"
+                    onClick={() => patch({ uploadedAssets: [] })}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-red-600 transition-colors"
                   >
-                    Chụp ảnh
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => uploadInputRef.current?.click()}
-                    className="btn-secondary hidden px-4 py-2 text-[13px] sm:inline-flex"
-                  >
-                    Tải lên từ PC
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => uploadBoxRef.current?.focus()}
-                    className="btn-ghost text-[13px]"
-                  >
-                    Dán
+                    Xóa tất cả
                   </button>
                 </div>
-                <p className="mt-2.5 text-[11px] leading-4 text-slate-400">Dán ảnh theo thứ tự trang; AI sẽ đọc theo số thứ tự hiển thị bên dưới.</p>
-              </div>
-              {input.uploadedAssets.length ? (
-                <div className="mt-3.5 grid gap-3 sm:grid-cols-2">
+
+                <div className="grid grid-cols-2 gap-2.5">
                   {input.uploadedAssets.map((asset, index) => {
                     const displayOrder = asset.order ?? index + 1;
                     return (
-                    <div key={asset.id} className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md">
-                      {asset.type === "image" && assetPreviewUrl(asset) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={assetPreviewUrl(asset)} alt={`Ảnh SGK ${displayOrder}: ${asset.name}`} className="h-32 w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
-                      ) : (
-                        <div className="flex h-32 items-center justify-center bg-surface-50 text-sm font-bold text-slate-400">
-                          <span className="rounded-xl bg-white px-3 py-2 shadow-sm">ẢNH</span>
+                      <div
+                        key={asset.id}
+                        className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md"
+                      >
+                        {asset.type === "image" && assetPreviewUrl(asset) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={assetPreviewUrl(asset)}
+                            alt={`Trang SGK ${displayOrder}: ${asset.name}`}
+                            className="h-28 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                          />
+                        ) : (
+                          <div className="flex h-28 items-center justify-center bg-surface-50 text-xs font-bold text-slate-400">
+                            <span className="rounded-lg bg-white px-2.5 py-1 shadow-sm">ẢNH</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-1.5 p-2.5">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="shrink-0 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 px-2 py-0.5 text-[10px] font-bold text-white">
+                              #{displayOrder}
+                            </span>
+                            <p className="min-w-0 truncate text-[11px] font-semibold text-slate-600" title={asset.name}>
+                              {asset.name}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-500 transition hover:bg-red-100"
+                            onClick={() => removeAsset(asset)}
+                          >
+                            Xóa
+                          </button>
                         </div>
-                      )}
-                      <div className="flex items-center justify-between gap-2 p-3">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="shrink-0 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 px-2.5 py-0.5 text-[11px] font-bold text-white">#{displayOrder}</span>
-                          <p className="min-w-0 truncate text-xs font-semibold text-slate-600" title={asset.name}>
-                            {asset.name}
-                          </p>
-                        </div>
-                        <button type="button" className="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-500 transition hover:bg-red-100" onClick={() => removeAsset(asset)}>
-                          Xóa
-                        </button>
                       </div>
-                    </div>
                     );
                   })}
                 </div>
-              ) : null}
-              {isOptimizingImages ? <p className="mt-2 text-xs font-semibold text-brand-600">Đang tối ưu ảnh để tải nhanh và tránh lỗi dung lượng...</p> : null}
-              <FieldError message={uploadError || (input.uploadedAssets.length ? undefined : errors.uploadedAssets)} />
-            </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-4 text-center">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-slate-700">Chưa chọn trang SGK nào</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+                  Bấm <strong>&ldquo;Chọn trang SGK bài dạy&rdquo;</strong> ở trên để chọn các trang bài học trực tiếp từ sách điện tử.
+                </p>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  (Không bắt buộc nếu đã nhập Tên bài cụ thể ở Bước 1)
+                </p>
+              </div>
+            )}
+
+            {isOptimizingImages ? (
+              <p className="text-xs font-semibold text-brand-600 animate-pulse">
+                Đang tối ưu ảnh SGK để nạp vào bài dạy...
+              </p>
+            ) : null}
+
+            <FieldError message={uploadError || (input.uploadedAssets.length ? undefined : errors.uploadedAssets)} />
           </FormGroup>
 
           {/* ── AI inference checkbox ── */}
