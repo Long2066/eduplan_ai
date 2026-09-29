@@ -115,12 +115,12 @@ export function learningContextGuidance(input: LessonInput) {
   const facilities = input.facilities === "auto" ? "AI tự chọn thiết bị vừa đủ, có phương án không cần thiết bị số" : input.facilities.join(", ");
   return `Quy tắc cá nhân hóa theo môi trường học và cơ sở vật chất:
 - Môi trường học: ${input.teachingEnvironment}. Đối tượng học sinh: ${input.studentProfile}. Cơ sở vật chất: ${facilities}.
-- Các lựa chọn này phải xuất hiện rõ trong materials.teacher/materials.students và trong teacherActions/studentActions, không chỉ ghi ở contextFit.
-- Nếu có TV/máy chiếu/wifi/bảng tương tác/loa: ít nhất một hoạt động Khởi động hoặc Khám phá phải nêu cụ thể GV chiếu tranh/video ngắn/bản đồ số/slide câu hỏi/mở âm thanh; HS quan sát, tương tác, trả lời, kéo-thả/đánh dấu/chọn đáp án hoặc hoàn thành phiếu tương ứng. Luôn có phương án thay thế nếu mất mạng.
+- Cơ sở vật chất và môi trường học chỉ dùng để chọn danh mục đồ dùng thực tế (có TV/máy tính thì ghi "Ti vi / bài trình chiếu (slide)", không có thì ghi "Tranh ảnh minh họa / phiếu in"). Tuyệt đối KHÔNG ghi câu giải thích cách dạy, KHÔNG ghi phương án mất mạng hay phân hóa HS vào materials.teacher/materials.students.
+- Trong teacherActions/studentActions của Mục III: nếu có TV/máy chiếu/wifi thì nêu cụ thể GV chiếu tranh/slide/video; HS tương tác, hoàn thành phiếu tương ứng. Phương án thay thế nếu mất mạng chỉ thể hiện trong tiến trình dạy học khi cần, không ghi vào mục thiết bị.
 - Nếu không có thiết bị trình chiếu hoặc môi trường vùng núi/điểm trường lẻ: ưu tiên tranh in, thẻ từ/thẻ màu, vật thật, bảng phụ, phiếu học tập, hoạt động nhóm nhỏ, quan sát cảnh quan/sân trường/vật liệu sẵn có; không phụ thuộc video, mạng hoặc thiết bị số.
 - Nếu môi trường nông thôn: ưu tiên tình huống thực tế như ruộng vườn, chợ quê, con đường làng, dòng sông, nghề nghiệp địa phương, quan sát thực tế quanh trường; hoạt động phải làm được trên lớp hoặc sân trường.
 - Nếu môi trường thành thị: ưu tiên tình huống giao thông, công viên, khu dân cư, siêu thị, trường học, dữ liệu/hình ảnh số, bản đồ/sơ đồ đô thị ở mức phù hợp.
-- Nếu học sinh cần hỗ trợ nhiều/học lực không đồng đều: chia nhiệm vụ nhỏ, có câu hỏi gợi ý, phiếu mẫu, cặp đôi hỗ trợ; nếu học sinh khá giỏi: có nhiệm vụ mở rộng, so sánh, giải thích, đề xuất giải pháp.
+- Nếu học sinh cần hỗ trợ nhiều/học lực không đồng đều: chia nhiệm vụ nhỏ trong Mục III, có câu hỏi gợi ý, phiếu mẫu, cặp đôi hỗ trợ; nếu học sinh khá giỏi: có nhiệm vụ mở rộng, so sánh, giải thích, đề xuất giải pháp.
 - Hoạt động không cần sao chép y nguyên SGK. Dùng ảnh SGK làm căn cứ mục tiêu và phạm vi kiến thức; được thiết kế sinh động, thực tế, sáng tạo vừa phải, miễn đúng mục tiêu bài học và không sa đà trò chơi làm loãng kiến thức.`;
 }
 
@@ -364,7 +364,7 @@ Yêu cầu output:
 - learningProducts phải nêu sản phẩm quan sát được cho từng hoạt động: câu trả lời, phiếu học tập, bảng nhóm, đoạn viết, bài giải, tranh/sơ đồ, cam kết/hành động. Không được để rỗng.
 - outcomes phải gắn với bài học cụ thể và dùng đúng hệ phẩm chất/năng lực CTGDPT 2018; không liệt kê quá rộng. Không được viết sơ sài kiểu "- Tự chủ và tự học"; phải viết thành hành vi quan sát được trong bài.
 - Phần phẩm chất không được chỉ liệt kê từ khóa như "Nhân ái", "Trách nhiệm". Mỗi phẩm chất phải viết thành một câu/nhiều ý cụ thể gắn với hành vi trong bài học, ví dụ: "Biết quan tâm, lắng nghe và chủ động giúp đỡ em nhỏ bằng lời nói, việc làm phù hợp trong gia đình và ở lớp".
-- materials phải phù hợp với cơ sở vật chất, môi trường học và vùng miền user chọn. Nếu vùng núi/điểm trường lẻ/không có thiết bị trình chiếu, ưu tiên tranh in, thẻ màu, vật thật, phiếu học tập đơn giản; không mặc định slide/video/máy chiếu. Nếu có TV/máy chiếu/wifi, có thể dùng slide/video ngắn nhưng vẫn cần phương án thay thế.
+- materials: CHỈ liệt kê ngắn gọn tên các đồ dùng, thiết bị, học liệu dạy học (danh từ ngắn, dưới 12 từ/mục, tối đa 3-6 mục mỗi bên). Tuyệt đối KHÔNG viết câu giải thích cách dạy, KHÔNG ghi phương án mất mạng, KHÔNG ghi nhiệm vụ của HS.
 - assessment phải có tiêu chí quan sát được, minh chứng cụ thể và nhận xét/hỗ trợ học sinh.
 - Với mọi môn có bài tập, câu hỏi, thực hành hoặc sản phẩm học tập, phải nêu đáp án dự kiến/cách làm/chốt kiến thức/tiêu chí đánh giá tương ứng ngay trong teacherActions, studentActions hoặc learningProducts; không chỉ ghi "HS làm bài" hay "GV nhận xét".
 - Có năng lực số ở mức phù hợp, không gượng ép.
@@ -433,7 +433,7 @@ ${subjectPedagogyRepairGuidanceStr}
 - Tuyet doi xoa tu "OCR" khoi giao an. Neu dang viet "tranh/SGK/OCR" hay "theo OCR", doi thanh "tranh trong SGK", "anh SGK", "tinh huong trang ..." neu nhan dien duoc so trang.
 - Neu ten bai thieu so bai nhung anh SGK co so bai, bo sung vao lessonTitle theo dang "Bai X. Ten bai".
 - Viet lai phan Pham chat thanh cac cau cu the gan hanh vi hoc sinh trong bai, khong chi liet ke ten pham chat.
-- Dieu chinh materials theo dung co so vat chat, moi truong hoc, vung mien cua user; khong mac dinh thiet bi hien dai neu user chon vung nui/diem truong le/khong co trinh chieu.
+- materials: rút gọn thành danh sách tên đồ dùng, thiết bị ngắn gọn (danh từ ngắn); xóa bỏ mọi câu mô tả hành động của GV/HS hoặc phương án mất mạng.
 - Nếu số tiết lớn hơn 1, phải sửa thành đủ periodPlans theo đúng số tiết; mỗi tiết có đầy đủ Khởi động, Khám phá, Luyện tập, Vận dụng riêng, trọng tâm không lặp y nguyên.
 - Với bài nhiều tiết, mỗi periodPlan phải có outcomes riêng gồm kiến thức/kĩ năng, năng lực chung, năng lực đặc thù và phẩm chất phù hợp đúng trọng tâm tiết đó; không lặp nguyên outcomes chung.
 - Mỗi periodPlan sẽ được render như một tiết riêng biệt trên bản in giáo án; cần đảm bảo format và trường dữ liệu nhất quán với periodPlan schema.`;
@@ -535,6 +535,7 @@ Yêu cầu blueprint:
 - Gom các sourceUnit phụ thuộc nhau thành cluster không được cắt ngang; ví dụ đề bài - phân tích - phép tính/lời giải - kiểm tra kết quả phải cùng cluster.
 - Mỗi sourceUnit bắt buộc chỉ thuộc một cluster, trừ khi allowReuse=true. Mỗi cluster phải gán vào đúng một periodNumber trong ${input.periods} tiết.
 - periods[].activities phải khai báo sourceUnitIds và sourceClusterIds tương ứng; không dùng cùng cluster để lấp nội dung cho nhiều tiết.
+- materials.teacher và materials.students: CHỈ liệt kê ngắn gọn tên các đồ dùng, thiết bị, học liệu dạy học (SGK, bảng phụ, que tính, thước, thẻ số,...). Tuyệt đối KHÔNG mô tả hoạt động hay phương án dự phòng.
 
 Schema JSON cần trả:
 {
@@ -909,6 +910,7 @@ Yêu cầu blueprint:
 - Không dùng từ "OCR"; dùng "ảnh SGK", "tranh trong SGK" hoặc "trang sách".
 - Không bịa dữ liệu địa phương. Nếu bài cần địa phương mà chưa có tỉnh/nguồn cụ thể, ghi localConnectionRules dạng mở an toàn.
 - Với lớp 1-2, tránh thuật ngữ trừu tượng như quang hợp, hệ sinh thái, kinh tuyến/vĩ tuyến, áp suất khí quyển.
+- materials.teacher và materials.students: CHỈ liệt kê ngắn gọn tên các đồ dùng, thiết bị, học liệu dạy học (SGK, tranh ảnh minh họa, video ngắn, mẫu vật/vật thật, phiếu quan sát,...). Tuyệt đối KHÔNG mô tả hoạt động hay phương án thay thế, không đưa phương án mất mạng vào đây.
 
 Schema JSON:
 {
@@ -1365,6 +1367,7 @@ Yêu cầu blueprint:
 - Mỗi tiết chỉ nêu học liệu/ngữ liệu riêng của tiết đó trong sourceEvidence và activities; không đưa văn bản, tranh, phiếu của tiết khác vào tiết hiện tại.
 - Với bài luyện từ/câu về đồng nghĩa hoặc trường nghĩa, ghi rõ nhóm nghĩa đúng theo SGK; không gán "ban mai/sáng sớm/bình minh" vào âm thanh và không gán "khuân/vác/lôi" vào âm thanh.
 - Với lớp 1–3, nếu có đọc thành tiếng, sourceInventory.longSentences phải có câu nguyên văn và bản ngắt nghỉ bằng "/".
+- materials.teacher và materials.students: CHỈ liệt kê ngắn gọn tên các đồ dùng, thiết bị, học liệu dạy học (SGK, bảng phụ, thẻ từ, tranh ảnh minh họa, phiếu bài tập,...). Tuyệt đối không viết câu dài mô tả hoạt động.
 
 Schema JSON:
 {

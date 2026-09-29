@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { lessonHeadingTitle } from "@/lib/lesson-format";
+import { lessonHeadingTitle, sanitizeMaterialList } from "@/lib/lesson-format";
 import { isSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
@@ -182,9 +182,9 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
 
       <A4Section title="II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU">
         <p className="sub-title">1. Giáo viên:</p>
-        <List items={lesson.materials.teacher} />
+        <List items={sanitizeMaterialList(lesson.materials?.teacher)} />
         <p className="sub-title">2. Học sinh:</p>
-        <List items={lesson.materials.students} />
+        <List items={sanitizeMaterialList(lesson.materials?.students)} />
       </A4Section>
 
       <A4Section title="III. TIẾN TRÌNH DẠY HỌC">

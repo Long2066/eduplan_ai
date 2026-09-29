@@ -14,7 +14,7 @@ import {
   WidthType,
 } from "docx";
 import { docxMathParts, injectMathIntoDocx } from "@/lib/docx-math";
-import { lessonHeadingTitle, safeStringArray } from "@/lib/lesson-format";
+import { lessonHeadingTitle, safeStringArray, sanitizeMaterialList } from "@/lib/lesson-format";
 import { assertSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
@@ -269,9 +269,9 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
 
     sectionTitle("II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU"),
     subTitle("1. Giáo viên:"),
-    ...dashList(lesson.materials.teacher),
+    ...dashList(sanitizeMaterialList(lesson.materials?.teacher)),
     subTitle("2. Học sinh:"),
-    ...dashList(lesson.materials.students),
+    ...dashList(sanitizeMaterialList(lesson.materials?.students)),
 
     sectionTitle("III. TIẾN TRÌNH DẠY HỌC"),
     activitiesTable(period.activities, displayOptions),

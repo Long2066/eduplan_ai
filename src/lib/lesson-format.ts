@@ -140,3 +140,97 @@ export function pairedActivityActions(activity: LessonActivity) {
     return { teacher, student };
   });
 }
+
+const pseudoMaterialInstructionPattern =
+  /^(?:phương án thay thế|kế hoạch dự phòng|dự phòng khi|nhiệm vụ\s+(?:trao đổi|vận dụng|học tập|ở nhà|về nhà|rèn luyện|nhóm|cá nhân)|hướng dẫn\s+(?:về nhà|chuẩn bị)|lưu ý sư phạm|dặn dò|cách tổ chức|tiến trình|hoạt động của)/i;
+
+const materialActionCutoffPattern =
+  /[;,]\s*(?:(?:dùng\s+)?để\s+(?:gv|hs|tổ chức|thực hiện|tổng hợp|đánh dấu|chốt|kéo-thả|ghép|làm)|(?:gv|hs)\s+(?:dùng|chiếu|mời|quan sát|thực hiện|kéo-thả|trao đổi|trả lời|làm việc)|mở\s+slide|không\s+sử\s+dụng|nếu\s+wifi|khi\s+mất\s+mạng|khi\s+không\s+dùng\s+mạng).*$/i;
+
+const materialActionColonPattern =
+  /:\s*(?:(?:gv|hs)\s+(?:chiếu|quan sát|mời|nêu|tổ chức|hướng dẫn|thực hiện|làm việc|trao đổi)|quan sát\b|khoanh\b|nối\b|đánh dấu\b|câu hỏi\b|kéo-thả\b|để\s+gv|để\s+hs).*$/i;
+
+const materialTrailingPurposePattern =
+  /\s+(?:(?:dùng\s+)?để\s+(?:tổng hợp|chốt|tổ chức|thực hiện|đánh dấu|kéo-thả|phục vụ|minh họa|hỗ trợ|phân hóa|làm việc|trao đổi|hs|gv)|(?:cho|để)\s+(?:hs|gv|học sinh|giáo viên)\s+(?:làm việc|thực hiện|hoạt động|trao đổi|quan sát|học tập)).*$/i;
+
+const noisyContextPattern =
+  /\b(?:ở\s+khu\s+chung\s+cư\/nhà\s+phố|của\s+lớp\s+học\s+trường\s+thành\s+phố|tại\s+gia\s+đình\s+thành\s+thị|khi\s+không\s+dùng\s+mạng|khi\s+mất\s+mạng|nếu\s+wifi\s+không\s+ổn\s+định|mẫu\s+phân\s+hóa)\b/gi;
+
+export function sanitizeMaterialItem(raw: string): string | null {
+  if (!raw || typeof raw !== "string") return null;
+
+  let cleaned = raw
+    .replace(/^[-*–—•\s\d.]+\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned || pseudoMaterialInstructionPattern.test(cleaned)) {
+    return null;
+  }
+
+  // Remove trailing clauses after semicolon/comma that describe pedagogical actions
+  cleaned = cleaned.replace(materialActionCutoffPattern, "").trim();
+
+  // If there is a colon followed by activity instructions, drop the instruction part
+  if (materialActionColonPattern.test(cleaned)) {
+    cleaned = cleaned.split(":")[0].trim();
+  }
+
+  // Remove trailing "để tổng hợp / để chốt / để HS làm việc..."
+  cleaned = cleaned.replace(materialTrailingPurposePattern, "").trim();
+
+  // Remove environment buzzwords
+  cleaned = cleaned.replace(noisyContextPattern, "").trim();
+
+  // Simplify verbose lists of examples after "gồm:"
+  if (/\s+gồm\s*:/i.test(cleaned)) {
+    cleaned = cleaned.split(/\s+gồm\s*:/i)[0].trim();
+  }
+
+  // Simplify overly descriptive computer/TV strings
+  if (/^máy tính(?:\s+giáo viên)?\s+kết nối\s+tv/i.test(cleaned)) {
+    cleaned = "Máy tính, ti vi / màn chiếu, bài trình chiếu (slide)";
+  } else if (/^slide khởi động/i.test(cleaned)) {
+    cleaned = "Bài trình chiếu (slide) / hình ảnh minh họa";
+  } else if (/^sgk hoặc bản in các hình/i.test(cleaned)) {
+    cleaned = "SGK hoặc tranh ảnh minh họa";
+  }
+
+  // Clean trailing punctuation and spaces
+  cleaned = cleaned.replace(/[,;:.–—\s]+$/, "").trim();
+
+  // Must have at least 3 characters and not be a pure verb/instruction
+  if (cleaned.length < 3 || /^(?:gv|giáo viên|hs|học sinh)\b/i.test(cleaned)) {
+    return null;
+  }
+
+  return cleaned;
+}
+
+export function sanitizeMaterialList(rawItems: unknown): string[] {
+  const items = safeStringArray(rawItems);
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const cleaned = sanitizeMaterialItem(item);
+    if (!cleaned) continue;
+
+    const lower = cleaned.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    result.push(cleaned);
+  }
+
+  return result.slice(0, 8);
+}
+
+export function sanitizeMaterials(materials?: { teacher?: string[]; students?: string[] }): {
+  teacher: string[];
+  students: string[];
+} {
+  return {
+    teacher: sanitizeMaterialList(materials?.teacher),
+    students: sanitizeMaterialList(materials?.students),
+  };
+}

@@ -25,6 +25,7 @@ import {
   type StagedSourceIdentity,
 } from "@/lib/generation/section-types";
 import { resolveLessonTitle, requireResolvedLessonTitle } from "@/lib/lesson-title";
+import { sanitizeMaterials, sanitizeMaterialItem } from "@/lib/lesson-format";
 import {
   buildSubjectSystemRole,
   bookContext,
@@ -374,10 +375,13 @@ Cơ sở vật chất: ${learningContextGuidance(input)}
 Dữ kiện nguồn SGK: ${JSON.stringify(sourceFacts.facts.sourceEvidence)}
 YCCĐ: ${JSON.stringify(outcomes.outcomes.objectiveMetadata.map((o) => o.id))}
 
-Yêu cầu:
+Yêu cầu định dạng bắt buộc:
 1. Chia thành Giáo viên (teacher) và Học sinh (students).
-2. Liệt kê danh sách items với ID cố định: "mat-1", "mat-2",... Gắn kết rõ sourceIds và objectiveIds phục vụ.
-3. KHÔNG bịa thiết bị đắt tiền nếu điều kiện học sinh bình thường.
+2. CHỈ ghi ngắn gọn tên các thiết bị, đồ dùng, học liệu, tài liệu, phiếu học tập (danh từ ngắn, dưới 12 từ/mục, tối đa 4-6 mục).
+3. TUYỆT ĐỐI KHÔNG mô tả hoạt động hay kịch bản sư phạm (cấm ghi: "GV chiếu...", "HS quan sát...", "dùng để...", "mời HS...", "kéo-thả...", "nhiệm vụ...").
+4. TUYỆT ĐỐI KHÔNG ghi phương án thay thế, phương án mất mạng, nhiệm vụ học tập, hay phân hóa học sinh vào đây.
+5. Liệt kê danh sách items với ID cố định: "mat-1", "mat-2",... Gắn kết rõ sourceIds và objectiveIds phục vụ.
+6. KHÔNG bịa thiết bị đắt tiền nếu điều kiện học sinh bình thường.
 
 Trả về duy nhất JSON:
 {
@@ -395,6 +399,12 @@ Trả về duy nhất JSON:
     { role: "user", content: prompt },
   ]);
   const parsed = extractAiJsonValue<{ materials: LessonPlan["materials"]; items: StagedMaterial[] }>(res.content);
+  const cleanMat = sanitizeMaterials(parsed.materials);
+  const cleanItems = (parsed.items || []).map((item) => ({
+    ...item,
+    label: sanitizeMaterialItem(item.label) || item.label,
+  })).filter((item) => sanitizeMaterialItem(item.label) !== null);
+
   const artifact: StagedMaterialsArtifact = {
     version: 2,
     kind: "section-materials",
@@ -410,8 +420,8 @@ Trả về duy nhất JSON:
     model: res.model,
     provider: res.provider,
     fallbackUsed: res.fallbackUsed,
-    materials: parsed.materials,
-    items: parsed.items || [],
+    materials: cleanMat,
+    items: cleanItems.length ? cleanItems : parsed.items || [],
   };
   artifact.anchor = stagedArtifactAnchor(artifact);
   return artifact;

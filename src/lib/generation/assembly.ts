@@ -5,6 +5,7 @@ import {
   requireResolvedLessonTitle,
   resolveLessonTitle,
 } from "@/lib/lesson-title";
+import { sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
 import type { SubscriptionPlan } from "@/lib/model-strategy";
@@ -263,10 +264,10 @@ export function assembleStagedLesson(
       duration: positiveInteger(input.duration, 35),
     },
     outcomes: mergeOutcomes(blueprint.outcomes, periods),
-    materials: {
+    materials: sanitizeMaterials({
       teacher: teacherMaterials.length ? teacherMaterials : fallbackMaterials.teacher,
       students: studentMaterials.length ? studentMaterials : fallbackMaterials.students,
-    },
+    }),
     activities: periods.flatMap((period) => period.activities),
     periodPlans: periods,
     assessment: {

@@ -1,4 +1,5 @@
 import type { LessonActivity, LessonInput, LessonPlan, PedagogyAuditFinding } from "@/types/lesson";
+import { sanitizeMaterials } from "@/lib/lesson-format";
 
 const mechanicalTextPattern = /thực hiện được qua|sử dụng kiến thức,?\s*kĩ năng đặc thù|sử dụng kiến thức đặc thù|kiến thức đặc thù|nội dung học tập đặc thù|được hình thành qua|thông qua hoạt động|\.\s*:/i;
 const unsafeUncertaintyPattern = /cần\s+(?:gv|giáo viên\s+)?xác minh|cần xác minh|ocr\s+chưa\s+rõ|kiểm tra lại\s+sgk|đối chiếu\s+(?:bằng|lại|theo)\s+sgk(?:\s+bản\s+in)?|chốt\s+theo\s+sgk|theo\s+sgk\s+bản\s+in/i;
@@ -169,10 +170,7 @@ export function applyVietnameseMechanicalRepair(lesson: LessonPlan, _input?: Les
   return {
     ...lesson,
     outcomes: cleanOutcomes(lesson),
-    materials: {
-      teacher: cleanStringArray(lesson.materials?.teacher, 8),
-      students: cleanStringArray(lesson.materials?.students, 8),
-    },
+    materials: sanitizeMaterials(lesson.materials),
     activities: periodPlans?.length
       ? periodPlans.flatMap((period) => period.activities)
       : (lesson.activities || []).map(cleanActivity),

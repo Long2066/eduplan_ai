@@ -14,6 +14,7 @@ import {
   type StagedSectionsAssembly,
 } from "@/lib/generation/section-types";
 import { requireResolvedLessonTitle, resolveLessonTitle } from "@/lib/lesson-title";
+import { sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
 import type {
@@ -270,10 +271,7 @@ function buildCompactBlueprint(
     lessonTitle,
     lessonOverview: lessonMap.lessonMap.lessonOverview,
     outcomes: cloneOutcomes(outcomes.outcomes),
-    materials: {
-      teacher: [...materials.materials.teacher],
-      students: [...materials.materials.students],
-    },
+    materials: sanitizeMaterials(materials.materials),
     assessment: {
       criteria: [...assessment.assessment.criteria],
       evidence: [...assessment.assessment.evidence],
@@ -486,10 +484,7 @@ export function assembleStagedSections(
       duration: positiveInteger(input.duration, 35),
     },
     outcomes: cloneOutcomes(outcomes.outcomes),
-    materials: {
-      teacher: [...materials.materials.teacher],
-      students: [...materials.materials.students],
-    },
+    materials: sanitizeMaterials(materials.materials),
     activities: periodPlans.flatMap((period) => period.activities),
     periodPlans,
     assessment: {
