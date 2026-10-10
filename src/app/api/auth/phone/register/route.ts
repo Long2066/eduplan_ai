@@ -14,11 +14,19 @@ const NO_STORE_HEADERS = { "Cache-Control": "private, no-store, no-cache, max-ag
 
 export async function POST(request: Request) {
   try {
-    const { phoneNumber, password, displayName } = (await request.json()) as {
+    const { phoneNumber, password, displayName, recoveryCode } = (await request.json()) as {
       phoneNumber?: string;
       password?: string;
       displayName?: string;
+      recoveryCode?: string;
     };
+
+    if (!displayName || !displayName.trim()) {
+      return NextResponse.json(
+        { error: "Vui lòng nhập họ và tên của bạn." },
+        { status: 400, headers: NO_STORE_HEADERS },
+      );
+    }
 
     if (!phoneNumber || !phoneNumber.trim()) {
       return NextResponse.json(
@@ -37,6 +45,14 @@ export async function POST(request: Request) {
     if (!password || password.length < 6) {
       return NextResponse.json(
         { error: "Mật khẩu cần tối thiểu 6 ký tự." },
+        { status: 400, headers: NO_STORE_HEADERS },
+      );
+    }
+
+    const trimmedCode = (recoveryCode || "").trim();
+    if (!/^\d{6}$/.test(trimmedCode)) {
+      return NextResponse.json(
+        { error: "Vui lòng nhập mã code tùy chỉnh đúng 6 chữ số để khôi phục mật khẩu sau này." },
         { status: 400, headers: NO_STORE_HEADERS },
       );
     }
@@ -71,7 +87,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const nameToUse = displayName?.trim() || `Người dùng ${normalized.slice(-4)}`;
+    const nameToUse = displayName.trim();
 
     // Create Firebase Auth user with email & password (Spark-compatible, 0 SMS OTP)
     const userRecord = await auth.createUser({
@@ -86,6 +102,7 @@ export async function POST(request: Request) {
         phoneNumber: normalized,
         email: internalEmail,
         displayName: nameToUse,
+        recoveryCode: trimmedCode,
         presenceState: "online",
         lastSeenAt: now,
         lastOnlineAt: now,

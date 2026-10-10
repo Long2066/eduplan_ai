@@ -322,6 +322,9 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [newResetPassword, setNewResetPassword] = useState("");
+  const [newResetPasswordVisible, setNewResetPasswordVisible] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -339,6 +342,8 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
   function switchMode(newMode: AuthMode) {
     setMode(newMode);
+    setRecoveryCode("");
+    setNewResetPassword("");
     setError("");
     setMessage("");
   }
@@ -481,6 +486,12 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       return;
     }
 
+    const trimmedCode = recoveryCode.trim();
+    if (!trimmedCode || !/^\d{6}$/.test(trimmedCode)) {
+      setError("Vui lòng nhập mã code tùy chỉnh đúng 6 số để khôi phục mật khẩu sau này.");
+      return;
+    }
+
     if (!acceptedPolicy) {
       setError("Bạn cần đồng ý Điều khoản sử dụng và Chính sách bảo mật.");
       return;
@@ -495,6 +506,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           phoneNumber: rawPhone,
           password,
           displayName: displayName.trim(),
+          recoveryCode: trimmedCode,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -513,6 +525,77 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       setMessage("Đăng ký thành công!");
     } catch (authError) {
       setError(friendlyAuthError(authError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handlePhoneResetPassword() {
+    setError("");
+    setMessage("");
+    if (!clientReady) {
+      setError("Thiếu cấu hình kết nối tài khoản.");
+      return;
+    }
+
+    if (!displayName.trim()) {
+      setError("Vui lòng nhập họ và tên của tài khoản.");
+      return;
+    }
+
+    const rawPhone = phoneNumber.trim();
+    if (!rawPhone) {
+      setError("Vui lòng nhập số điện thoại.");
+      return;
+    }
+
+    if (!isValidVietnamesePhoneNumber(rawPhone)) {
+      setError("Số điện thoại không đúng định dạng nhà mạng Việt Nam.");
+      return;
+    }
+
+    const trimmedCode = recoveryCode.trim();
+    if (!trimmedCode || !/^\d{6}$/.test(trimmedCode)) {
+      setError("Vui lòng nhập mã code khôi phục đúng 6 chữ số.");
+      return;
+    }
+
+    if (!newResetPassword || newResetPassword.length < 6) {
+      setError("Mật khẩu mới cần tối thiểu 6 ký tự.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/phone/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: rawPhone,
+          displayName: displayName.trim(),
+          recoveryCode: trimmedCode,
+          newPassword: newResetPassword,
+        }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        message?: string;
+      };
+
+      if (!res.ok) {
+        setError(data.error || "Thông tin Họ tên, Số điện thoại hoặc Mã khôi phục chưa chính xác. Vui lòng kiểm tra lại.");
+        return;
+      }
+
+      setMessage("Đã đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.");
+      setPassword(newResetPassword);
+      setNewResetPassword("");
+      setRecoveryCode("");
+      setMode("login");
+    } catch (err) {
+      setError(friendlyAuthError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -548,12 +631,12 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const subtitle =
     mode === "reset"
       ? authMethod === "phone"
-        ? "Liên hệ hỗ trợ để được cấp lại mật khẩu cho số điện thoại."
+        ? "Nhập Họ tên, Số điện thoại và Mã code 6 số để đặt lại mật khẩu mới."
         : "Nhập email để nhận link đặt lại mật khẩu."
       : authMethod === "phone"
       ? mode === "login"
         ? "Đăng nhập bằng số điện thoại và mật khẩu."
-        : "Đăng ký tài khoản với số điện thoại và mật khẩu."
+        : "Đăng ký tài khoản với số điện thoại và mã code khôi phục."
       : mode === "login"
       ? "Đăng nhập để vào giao diện tạo giáo án và lưu lịch sử làm việc."
       : "Tạo tài khoản mới để bắt đầu sử dụng EduPlan AI.";
@@ -953,6 +1036,27 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                   </span>
                 </label>
 
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Mã code khôi phục mật khẩu (6 số)
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><ShieldIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field font-mono tracking-widest"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="Ví dụ: 123456"
+                      value={recoveryCode}
+                      onChange={(event) => setRecoveryCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                  </span>
+                  <span className="mt-1.5 block text-[11px] font-medium text-amber-700">
+                    Vui lòng nhập mã code tùy chỉnh 6 số để khôi phục mật khẩu sau này.
+                  </span>
+                </label>
+
                 <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
                   <input
                     type="checkbox"
@@ -999,34 +1103,102 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             ) : (
               /* mode === "reset" && authMethod === "phone" */
               <div className="auth-fields-container space-y-5">
-                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-left">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700">
-                      <PhoneIcon />
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900">Đặt lại mật khẩu cho số điện thoại</h3>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Họ và tên tài khoản
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><UserIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field"
+                      placeholder="Nguyễn Văn A"
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                    />
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Số điện thoại
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><PhoneIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field"
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="0912 345 678"
+                      value={phoneNumber}
+                      onChange={(event) => setPhoneNumber(event.target.value)}
+                    />
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Mã code khôi phục 6 số (đã tạo lúc đăng ký)
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><ShieldIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field font-mono tracking-widest"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="••••••"
+                      value={recoveryCode}
+                      onChange={(event) => setRecoveryCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Mật khẩu mới
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><LockIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field pr-12"
+                      type={newResetPasswordVisible ? "text" : "password"}
+                      placeholder="Tối thiểu 6 ký tự"
+                      value={newResetPassword}
+                      onChange={(event) => setNewResetPassword(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
+                      onClick={() => setNewResetPasswordVisible((current) => !current)}
+                      aria-label={newResetPasswordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    >
+                      <EyeIcon />
+                    </button>
+                  </span>
+                </label>
+
+                {error ? (
+                  <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                    {error}
                   </div>
-                  <p className="mt-2.5 text-xs leading-relaxed text-slate-600">
-                    Để đảm bảo bảo mật và tránh chiếm đoạt tài khoản khi không dùng SMS OTP, việc đặt lại mật khẩu cho tài khoản số điện thoại được hỗ trợ trực tiếp bởi Quản trị viên.
-                  </p>
-                  <div className="mt-3.5 rounded-xl border border-amber-200/80 bg-white p-3 text-xs">
-                    <p className="font-semibold text-slate-800">Liên hệ Hotline / Zalo hỗ trợ:</p>
-                    <p className="mt-1 font-mono text-base font-black text-brand-700">0342 159 006</p>
-                    <p className="mt-0.5 text-[11px] text-slate-500">Hỗ trợ nhanh - Cấp lại mật khẩu sau 1 phút</p>
+                ) : null}
+                {message ? (
+                  <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
+                    {message}
                   </div>
-                </div>
+                ) : null}
 
                 <button
-                  type="button"
-                  className="btn-secondary w-full py-3.5 text-base font-bold text-slate-700"
-                  onClick={() => setAuthMethod("email")}
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
+                  disabled={isSubmitting}
+                  onClick={handlePhoneResetPassword}
                 >
-                  Khôi phục tài khoản qua Email
+                  {isSubmitting ? "Đang xử lý..." : "Xác nhận & Đổi mật khẩu"}
                 </button>
 
                 <button
                   type="button"
-                  className="btn-primary w-full py-3.5 text-base font-bold"
+                  className="btn-secondary w-full py-3.5 text-base font-bold text-slate-700"
                   onClick={() => switchMode("login")}
                 >
                   Quay lại Đăng nhập
