@@ -11,6 +11,11 @@ export function isValidPhoneNumber(phone: string): boolean {
   return /^\+[1-9]\d{8,14}$/.test(phone);
 }
 
+export function isValidVietnamesePhoneNumber(raw: string): boolean {
+  const cleaned = raw.trim().replace(/[\s.\-()]/g, "");
+  return /^(?:\+84|0)(3[2-9]|5[25689]|7[06-9]|8[1-9]|9\d)\d{7}$/.test(cleaned);
+}
+
 export function phoneToInternalEmail(phone: string): string {
   const normalized = normalizePhoneNumber(phone);
   const digits = normalized.replace(/\D/g, "");

@@ -1,23 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
   getRedirectResult,
-  RecaptchaVerifier,
   sendEmailVerification,
   sendPasswordResetEmail,
+  signInWithCustomToken,
   signInWithEmailAndPassword,
-  signInWithPhoneNumber,
   signInWithPopup,
   signInWithRedirect,
   updateProfile,
-  type ConfirmationResult,
   type User,
 } from "firebase/auth";
 import { completeFirebaseAuthSession, getGoogleAuthStrategy } from "@/lib/auth-client";
 import { getEmailActionSettings, getFirebaseClientAuth, googleAuthProvider, hasFirebaseClientConfig } from "@/lib/firebase-client";
-import { isValidPhoneNumber, normalizePhoneNumber, phoneToInternalEmail } from "@/lib/phone-utils";
+import {
+  isValidVietnamesePhoneNumber,
+  normalizePhoneNumber,
+  phoneToInternalEmail,
+} from "@/lib/phone-utils";
 
 type AuthPanelProps = {
   onSessionReady: () => Promise<void> | void;
@@ -318,16 +320,7 @@ function AuthInputIcon({ children }: { children: ReactNode }) {
 export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
-  const [phoneStep, setPhoneStep] = useState<"input_phone" | "input_otp">("input_phone");
-  const [phoneResetStep, setPhoneResetStep] = useState<"input_phone" | "input_otp">("input_phone");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
-  const [newResetPassword, setNewResetPassword] = useState("");
-  const [newResetPasswordVisible, setNewResetPasswordVisible] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -344,60 +337,8 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
   const clientReady = hasFirebaseClientConfig();
 
-  function resetRecaptcha() {
-    if (recaptchaVerifierRef.current) {
-      try {
-        recaptchaVerifierRef.current.clear();
-      } catch {
-        // ignore
-      }
-      recaptchaVerifierRef.current = null;
-    }
-  }
-
-  function getOrCreateRecaptcha(): RecaptchaVerifier {
-    const auth = getFirebaseClientAuth();
-    if (recaptchaVerifierRef.current) {
-      return recaptchaVerifierRef.current;
-    }
-    const verifier = new RecaptchaVerifier(auth, "phone-recaptcha-container", {
-      size: "invisible",
-    });
-    recaptchaVerifierRef.current = verifier;
-    return verifier;
-  }
-
-  useEffect(() => {
-    return () => {
-      resetRecaptcha();
-    };
-  }, []);
-
-  useEffect(() => {
-    const isWaitingOtp =
-      (mode === "register" && phoneStep === "input_otp") ||
-      (mode === "reset" && phoneResetStep === "input_otp");
-    if (!isWaitingOtp || otpSecondsLeft <= 0) return;
-    const timer = setInterval(() => {
-      setOtpSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [mode, phoneStep, phoneResetStep, otpSecondsLeft]);
-
   function switchMode(newMode: AuthMode) {
     setMode(newMode);
-    setPhoneStep("input_phone");
-    setPhoneResetStep("input_phone");
-    setOtpCode("");
-    setNewResetPassword("");
-    setError("");
-    setMessage("");
-  }
-
-  function handleChangePhone() {
-    setPhoneStep("input_phone");
-    setPhoneResetStep("input_phone");
-    setOtpCode("");
     setError("");
     setMessage("");
   }
@@ -484,11 +425,11 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       setError("Vui lòng nhập số điện thoại.");
       return;
     }
-    const cleaned = normalizePhoneNumber(rawPhone);
-    if (!isValidPhoneNumber(cleaned)) {
-      setError("Số điện thoại không đúng định dạng. Vui lòng nhập số di động Việt Nam (VD: 0912 345 678).");
+    if (!isValidVietnamesePhoneNumber(rawPhone)) {
+      setError("Số điện thoại không đúng định dạng nhà mạng Việt Nam (10 chữ số, ví dụ: 0912 345 678).");
       return;
     }
+    const cleaned = normalizePhoneNumber(rawPhone);
     if (!password) {
       setError("Vui lòng nhập mật khẩu.");
       return;
@@ -512,11 +453,16 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
     }
   }
 
-  async function handleSendPhoneOtp() {
+  async function handlePhoneRegister() {
     setError("");
     setMessage("");
     if (!clientReady) {
-      setError("Thiếu Firebase Web App config.");
+      setError("Thiếu cấu hình kết nối tài khoản.");
+      return;
+    }
+
+    if (!displayName.trim()) {
+      setError("Vui lòng nhập họ và tên của bạn.");
       return;
     }
 
@@ -525,14 +471,8 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       setError("Vui lòng nhập số điện thoại.");
       return;
     }
-    const cleaned = normalizePhoneNumber(rawPhone);
-    if (!isValidPhoneNumber(cleaned)) {
-      setError("Số điện thoại không đúng định dạng. Vui lòng nhập số di động Việt Nam (VD: 0912 345 678).");
-      return;
-    }
-
-    if (!displayName.trim()) {
-      setError("Vui lòng nhập họ và tên của bạn.");
+    if (!isValidVietnamesePhoneNumber(rawPhone)) {
+      setError("Số điện thoại không đúng định dạng nhà mạng Việt Nam (10 chữ số, đầu số 03, 05, 07, 08, 09).");
       return;
     }
 
@@ -548,184 +488,37 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
     setIsSubmitting(true);
     try {
-      const checkRes = await fetch("/api/auth/phone/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber: cleaned,
-          intent: "register",
-        }),
-      });
-      const checkData = (await checkRes.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      if (!checkRes.ok) {
-        setError(checkData.error || "Không thể kiểm tra số điện thoại.");
-        return;
-      }
-
-      const auth = getFirebaseClientAuth();
-      const verifier = getOrCreateRecaptcha();
-      const confirmation = await signInWithPhoneNumber(auth, cleaned, verifier);
-      setConfirmationResult(confirmation);
-      setPhoneStep("input_otp");
-      setOtpSecondsLeft(60);
-      setMessage(`Đã gửi mã xác thực 6 số đến ${formatPhoneDisplay(cleaned)}. Vui lòng kiểm tra tin nhắn SMS.`);
-    } catch (authError) {
-      resetRecaptcha();
-      setError(friendlyAuthError(authError));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleVerifyOtpRegister() {
-    setError("");
-    setMessage("");
-    if (!confirmationResult) {
-      setError("Phiên gửi mã OTP đã hết hạn. Vui lòng gửi lại mã mới.");
-      return;
-    }
-    const code = otpCode.trim();
-    if (code.length < 6) {
-      setError("Vui lòng nhập đủ 6 chữ số mã xác thực.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const credential = await confirmationResult.confirm(code);
-      const idToken = await credential.user.getIdToken(true);
       const res = await fetch("/api/auth/phone/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          idToken,
+          phoneNumber: rawPhone,
           password,
           displayName: displayName.trim(),
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setError(data.error || "Không thể hoàn tất đăng ký.");
-        return;
-      }
-      await onSessionReady();
-      setMessage("Đăng ký thành công!");
-    } catch (verifyError) {
-      setError(friendlyAuthError(verifyError));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleSendPhoneResetOtp() {
-    setError("");
-    setMessage("");
-    if (!clientReady) {
-      setError("Thiếu Firebase Web App config.");
-      return;
-    }
-
-    const rawPhone = phoneNumber.trim();
-    if (!rawPhone) {
-      setError("Vui lòng nhập số điện thoại.");
-      return;
-    }
-    const cleaned = normalizePhoneNumber(rawPhone);
-    if (!isValidPhoneNumber(cleaned)) {
-      setError("Số điện thoại không đúng định dạng. Vui lòng nhập số di động Việt Nam (VD: 0912 345 678).");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const checkRes = await fetch("/api/auth/phone/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber: cleaned,
-          intent: "login",
-        }),
-      });
-      const checkData = (await checkRes.json().catch(() => ({}))) as {
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        customToken?: string;
         error?: string;
       };
-      if (!checkRes.ok) {
-        setError(checkData.error || "Số điện thoại chưa được đăng ký.");
+      if (!res.ok || !data.customToken) {
+        setError(data.error || "Không thể hoàn tất đăng ký.");
         return;
       }
 
       const auth = getFirebaseClientAuth();
-      const verifier = getOrCreateRecaptcha();
-      const confirmation = await signInWithPhoneNumber(auth, cleaned, verifier);
-      setConfirmationResult(confirmation);
-      setPhoneResetStep("input_otp");
-      setOtpSecondsLeft(60);
-      setMessage(`Đã gửi mã xác thực 6 số đến ${formatPhoneDisplay(cleaned)}. Vui lòng kiểm tra tin nhắn SMS.`);
+      const credential = await signInWithCustomToken(auth, data.customToken);
+      await finishSession(credential.user);
+      setMessage("Đăng ký thành công!");
     } catch (authError) {
-      resetRecaptcha();
       setError(friendlyAuthError(authError));
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function handleVerifyPhoneResetOtp() {
-    setError("");
-    setMessage("");
-    if (!confirmationResult) {
-      setError("Phiên gửi mã OTP đã hết hạn. Vui lòng gửi lại mã mới.");
-      return;
-    }
-    const code = otpCode.trim();
-    if (code.length < 6) {
-      setError("Vui lòng nhập đủ 6 chữ số mã xác thực.");
-      return;
-    }
-    if (!newResetPassword || newResetPassword.length < 6) {
-      setError("Mật khẩu mới cần tối thiểu 6 ký tự.");
-      return;
-    }
 
-    setIsSubmitting(true);
-    try {
-      const credential = await confirmationResult.confirm(code);
-      const idToken = await credential.user.getIdToken(true);
-      const res = await fetch("/api/auth/phone/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idToken,
-          newPassword: newResetPassword,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setError(data.error || "Không thể đặt lại mật khẩu.");
-        return;
-      }
-      setMessage("Đã đổi mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.");
-      setMode("login");
-      setAuthMethod("phone");
-      setPhoneResetStep("input_phone");
-      setPassword(newResetPassword);
-      setOtpCode("");
-    } catch (verifyError) {
-      setError(friendlyAuthError(verifyError));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleResendOtp() {
-    if (otpSecondsLeft > 0) return;
-    if (mode === "register") {
-      await handleSendPhoneOtp();
-    } else if (mode === "reset") {
-      await handleSendPhoneResetOtp();
-    }
-  }
 
   async function handleGoogleLogin() {
     setError("");
@@ -755,15 +548,11 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const subtitle =
     mode === "reset"
       ? authMethod === "phone"
-        ? phoneResetStep === "input_otp"
-          ? "Nhập mã OTP 6 số và mật khẩu mới để khôi phục tài khoản."
-          : "Nhập số điện thoại đã đăng ký để nhận mã OTP qua SMS."
+        ? "Liên hệ hỗ trợ để được cấp lại mật khẩu cho số điện thoại."
         : "Nhập email để nhận link đặt lại mật khẩu."
       : authMethod === "phone"
       ? mode === "login"
         ? "Đăng nhập bằng số điện thoại và mật khẩu."
-        : phoneStep === "input_otp"
-        ? "Nhập mã OTP 6 số để hoàn tất đăng ký tài khoản."
         : "Đăng ký tài khoản với số điện thoại và mật khẩu."
       : mode === "login"
       ? "Đăng nhập để vào giao diện tạo giáo án và lưu lịch sử làm việc."
@@ -771,7 +560,6 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
   return (
     <main className="auth-page flex min-h-screen items-center justify-center px-4 py-7 sm:px-6 lg:px-8">
-      <div id="phone-recaptcha-container" />
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}
@@ -1105,317 +893,145 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 </button>
               </div>
             ) : mode === "register" ? (
-              phoneStep === "input_otp" ? (
-                <div className="auth-fields-container space-y-5">
-                  <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 text-center">
-                    <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Xác thực số điện thoại</p>
-                    <p className="mt-1 text-sm font-medium text-slate-700">
-                      Mã 6 số đã được gửi đến số <strong className="font-bold text-slate-900">{formatPhoneDisplay(phoneNumber)}</strong>
-                    </p>
+              <div className="auth-fields-container space-y-5">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Họ tên
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><UserIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field"
+                      placeholder="Nguyễn Văn A"
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                    />
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Số điện thoại
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><PhoneIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field"
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="0912 345 678"
+                      value={phoneNumber}
+                      onChange={(event) => setPhoneNumber(event.target.value)}
+                    />
+                  </span>
+                  <span className="mt-1.5 block text-[11px] text-slate-400">
+                    Nhập số di động 10 số nhà mạng Việt Nam (Viettel, Vina, Mobi, v.v.).
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Mật khẩu
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><LockIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field pr-12"
+                      type={passwordVisible ? "text" : "password"}
+                      placeholder="Tối thiểu 6 ký tự"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
                     <button
                       type="button"
-                      className="mt-2 text-xs font-bold text-brand-700 hover:underline"
-                      onClick={handleChangePhone}
+                      className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
+                      onClick={() => setPasswordVisible((current) => !current)}
+                      aria-label={passwordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                     >
-                      Đổi số điện thoại khác
+                      <EyeIcon />
                     </button>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
+                    checked={acceptedPolicy}
+                    onChange={(event) => setAcceptedPolicy(event.target.checked)}
+                  />
+                  <span>
+                    Tôi đồng ý với{" "}
+                    <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>Điều khoản sử dụng</button>
+                    {" "}và{" "}
+                    <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Chính sách bảo mật")}>Chính sách bảo mật</button>.
+                  </span>
+                </label>
+
+                {error ? (
+                  <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                    {error}
                   </div>
-
-                  <label className="block">
-                    <span className="mb-2 block text-center text-xs font-black uppercase tracking-wide text-slate-500">
-                      Nhập mã OTP gồm 6 chữ số
-                    </span>
-                    <input
-                      className="auth-input-field text-center font-mono text-2xl font-bold tracking-[0.35em] text-slate-900 placeholder:text-slate-300"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      placeholder="••••••"
-                      value={otpCode}
-                      onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                      autoFocus
-                    />
-                  </label>
-
-                  {error ? (
-                    <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
-                      {error}
-                    </div>
-                  ) : null}
-                  {message ? (
-                    <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
-                      {message}
-                    </div>
-                  ) : null}
-
-                  <button
-                    className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
-                    disabled={isSubmitting || otpCode.length < 6}
-                    onClick={handleVerifyOtpRegister}
-                  >
-                    {isSubmitting ? "Đang xác thực..." : "Xác nhận & Hoàn tất đăng ký"}
-                  </button>
-
-                  <div className="text-center">
-                    {otpSecondsLeft > 0 ? (
-                      <p className="text-xs font-medium text-slate-400">
-                        Gửi lại mã sau <span className="font-bold tabular-nums text-slate-600">{otpSecondsLeft}s</span>
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        className="text-xs font-bold text-brand-700 hover:underline"
-                        disabled={isSubmitting}
-                        onClick={handleResendOtp}
-                      >
-                        Chưa nhận được mã? Gửi lại OTP
-                      </button>
-                    )}
+                ) : null}
+                {message ? (
+                  <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
+                    {message}
                   </div>
-                </div>
-              ) : (
-                <div className="auth-fields-container space-y-5">
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                      Họ tên
-                    </span>
-                    <span className="relative block">
-                      <AuthInputIcon><UserIcon /></AuthInputIcon>
-                      <input
-                        className="auth-input-field"
-                        placeholder="Nguyễn Văn A"
-                        value={displayName}
-                        onChange={(event) => setDisplayName(event.target.value)}
-                      />
-                    </span>
-                  </label>
+                ) : null}
 
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                      Số điện thoại
-                    </span>
-                    <span className="relative block">
-                      <AuthInputIcon><PhoneIcon /></AuthInputIcon>
-                      <input
-                        className="auth-input-field"
-                        type="tel"
-                        inputMode="tel"
-                        placeholder="0912 345 678"
-                        value={phoneNumber}
-                        onChange={(event) => setPhoneNumber(event.target.value)}
-                      />
-                    </span>
-                    <span className="mt-1.5 block text-[11px] text-slate-400">
-                      Hệ thống sẽ gửi tin nhắn SMS chứa mã OTP 6 số để xác thực lần đầu.
-                    </span>
-                  </label>
+                <button
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isSubmitting || !acceptedPolicy}
+                  onClick={handlePhoneRegister}
+                >
+                  {isSubmitting ? "Đang đăng ký..." : "Đăng ký tài khoản"}
+                </button>
 
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                      Mật khẩu (dùng để đăng nhập sau này)
-                    </span>
-                    <span className="relative block">
-                      <AuthInputIcon><LockIcon /></AuthInputIcon>
-                      <input
-                        className="auth-input-field pr-12"
-                        type={passwordVisible ? "text" : "password"}
-                        placeholder="Tối thiểu 6 ký tự"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
-                        onClick={() => setPasswordVisible((current) => !current)}
-                        aria-label={passwordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                      >
-                        <EyeIcon />
-                      </button>
-                    </span>
-                  </label>
-
-                  <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
-                      checked={acceptedPolicy}
-                      onChange={(event) => setAcceptedPolicy(event.target.checked)}
-                    />
-                    <span>
-                      Tôi đồng ý với{" "}
-                      <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>Điều khoản sử dụng</button>
-                      {" "}và{" "}
-                      <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Chính sách bảo mật")}>Chính sách bảo mật</button>.
-                    </span>
-                  </label>
-
-                  {error ? (
-                    <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
-                      {error}
-                    </div>
-                  ) : null}
-                  {message ? (
-                    <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
-                      {message}
-                    </div>
-                  ) : null}
-
-                  <button
-                    className="btn-primary auth-submit-btn w-full py-4 text-lg font-black disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={isSubmitting || !acceptedPolicy}
-                    onClick={handleSendPhoneOtp}
-                  >
-                    {isSubmitting ? "Đang gửi mã OTP..." : "Gửi mã đăng ký SMS"}
-                  </button>
-
-                  <button
-                    className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
-                    disabled={isSubmitting}
-                    onClick={handleGoogleLogin}
-                  >
-                    <GoogleIcon />
-                    Tiếp tục với Google
-                  </button>
-                </div>
-              )
+                <button
+                  className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
+                  disabled={isSubmitting}
+                  onClick={handleGoogleLogin}
+                >
+                  <GoogleIcon />
+                  Tiếp tục với Google
+                </button>
+              </div>
             ) : (
               /* mode === "reset" && authMethod === "phone" */
-              phoneResetStep === "input_otp" ? (
-                <div className="auth-fields-container space-y-5">
-                  <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 text-center">
-                    <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Xác thực đặt lại mật khẩu</p>
-                    <p className="mt-1 text-sm font-medium text-slate-700">
-                      Mã 6 số đã được gửi đến số <strong className="font-bold text-slate-900">{formatPhoneDisplay(phoneNumber)}</strong>
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-2 text-xs font-bold text-brand-700 hover:underline"
-                      onClick={handleChangePhone}
-                    >
-                      Đổi số điện thoại khác
-                    </button>
+              <div className="auth-fields-container space-y-5">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-left">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-700">
+                      <PhoneIcon />
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-900">Đặt lại mật khẩu cho số điện thoại</h3>
                   </div>
-
-                  <label className="block">
-                    <span className="mb-2 block text-center text-xs font-black uppercase tracking-wide text-slate-500">
-                      Nhập mã OTP gồm 6 chữ số
-                    </span>
-                    <input
-                      className="auth-input-field text-center font-mono text-2xl font-bold tracking-[0.35em] text-slate-900 placeholder:text-slate-300"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="one-time-code"
-                      maxLength={6}
-                      placeholder="••••••"
-                      value={otpCode}
-                      onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                      autoFocus
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                      Mật khẩu mới
-                    </span>
-                    <span className="relative block">
-                      <AuthInputIcon><LockIcon /></AuthInputIcon>
-                      <input
-                        className="auth-input-field pr-12"
-                        type={newResetPasswordVisible ? "text" : "password"}
-                        placeholder="Tối thiểu 6 ký tự"
-                        value={newResetPassword}
-                        onChange={(event) => setNewResetPassword(event.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
-                        onClick={() => setNewResetPasswordVisible((current) => !current)}
-                        aria-label={newResetPasswordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                      >
-                        <EyeIcon />
-                      </button>
-                    </span>
-                  </label>
-
-                  {error ? (
-                    <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
-                      {error}
-                    </div>
-                  ) : null}
-                  {message ? (
-                    <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
-                      {message}
-                    </div>
-                  ) : null}
-
-                  <button
-                    className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
-                    disabled={isSubmitting || otpCode.length < 6 || newResetPassword.length < 6}
-                    onClick={handleVerifyPhoneResetOtp}
-                  >
-                    {isSubmitting ? "Đang xử lý..." : "Xác nhận & Đổi mật khẩu"}
-                  </button>
-
-                  <div className="text-center">
-                    {otpSecondsLeft > 0 ? (
-                      <p className="text-xs font-medium text-slate-400">
-                        Gửi lại mã sau <span className="font-bold tabular-nums text-slate-600">{otpSecondsLeft}s</span>
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        className="text-xs font-bold text-brand-700 hover:underline"
-                        disabled={isSubmitting}
-                        onClick={handleResendOtp}
-                      >
-                        Chưa nhận được mã? Gửi lại OTP
-                      </button>
-                    )}
+                  <p className="mt-2.5 text-xs leading-relaxed text-slate-600">
+                    Để đảm bảo bảo mật và tránh chiếm đoạt tài khoản khi không dùng SMS OTP, việc đặt lại mật khẩu cho tài khoản số điện thoại được hỗ trợ trực tiếp bởi Quản trị viên.
+                  </p>
+                  <div className="mt-3.5 rounded-xl border border-amber-200/80 bg-white p-3 text-xs">
+                    <p className="font-semibold text-slate-800">Liên hệ Hotline / Zalo hỗ trợ:</p>
+                    <p className="mt-1 font-mono text-base font-black text-brand-700">0342 159 006</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">Hỗ trợ nhanh - Cấp lại mật khẩu sau 1 phút</p>
                   </div>
                 </div>
-              ) : (
-                <div className="auth-fields-container space-y-5">
-                  <label className="block">
-                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                      Số điện thoại
-                    </span>
-                    <span className="relative block">
-                      <AuthInputIcon><PhoneIcon /></AuthInputIcon>
-                      <input
-                        className="auth-input-field"
-                        type="tel"
-                        inputMode="tel"
-                        placeholder="0912 345 678"
-                        value={phoneNumber}
-                        onChange={(event) => setPhoneNumber(event.target.value)}
-                      />
-                    </span>
-                    <span className="mt-1.5 block text-[11px] text-slate-400">
-                      Hệ thống sẽ gửi mã OTP qua tin nhắn SMS để xác nhận đổi mật khẩu.
-                    </span>
-                  </label>
 
-                  {error ? (
-                    <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
-                      {error}
-                    </div>
-                  ) : null}
-                  {message ? (
-                    <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
-                      {message}
-                    </div>
-                  ) : null}
+                <button
+                  type="button"
+                  className="btn-secondary w-full py-3.5 text-base font-bold text-slate-700"
+                  onClick={() => setAuthMethod("email")}
+                >
+                  Khôi phục tài khoản qua Email
+                </button>
 
-                  <button
-                    className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
-                    disabled={isSubmitting}
-                    onClick={handleSendPhoneResetOtp}
-                  >
-                    {isSubmitting ? "Đang gửi mã OTP..." : "Gửi mã xác nhận SMS"}
-                  </button>
-                </div>
-              )
+                <button
+                  type="button"
+                  className="btn-primary w-full py-3.5 text-base font-bold"
+                  onClick={() => switchMode("login")}
+                >
+                  Quay lại Đăng nhập
+                </button>
+              </div>
             )}
           </div>
 

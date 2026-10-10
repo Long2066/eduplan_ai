@@ -6,7 +6,12 @@ export const dynamic = "force-dynamic";
 
 const NO_STORE_HEADERS = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 
-import { normalizePhoneNumber, isValidPhoneNumber, phoneToInternalEmail } from "@/lib/phone-utils";
+import {
+  isValidPhoneNumber,
+  isValidVietnamesePhoneNumber,
+  normalizePhoneNumber,
+  phoneToInternalEmail,
+} from "@/lib/phone-utils";
 
 export async function POST(request: Request) {
   try {
@@ -22,10 +27,17 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!isValidVietnamesePhoneNumber(phoneNumber)) {
+      return NextResponse.json(
+        { error: "Số điện thoại không đúng định dạng nhà mạng Việt Nam (10 chữ số, ví dụ: 0912 345 678)." },
+        { status: 400, headers: NO_STORE_HEADERS },
+      );
+    }
+
     const normalized = normalizePhoneNumber(phoneNumber);
     if (!isValidPhoneNumber(normalized)) {
       return NextResponse.json(
-        { error: "Số điện thoại không đúng định dạng. Vui lòng nhập số hợp lệ (ví dụ: 0912345678)." },
+        { error: "Số điện thoại không đúng định dạng. Vui lòng nhập số hợp lệ." },
         { status: 400, headers: NO_STORE_HEADERS },
       );
     }
