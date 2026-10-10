@@ -53,6 +53,7 @@ type Dashboard = {
 type ManagedUser = {
   uid: string;
   email: string;
+  phoneNumber?: string;
   displayName: string;
   role: "user" | "admin";
   emailVerified: boolean;
@@ -697,7 +698,7 @@ export default function AdminPage() {
           ipLimitOverride: user.ipLimitOverride,
         }),
       });
-      setMessage(`Đã cập nhật ${user.email}.`);
+      setMessage(`Đã cập nhật ${user.displayName || user.phoneNumber || user.email}.`);
       await loadUsers(userQuery, userFilter, true);
       await loadDashboard().catch(() => undefined);
     } catch (saveError) {
@@ -730,7 +731,7 @@ export default function AdminPage() {
         method: "PATCH",
         body: JSON.stringify({ disabled: true, blockedReasonDetail: reason }),
       });
-      setMessage(`Đã khóa ${blockTarget.email} và thu hồi phiên đăng nhập.`);
+      setMessage(`Đã khóa ${blockTarget.displayName || blockTarget.phoneNumber || blockTarget.email} và thu hồi phiên đăng nhập.`);
       setBlockTarget(null);
       setBlockReason("");
       await loadUsers(userQuery, userFilter, true);
@@ -742,7 +743,7 @@ export default function AdminPage() {
   }
 
   async function unblockUser(user: ManagedUser) {
-    if (!window.confirm(`Mở khóa tài khoản ${user.email}?`)) return;
+    if (!window.confirm(`Mở khóa tài khoản ${user.displayName || user.phoneNumber || user.email}?`)) return;
     setError("");
     setMessage("");
     try {
@@ -750,7 +751,7 @@ export default function AdminPage() {
         method: "PATCH",
         body: JSON.stringify({ disabled: false }),
       });
-      setMessage(`Đã mở khóa ${user.email}.`);
+      setMessage(`Đã mở khóa ${user.displayName || user.phoneNumber || user.email}.`);
       await loadUsers(userQuery, userFilter, true);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Không thể mở khóa user.");
@@ -779,7 +780,7 @@ export default function AdminPage() {
       setError("Không thể xóa chính tài khoản admin đang đăng nhập.");
       return;
     }
-    const confirmed = window.confirm(`Xóa user ${user.email || user.displayName}? Thao tác này xóa tài khoản đăng nhập và hồ sơ user, không tự khôi phục.`);
+    const confirmed = window.confirm(`Xóa user ${user.displayName || user.phoneNumber || user.email}? Thao tác này xóa tài khoản đăng nhập và hồ sơ user, không tự khôi phục.`);
     if (!confirmed) return;
     setError("");
     setMessage("");
@@ -788,7 +789,7 @@ export default function AdminPage() {
       setSelectedUserIds((current) => current.filter((uid) => uid !== user.uid));
 
       if (passwordTarget?.uid === user.uid) setPasswordTarget(null);
-      setMessage(`Đã xóa user ${user.email}.`);
+      setMessage(`Đã xóa user ${user.displayName || user.phoneNumber || user.email}.`);
       await loadUsers();
       await loadDashboard().catch(() => undefined);
     } catch (saveError) {
@@ -1223,7 +1224,7 @@ export default function AdminPage() {
         {tab === "users" ? (
           <div className="card" style={{ marginTop: 14 }}>
             <div className="toolbar-grid user-toolbar">
-              <input className="input" placeholder="Tìm theo email hoặc họ tên" value={userQuery} onChange={(event) => setUserQuery(event.target.value)} />
+              <input className="input" placeholder="Tìm theo email, số điện thoại hoặc họ tên" value={userQuery} onChange={(event) => setUserQuery(event.target.value)} />
               <select className="select" value={userFilter} onChange={(event) => setUserFilter(event.target.value)}>
                 <option value="all">Tất cả user</option>
                 <option value="remaining">Còn lượt</option>
@@ -1267,7 +1268,7 @@ export default function AdminPage() {
                     <tr key={user.uid}>
                       <td className="select-cell">
                         <input
-                          aria-label={`Chọn ${user.email || user.displayName}`}
+                          aria-label={`Chọn ${user.displayName || user.phoneNumber || user.email}`}
                           type="checkbox"
                           checked={selectedUserIds.includes(user.uid)}
                           disabled={user.uid === admin.uid}
@@ -1278,7 +1279,15 @@ export default function AdminPage() {
                         <input className="input" value={user.displayName} onChange={(event) => {
                           setUsers(users.map((item) => item.uid === user.uid ? { ...item, displayName: event.target.value } : item));
                         }} />
-                        <div className="muted">{user.email}</div>
+                        <div className="user-contacts">
+                          {user.phoneNumber ? (
+                            <span className="user-phone-chip" title="Số điện thoại đăng ký">
+                              <span className="user-phone-icon" aria-hidden="true">📞</span>
+                              <span className="user-phone-number">{user.phoneNumber}</span>
+                            </span>
+                          ) : null}
+                          {user.email ? <div className="muted">{user.email}</div> : null}
+                        </div>
                       </td>
                       <td>
                         <div className="status-cell">
@@ -1538,7 +1547,7 @@ export default function AdminPage() {
             </div>
             <div className="block-target-card">
               <strong>{blockTarget.displayName || "Người dùng chưa đặt tên"}</strong>
-              <span>{blockTarget.email}</span>
+              <span>{blockTarget.phoneNumber ? `📞 ${blockTarget.phoneNumber}` : blockTarget.email}</span>
             </div>
             <label className="label" htmlFor="block-reason-input">Lý do khóa gửi tới người dùng <strong aria-hidden="true">*</strong></label>
             <textarea
@@ -1570,7 +1579,7 @@ export default function AdminPage() {
         <div className="modal-backdrop">
           <div className="modal">
             <h2>Đổi mật khẩu</h2>
-            <p className="muted">{passwordTarget.email}</p>
+            <p className="muted">{passwordTarget.displayName ? `${passwordTarget.displayName} · ` : ""}{passwordTarget.phoneNumber ? `📞 ${passwordTarget.phoneNumber}` : passwordTarget.email}</p>
             <label className="label">Mật khẩu mới</label>
             <input className="input" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
             <label className="switch-row" style={{ marginTop: 12 }}>
@@ -1723,7 +1732,7 @@ export default function AdminPage() {
             <div className="modal-title-row">
               <div>
                 <p className="eyebrow">Quản lý gói & tín dụng</p>
-                <h2>{grantTarget.displayName || grantTarget.email}</h2>
+                <h2>{grantTarget.displayName || grantTarget.phoneNumber || grantTarget.email}</h2>
               </div>
               <button className="button secondary" onClick={() => setGrantTarget(null)}>Đóng</button>
             </div>
@@ -1734,7 +1743,7 @@ export default function AdminPage() {
               <div><span className="label">Tín dụng gói</span><strong>{grantTarget.packageCredits}</strong></div>
               <div><span className="label">Tín dụng top-up</span><strong>{grantTarget.topupCredits}</strong></div>
               <div><span className="label">Hết hạn</span><strong>{grantTarget.planExpiresAt ? shortDate(grantTarget.planExpiresAt) : '—'}</strong></div>
-              <div><span className="label">Email</span><strong>{grantTarget.email}</strong></div>
+              <div><span className="label">{grantTarget.phoneNumber ? "Số điện thoại / Email" : "Email"}</span><strong>{grantTarget.phoneNumber || grantTarget.email || "—"}</strong></div>
             </div>
 
             {/* ── Kích hoạt gói ── */}

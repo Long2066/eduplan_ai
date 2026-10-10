@@ -41,9 +41,16 @@ export async function GET(request: Request) {
     ]);
     let users = snapshot.docs.map((doc) => serializeUser(doc, settings));
     if (query) {
-      users = users.filter((user) =>
-        `${user.email} ${user.displayName}`.toLowerCase().includes(query),
-      );
+      const cleanDigits = query.replace(/\D/g, "");
+      users = users.filter((user) => {
+        const phone = user.phoneNumber || "";
+        const phoneDigits = phone.replace(/\D/g, "");
+        const matchDigits = cleanDigits.length >= 3 && phoneDigits.includes(cleanDigits);
+        return (
+          `${user.email} ${user.displayName} ${phone}`.toLowerCase().includes(query) ||
+          matchDigits
+        );
+      });
     }
     if (filter === "remaining") users = users.filter((user) => user.remainingGenerations > 0);
     if (filter === "exhausted") users = users.filter((user) => user.remainingGenerations <= 0);

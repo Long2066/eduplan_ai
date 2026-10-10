@@ -23,6 +23,19 @@ export type AdminQuotaSettings = {
   paidTrialDailyCredits: number;
 };
 
+export function formatPhoneNumber(phone: unknown): string {
+  if (!phone || typeof phone !== "string") return "";
+  const cleaned = phone.trim().replace(/\D/g, "");
+  if (cleaned.startsWith("84") && cleaned.length === 11) {
+    const local = `0${cleaned.slice(2)}`;
+    return `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}`;
+  }
+  if (cleaned.startsWith("0") && cleaned.length === 10) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
+  }
+  return phone.trim();
+}
+
 export function serializeUser(doc: QueryDocumentSnapshot<DocumentData>, settings: AdminQuotaSettings = { freeDailyLimit: 3, paidTrialDailyCredits: 10 }) {
   const data = doc.data();
   const today = vietnamDayKey();
@@ -41,13 +54,24 @@ export function serializeUser(doc: QueryDocumentSnapshot<DocumentData>, settings
     && presenceState === "online"
     && Number.isFinite(lastSeenMs)
     && Date.now() - lastSeenMs <= ONLINE_WINDOW_MS;
+
+  const rawEmail = String(data.email || "");
+  const isInternal = rawEmail.endsWith("@phone.eduplan.vn");
+  let phoneNumber = String(data.phoneNumber || "");
+  if (!phoneNumber && rawEmail.startsWith("phone_") && isInternal) {
+    const digits = rawEmail.replace("phone_", "").replace("@phone.eduplan.vn", "");
+    phoneNumber = digits.startsWith("84") ? `+${digits}` : digits;
+  }
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+
   return {
     id: doc.id,
     uid: doc.id,
-    email: String(data.email || ""),
+    email: isInternal ? "" : rawEmail,
+    phoneNumber: formattedPhone,
     displayName: String(data.displayName || ""),
     photoURL: String(data.photoURL || ""),
-    emailVerified: Boolean(data.emailVerified),
+    emailVerified: Boolean(data.emailVerified || (isInternal && phoneNumber)),
     disabled,
     blockedReason,
     blockedReasonDetail,

@@ -92,6 +92,7 @@ export async function POST(request: Request) {
     // Create Firebase Auth user with email & password (Spark-compatible, 0 SMS OTP)
     const userRecord = await auth.createUser({
       email: internalEmail,
+      emailVerified: true,
       password,
       displayName: nameToUse,
     });
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
         email: internalEmail,
         displayName: nameToUse,
         recoveryCode: trimmedCode,
+        emailVerified: true,
         presenceState: "online",
         lastSeenAt: now,
         lastOnlineAt: now,

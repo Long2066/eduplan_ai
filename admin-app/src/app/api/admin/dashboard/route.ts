@@ -50,7 +50,11 @@ export async function GET() {
     ]);
     const freeLimit = Math.max(0, Number(settingsDoc.get("defaultFreeLimit") ?? 3));
 
-    const verifiedUsers = users.docs.filter((doc) => Boolean(doc.get("emailVerified"))).length;
+    const verifiedUsers = users.docs.filter((doc) => {
+      const email = String(doc.get("email") || "");
+      const isPhone = email.endsWith("@phone.eduplan.vn") || Boolean(doc.get("phoneNumber"));
+      return Boolean(doc.get("emailVerified")) || isPhone;
+    }).length;
     const newUsersToday = users.docs.filter((doc) => docDateKey(doc.get("createdAt")) === today).length;
     const newUsersThisWeek = users.docs.filter((doc) => {
       const key = docDateKey(doc.get("createdAt"));
