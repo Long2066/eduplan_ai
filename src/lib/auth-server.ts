@@ -13,6 +13,7 @@ export const LESSON_TTL_DAYS = 7;
 export type AuthUser = {
   uid: string;
   email: string;
+  phoneNumber?: string;
   displayName: string;
   photoURL: string;
   emailVerified: boolean;
@@ -51,11 +52,14 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
   const ref = db.collection("users").doc(decoded.uid);
   const snapshot = await ref.get();
   const now = new Date();
+  const phoneNumber = userRecord.phoneNumber || (decoded.phone_number as string) || String(snapshot.get("phoneNumber") || "");
+  const isPhoneOnlyVerified = Boolean(!userRecord.email && phoneNumber);
   const baseProfile = {
     email: userRecord.email || decoded.email || "",
-    displayName: userRecord.displayName || decoded.name || "",
+    phoneNumber,
+    displayName: userRecord.displayName || decoded.name || (phoneNumber ? `Người dùng ${phoneNumber.slice(-4)}` : ""),
     photoURL: userRecord.photoURL || decoded.picture || "",
-    emailVerified: Boolean(userRecord.emailVerified),
+    emailVerified: Boolean(userRecord.emailVerified || isPhoneOnlyVerified),
     disabled: false,
     blockedReason: "",
     blockedReasonDetail: "",
@@ -98,9 +102,10 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
   await ref.set(
     {
       email: baseProfile.email,
+      phoneNumber: baseProfile.phoneNumber || String(snapshot.get("phoneNumber") || ""),
       displayName: baseProfile.displayName || snapshot.get("displayName") || "",
       photoURL: storedPhotoURL || baseProfile.photoURL,
-      emailVerified: baseProfile.emailVerified,
+      emailVerified: baseProfile.emailVerified || Boolean(snapshot.get("emailVerified")),
       disabled: Boolean(userRecord.disabled || snapshot.get("disabled")),
       updatedAt: now,
     },
@@ -120,13 +125,15 @@ export async function currentUser(): Promise<AuthUser | null> {
   const freeLimit = subscription.free.limit;
   const usedGenerations = subscription.free.used;
   const activeCard = subscription.cards.find((card) => card.id === subscription.activePlan);
+  const isPhoneOnlyUser = Boolean(!profile.email && profile.phoneNumber);
 
   return {
     uid: decoded.uid,
     email: String(profile.email || decoded.email || ""),
+    phoneNumber: String(profile.phoneNumber || (decoded.phone_number as string) || ""),
     displayName: String(profile.displayName || decoded.name || ""),
     photoURL: String(profile.photoURL || decoded.picture || ""),
-    emailVerified: Boolean(profile.emailVerified),
+    emailVerified: Boolean(profile.emailVerified || isPhoneOnlyUser),
     disabled,
     blockedReason: String(profile.blockedReason || ""),
     blockedReasonDetail: String(profile.blockedReasonDetail || ""),

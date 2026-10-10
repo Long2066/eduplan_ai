@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-server";
 import { createCheckout, getPaymentForUser, paymentErrorResponse, type CheckoutInput } from "@/lib/payment-service";
 
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireUser();
     const input = (await request.json()) as CheckoutInput;
-    const payment = await createCheckout(user.uid, user.displayName || user.email, input);
+    const payment = await createCheckout(user.uid, user.displayName || user.email || user.phoneNumber || "Người dùng", input);
     return NextResponse.json({ payment }, { status: 201 });
   } catch (error) {
     return errorResponse(error);

@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
   getRedirectResult,
+  RecaptchaVerifier,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPhoneNumber,
   signInWithPopup,
   signInWithRedirect,
   updateProfile,
+  type ConfirmationResult,
   type User,
 } from "firebase/auth";
 import { completeFirebaseAuthSession, getGoogleAuthStrategy } from "@/lib/auth-client";
@@ -20,6 +23,7 @@ type AuthPanelProps = {
 };
 
 type AuthMode = "login" | "register" | "reset";
+type AuthMethod = "email" | "phone";
 
 let redirectCompletionPromise: Promise<boolean> | null = null;
 
@@ -44,13 +48,13 @@ function friendlyAuthError(error: unknown) {
   }
   if (/tài khoản.*khóa|account.*disabled/i.test(message)) return message;
   if (/auth\/configuration-not-found/i.test(message)) {
-    return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Email/Password và Google.";
+    return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Phone, Email/Password và Google.";
   }
   if (/auth\/operation-not-allowed/i.test(message)) {
-    return "Phương thức đăng nhập này chưa được bật. Vào Authentication > Sign-in method để bật Email/Password hoặc Google.";
+    return "Phương thức đăng nhập này chưa được bật. Vào Authentication > Sign-in method để bật Phone, Email/Password hoặc Google.";
   }
   if (/auth\/unauthorized-domain/i.test(message)) {
-    return "Domain localhost chưa được phép đăng nhập. Vào Authentication > Settings > Authorized domains và thêm localhost.";
+    return "Domain hiện tại chưa được phép đăng nhập. Vào Authentication > Settings > Authorized domains để thêm domain.";
   }
   if (/auth\/unauthorized-continue-uri/i.test(message)) {
     return "Đường dẫn xác thực email chưa được Firebase cho phép. Hãy thêm domain của app vào Firebase Authentication > Settings > Authorized domains, hoặc bỏ cấu hình NEXT_PUBLIC_FIREBASE_AUTH_ACTION_CONTINUE_URL.";
@@ -70,8 +74,29 @@ function friendlyAuthError(error: unknown) {
   if (/auth\/weak-password/i.test(message)) {
     return "Mật khẩu cần tối thiểu 6 ký tự.";
   }
+  if (/auth\/invalid-phone-number/i.test(message)) {
+    return "Số điện thoại không hợp lệ. Vui lòng kiểm tra lại.";
+  }
+  if (/auth\/quota-exceeded/i.test(message)) {
+    return "Đã đạt giới hạn tin nhắn SMS miễn phí trong ngày (10 SMS/ngày). Vui lòng thử lại vào ngày mai hoặc đăng nhập bằng Email/Google.";
+  }
+  if (/auth\/too-many-requests/i.test(message)) {
+    return "Quá nhiều yêu cầu từ thiết bị này. Vui lòng đợi ít phút trước khi thử lại.";
+  }
+  if (/auth\/invalid-verification-code/i.test(message)) {
+    return "Mã OTP không chính xác. Vui lòng kiểm tra lại tin nhắn.";
+  }
+  if (/auth\/code-expired/i.test(message)) {
+    return "Mã OTP đã hết hạn. Vui lòng bấm gửi lại mã mới.";
+  }
+  if (/auth\/captcha-check-failed/i.test(message)) {
+    return "Kiểm tra bảo mật reCAPTCHA thất bại. Vui lòng thử lại.";
+  }
+  if (/auth\/missing-verification-code/i.test(message)) {
+    return "Vui lòng nhập đủ 6 chữ số mã OTP.";
+  }
   const firebaseCode = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: string }).code) : "";
-  return firebaseCode ? `Lỗi Firebase (${firebaseCode}): ${message}` : message || "Không thể xử lý tài khoản lúc này.";
+  return firebaseCode ? `Lỗi (${firebaseCode}): ${message}` : message || "Không thể xử lý tài khoản lúc này.";
 }
 
 type Policies = {
@@ -147,6 +172,31 @@ function MailIcon() {
       <path d="m5 8 7 5 7-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function PhoneIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function formatPhoneDisplay(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("84") && digits.length >= 11) {
+    return `+84 ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  }
+  if (digits.length === 10) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+  return raw;
 }
 
 function LockIcon() {
@@ -260,6 +310,14 @@ function AuthInputIcon({ children }: { children: ReactNode }) {
 
 export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   const [mode, setMode] = useState<AuthMode>("login");
+  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
+  const [phoneStep, setPhoneStep] = useState<"input_phone" | "input_otp">("input_phone");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -275,6 +333,58 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   });
 
   const clientReady = hasFirebaseClientConfig();
+
+  function resetRecaptcha() {
+    if (recaptchaVerifierRef.current) {
+      try {
+        recaptchaVerifierRef.current.clear();
+      } catch {
+        // ignore
+      }
+      recaptchaVerifierRef.current = null;
+    }
+  }
+
+  function getOrCreateRecaptcha(): RecaptchaVerifier {
+    const auth = getFirebaseClientAuth();
+    if (recaptchaVerifierRef.current) {
+      return recaptchaVerifierRef.current;
+    }
+    const verifier = new RecaptchaVerifier(auth, "phone-recaptcha-container", {
+      size: "invisible",
+    });
+    recaptchaVerifierRef.current = verifier;
+    return verifier;
+  }
+
+  useEffect(() => {
+    return () => {
+      resetRecaptcha();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phoneStep !== "input_otp" || otpSecondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      setOtpSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [phoneStep, otpSecondsLeft]);
+
+  function switchMode(newMode: AuthMode) {
+    setMode(newMode);
+    setPhoneStep("input_phone");
+    setOtpCode("");
+    setError("");
+    setMessage("");
+  }
+
+  function handleChangePhone() {
+    setPhoneStep("input_phone");
+    setOtpCode("");
+    setError("");
+    setMessage("");
+  }
 
   useEffect(() => {
     fetch("/api/settings/policies")
@@ -346,6 +456,109 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
     }
   }
 
+  async function handleSendPhoneOtp() {
+    setError("");
+    setMessage("");
+    if (!clientReady) {
+      setError("Thiếu Firebase Web App config. Cần điền NEXT_PUBLIC_FIREBASE_* trong .env.local.");
+      return;
+    }
+
+    const rawPhone = phoneNumber.trim();
+    if (!rawPhone) {
+      setError("Vui lòng nhập số điện thoại.");
+      return;
+    }
+
+    let cleaned = rawPhone.replace(/[\s.\-()]/g, "");
+    if (cleaned.startsWith("0")) cleaned = "+84" + cleaned.slice(1);
+    else if (cleaned.startsWith("84")) cleaned = "+" + cleaned;
+    else if (!cleaned.startsWith("+")) cleaned = "+84" + cleaned;
+
+    if (!/^\+[1-9]\d{8,14}$/.test(cleaned)) {
+      setError("Số điện thoại không đúng định dạng. Vui lòng nhập số di động Việt Nam (VD: 0912 345 678).");
+      return;
+    }
+
+    if (mode === "register") {
+      if (!displayName.trim()) {
+        setError("Vui lòng nhập họ và tên của bạn.");
+        return;
+      }
+      if (!acceptedPolicy) {
+        setError("Bạn cần đồng ý Điều khoản sử dụng và Chính sách bảo mật.");
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    try {
+      const checkRes = await fetch("/api/auth/phone/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: cleaned,
+          intent: mode === "register" ? "register" : "login",
+        }),
+      });
+      const checkData = (await checkRes.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        formattedPhone?: string;
+      };
+      if (!checkRes.ok) {
+        setError(checkData.error || "Không thể kiểm tra số điện thoại.");
+        return;
+      }
+
+      const auth = getFirebaseClientAuth();
+      const verifier = getOrCreateRecaptcha();
+      const confirmation = await signInWithPhoneNumber(auth, cleaned, verifier);
+      setConfirmationResult(confirmation);
+      setPhoneStep("input_otp");
+      setOtpSecondsLeft(60);
+      setMessage(`Đã gửi mã xác thực 6 số đến ${formatPhoneDisplay(cleaned)}. Vui lòng kiểm tra tin nhắn SMS.`);
+    } catch (authError) {
+      resetRecaptcha();
+      setError(friendlyAuthError(authError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    setError("");
+    setMessage("");
+    if (!confirmationResult) {
+      setError("Phiên gửi mã OTP đã hết hạn. Vui lòng gửi lại mã mới.");
+      return;
+    }
+    const code = otpCode.trim();
+    if (code.length < 6) {
+      setError("Vui lòng nhập đủ 6 chữ số mã xác thực.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const credential = await confirmationResult.confirm(code);
+      if (mode === "register" && displayName.trim()) {
+        await updateProfile(credential.user, { displayName: displayName.trim() }).catch(() => undefined);
+      }
+      await finishSession(credential.user);
+      setMessage(mode === "register" ? "Đăng ký thành công!" : "Đăng nhập thành công!");
+    } catch (verifyError) {
+      setError(friendlyAuthError(verifyError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (otpSecondsLeft > 0) return;
+    await handleSendPhoneOtp();
+  }
+
   async function handleGoogleLogin() {
     setError("");
     setMessage("");
@@ -371,9 +584,20 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
   }
 
   const title = mode === "register" ? "Tạo tài khoản" : mode === "reset" ? "Quên mật khẩu" : "Đăng nhập";
+  const subtitle =
+    mode === "reset"
+      ? "Nhập email để nhận link đặt lại mật khẩu."
+      : authMethod === "phone"
+      ? phoneStep === "input_otp"
+        ? "Nhập mã 6 chữ số vừa nhận để hoàn tất xác thực."
+        : mode === "register"
+        ? "Đăng ký bằng số điện thoại và nhận mã xác thực qua tin nhắn SMS."
+        : "Đăng nhập bằng số điện thoại và nhận mã xác thực qua tin nhắn SMS."
+      : "Đăng nhập để vào giao diện tạo giáo án và lưu lịch sử làm việc.";
 
   return (
     <main className="auth-page flex min-h-screen items-center justify-center px-4 py-7 sm:px-6 lg:px-8">
+      <div id="phone-recaptcha-container" />
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}
@@ -453,162 +677,351 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </div>
 
           <div className="flex flex-1 flex-col justify-center">
-          {mode !== "reset" ? (
-            <div className="auth-switcher-container mb-10 text-center">
-              <div className="relative inline-flex rounded-full bg-surface-100 p-1.5 shadow-inner">
-                <div
-                  className="absolute inset-y-1.5 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
-                  style={{
-                    width: "50%",
-                    left: mode === "login" ? "6px" : "calc(50% - 0px)",
-                  }}
-                />
-                <button
-                  className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
-                    mode === "login" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
-                  }`}
-                  onClick={() => setMode("login")}
-                >
-                  Đăng nhập
-                </button>
-                <button
-                  className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
-                    mode === "register" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
-                  }`}
-                  onClick={() => setMode("register")}
-                >
-                  Đăng ký
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="auth-header-container mb-8">
-            <h2 className="text-4xl font-black leading-tight text-slate-950">
-              {title}
-            </h2>
-            <p className="mt-3 text-base leading-relaxed text-slate-500">
-              {mode === "reset"
-                ? "Nhập email để nhận link đặt lại mật khẩu."
-                : "Đăng nhập để vào giao diện tạo giáo án và lưu lịch sử làm việc."}
-            </p>
-          </div>
-
-          <div className="auth-fields-container space-y-5">
-            {mode === "register" ? (
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                  Họ tên
-                </span>
-                <span className="relative block">
-                  <AuthInputIcon><UserIcon /></AuthInputIcon>
-                  <input
-                    className="auth-input-field"
-                    placeholder="Nguyễn Văn A"
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                  />
-                </span>
-              </label>
-            ) : null}
-
-            <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                Email
-              </span>
-              <span className="relative block">
-                <AuthInputIcon><MailIcon /></AuthInputIcon>
-                <input
-                  className="auth-input-field"
-                  type="email"
-                  placeholder="email@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </span>
-            </label>
-
             {mode !== "reset" ? (
-              <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
-                  Mật khẩu
-                </span>
-                <span className="relative block">
-                  <AuthInputIcon><LockIcon /></AuthInputIcon>
-                  <input
-                    className="auth-input-field pr-12"
-                    type={passwordVisible ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+              <div className="auth-switcher-container mb-8 text-center">
+                <div className="relative inline-flex rounded-full bg-surface-100 p-1.5 shadow-inner">
+                  <div
+                    className="absolute inset-y-1.5 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
+                    style={{
+                      width: "50%",
+                      left: mode === "login" ? "6px" : "calc(50% - 0px)",
+                    }}
                   />
                   <button
-                    type="button"
-                    className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
-                    onClick={() => setPasswordVisible((current) => !current)}
-                    aria-label={passwordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
+                      mode === "login" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
+                    }`}
+                    onClick={() => switchMode("login")}
                   >
-                    <EyeIcon />
+                    Đăng nhập
                   </button>
-                </span>
-              </label>
-            ) : null}
-
-            {mode === "register" ? (
-              <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
-                  checked={acceptedPolicy}
-                  onChange={(event) => setAcceptedPolicy(event.target.checked)}
-                />
-                <span>
-                  Tôi đồng ý với{" "}
-                  <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>Điều khoản sử dụng</button>
-                  {" "}và{" "}
-                  <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Chính sách bảo mật")}>Chính sách bảo mật</button>.
-                </span>
-              </label>
-            ) : null}
-
-            {error ? (
-              <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
-                {error}
-              </div>
-            ) : null}
-            {message ? (
-              <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
-                {message}
+                  <button
+                    className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
+                      mode === "register" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
+                    }`}
+                    onClick={() => switchMode("register")}
+                  >
+                    Đăng ký
+                  </button>
+                </div>
               </div>
             ) : null}
 
-            <button
-              className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
-              disabled={isSubmitting}
-              onClick={handleEmailAuth}
-            >
-              {isSubmitting ? "Đang xử lý..." : title}
-            </button>
+            <div className="auth-header-container mb-6">
+              <h2 className="text-4xl font-black leading-tight text-slate-950">
+                {title}
+              </h2>
+              <p className="mt-2.5 text-base leading-relaxed text-slate-500">
+                {subtitle}
+              </p>
+            </div>
 
             {mode !== "reset" ? (
-              <button
-                className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
-                disabled={isSubmitting}
-                onClick={handleGoogleLogin}
-              >
-                <GoogleIcon />
-                Tiếp tục với Google
-              </button>
+              <div className="mb-6 grid grid-cols-2 gap-1.5 rounded-2xl bg-surface-100 p-1.5 text-sm font-bold">
+                <button
+                  type="button"
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all ${
+                    authMethod === "email"
+                      ? "bg-white text-brand-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  onClick={() => {
+                    setAuthMethod("email");
+                    setError("");
+                    setMessage("");
+                  }}
+                >
+                  <MailIcon />
+                  <span>Email</span>
+                </button>
+                <button
+                  type="button"
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all ${
+                    authMethod === "phone"
+                      ? "bg-white text-brand-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  onClick={() => {
+                    setAuthMethod("phone");
+                    setError("");
+                    setMessage("");
+                  }}
+                >
+                  <PhoneIcon />
+                  <span>Số điện thoại</span>
+                </button>
+              </div>
             ) : null}
-          </div>
 
+            {authMethod === "email" || mode === "reset" ? (
+              <div className="auth-fields-container space-y-5">
+                {mode === "register" ? (
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                      Họ tên
+                    </span>
+                    <span className="relative block">
+                      <AuthInputIcon><UserIcon /></AuthInputIcon>
+                      <input
+                        className="auth-input-field"
+                        placeholder="Nguyễn Văn A"
+                        value={displayName}
+                        onChange={(event) => setDisplayName(event.target.value)}
+                      />
+                    </span>
+                  </label>
+                ) : null}
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Email
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><MailIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field"
+                      type="email"
+                      placeholder="email@example.com"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                    />
+                  </span>
+                </label>
+
+                {mode !== "reset" ? (
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                      Mật khẩu
+                    </span>
+                    <span className="relative block">
+                      <AuthInputIcon><LockIcon /></AuthInputIcon>
+                      <input
+                        className="auth-input-field pr-12"
+                        type={passwordVisible ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 flex -translate-y-1/2 text-slate-500 transition-colors hover:text-brand-700"
+                        onClick={() => setPasswordVisible((current) => !current)}
+                        aria-label={passwordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      >
+                        <EyeIcon />
+                      </button>
+                    </span>
+                  </label>
+                ) : null}
+
+                {mode === "register" ? (
+                  <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
+                      checked={acceptedPolicy}
+                      onChange={(event) => setAcceptedPolicy(event.target.checked)}
+                    />
+                    <span>
+                      Tôi đồng ý với{" "}
+                      <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>Điều khoản sử dụng</button>
+                      {" "}và{" "}
+                      <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Chính sách bảo mật")}>Chính sách bảo mật</button>.
+                    </span>
+                  </label>
+                ) : null}
+
+                {error ? (
+                  <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                    {error}
+                  </div>
+                ) : null}
+                {message ? (
+                  <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
+                    {message}
+                  </div>
+                ) : null}
+
+                <button
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
+                  disabled={isSubmitting}
+                  onClick={handleEmailAuth}
+                >
+                  {isSubmitting ? "Đang xử lý..." : title}
+                </button>
+
+                {mode !== "reset" ? (
+                  <button
+                    className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
+                    disabled={isSubmitting}
+                    onClick={handleGoogleLogin}
+                  >
+                    <GoogleIcon />
+                    Tiếp tục với Google
+                  </button>
+                ) : null}
+              </div>
+            ) : phoneStep === "input_otp" ? (
+              <div className="auth-fields-container space-y-5">
+                <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 text-center">
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Xác thực số điện thoại</p>
+                  <p className="mt-1 text-sm font-medium text-slate-700">
+                    Mã 6 số đã được gửi đến số <strong className="font-bold text-slate-900">{formatPhoneDisplay(phoneNumber)}</strong>
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-2 text-xs font-bold text-brand-700 hover:underline"
+                    onClick={handleChangePhone}
+                  >
+                    Đổi số điện thoại khác
+                  </button>
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-center text-xs font-black uppercase tracking-wide text-slate-500">
+                    Nhập mã OTP gồm 6 chữ số
+                  </span>
+                  <input
+                    className="auth-input-field text-center font-mono text-2xl font-bold tracking-[0.35em] text-slate-900 placeholder:text-slate-300"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={otpCode}
+                    onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    autoFocus
+                  />
+                </label>
+
+                {error ? (
+                  <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                    {error}
+                  </div>
+                ) : null}
+                {message ? (
+                  <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
+                    {message}
+                  </div>
+                ) : null}
+
+                <button
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
+                  disabled={isSubmitting || otpCode.length < 6}
+                  onClick={handleVerifyOtp}
+                >
+                  {isSubmitting ? "Đang xác thực..." : mode === "register" ? "Xác nhận & Đăng ký" : "Xác nhận & Đăng nhập"}
+                </button>
+
+                <div className="text-center">
+                  {otpSecondsLeft > 0 ? (
+                    <p className="text-xs font-medium text-slate-400">
+                      Gửi lại mã sau <span className="font-bold tabular-nums text-slate-600">{otpSecondsLeft}s</span>
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-brand-700 hover:underline"
+                      disabled={isSubmitting}
+                      onClick={handleResendOtp}
+                    >
+                      Chưa nhận được mã? Gửi lại OTP
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="auth-fields-container space-y-5">
+                {mode === "register" ? (
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                      Họ tên
+                    </span>
+                    <span className="relative block">
+                      <AuthInputIcon><UserIcon /></AuthInputIcon>
+                      <input
+                        className="auth-input-field"
+                        placeholder="Nguyễn Văn A"
+                        value={displayName}
+                        onChange={(event) => setDisplayName(event.target.value)}
+                      />
+                    </span>
+                  </label>
+                ) : null}
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-500">
+                    Số điện thoại
+                  </span>
+                  <span className="relative block">
+                    <AuthInputIcon><PhoneIcon /></AuthInputIcon>
+                    <input
+                      className="auth-input-field"
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="0912 345 678"
+                      value={phoneNumber}
+                      onChange={(event) => setPhoneNumber(event.target.value)}
+                    />
+                  </span>
+                  <span className="mt-1.5 block text-[11px] text-slate-400">
+                    Hệ thống sẽ gửi tin nhắn SMS chứa mã OTP 6 số để xác thực.
+                  </span>
+                </label>
+
+                {mode === "register" ? (
+                  <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-surface-50 p-3.5 text-xs leading-5 text-slate-600 transition-colors hover:border-brand-100 hover:bg-brand-50/30">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-brand-600"
+                      checked={acceptedPolicy}
+                      onChange={(event) => setAcceptedPolicy(event.target.checked)}
+                    />
+                    <span>
+                      Tôi đồng ý với{" "}
+                      <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>Điều khoản sử dụng</button>
+                      {" "}và{" "}
+                      <button className="font-bold text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Chính sách bảo mật")}>Chính sách bảo mật</button>.
+                    </span>
+                  </label>
+                ) : null}
+
+                {error ? (
+                  <div className="animate-slide-up rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                    {error}
+                  </div>
+                ) : null}
+                {message ? (
+                  <div className="animate-slide-up rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
+                    {message}
+                  </div>
+                ) : null}
+
+                <button
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
+                  disabled={isSubmitting}
+                  onClick={handleSendPhoneOtp}
+                >
+                  {isSubmitting ? "Đang gửi mã OTP..." : mode === "register" ? "Gửi mã đăng ký SMS" : "Gửi mã đăng nhập SMS"}
+                </button>
+
+                <button
+                  className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
+                  disabled={isSubmitting}
+                  onClick={handleGoogleLogin}
+                >
+                  <GoogleIcon />
+                  Tiếp tục với Google
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-base">
             {mode !== "login" ? (
               <button
                 className="font-bold text-brand-700 transition-colors hover:text-brand-800"
-                onClick={() => setMode("login")}
+                onClick={() => switchMode("login")}
               >
                 Đăng nhập
               </button>
@@ -616,7 +1029,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             {mode !== "register" ? (
               <button
                 className="font-bold text-brand-700 transition-colors hover:text-brand-800"
-                onClick={() => setMode("register")}
+                onClick={() => switchMode("register")}
               >
                 Đăng ký
               </button>
@@ -624,7 +1037,12 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             {mode !== "reset" ? (
               <button
                 className="font-medium text-slate-400 transition-colors hover:text-slate-600"
-                onClick={() => setMode("reset")}
+                onClick={() => {
+                  setMode("reset");
+                  setAuthMethod("email");
+                  setError("");
+                  setMessage("");
+                }}
               >
                 Quên mật khẩu?
               </button>
