@@ -50,8 +50,11 @@ function friendlyAuthError(error: unknown) {
   if (/auth\/configuration-not-found/i.test(message)) {
     return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Phone, Email/Password và Google.";
   }
+  if (/region.*enabled|sms.*region/i.test(message)) {
+    return "Firebase chưa bật gửi SMS về vùng Việt Nam (+84). Vào Firebase Console > Authentication > Paramètres (Settings) > SMS region policy, thêm Việt Nam (+84).";
+  }
   if (/auth\/operation-not-allowed/i.test(message)) {
-    return "Phương thức đăng nhập này chưa được bật. Vào Authentication > Sign-in method để bật Phone, Email/Password hoặc Google.";
+    return "Phương thức Phone hoặc vùng gửi SMS (+84) chưa được cấp phép. Vào Firebase Console > Authentication > Paramètres (Settings) > SMS Regions để thêm Việt Nam (+84).";
   }
   if (/auth\/unauthorized-domain/i.test(message)) {
     return "Domain hiện tại chưa được phép đăng nhập. Vào Authentication > Settings > Authorized domains để thêm domain.";
