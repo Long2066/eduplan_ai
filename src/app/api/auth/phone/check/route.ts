@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 const NO_STORE_HEADERS = { "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate" };
 
-import { normalizePhoneNumber, isValidPhoneNumber } from "@/lib/phone-utils";
+import { normalizePhoneNumber, isValidPhoneNumber, phoneToInternalEmail } from "@/lib/phone-utils";
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +43,18 @@ export async function POST(request: Request) {
       const code = typeof e === "object" && e !== null && "code" in e ? (e as { code?: string }).code : "";
       if (code !== "auth/user-not-found") {
         console.error("[Phone Check Auth Error]", e);
+      }
+    }
+
+    if (!exists) {
+      try {
+        const internalEmail = phoneToInternalEmail(normalized);
+        const userRecord = await auth.getUserByEmail(internalEmail);
+        if (userRecord && userRecord.uid) {
+          exists = true;
+        }
+      } catch {
+        // not found
       }
     }
 

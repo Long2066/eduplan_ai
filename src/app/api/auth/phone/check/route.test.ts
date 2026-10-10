@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/phone-utils";
+import {
+  isInternalPhoneEmail,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+  phoneToInternalEmail,
+} from "@/lib/phone-utils";
 
 describe("phone normalization & validation", () => {
   it("normalizes Vietnamese mobile numbers starting with 0", () => {
@@ -22,5 +27,13 @@ describe("phone normalization & validation", () => {
     expect(isValidPhoneNumber("abc")).toBe(false);
     expect(isValidPhoneNumber("")).toBe(false);
     expect(isValidPhoneNumber("+0123")).toBe(false);
+  });
+
+  it("converts phone numbers to internal emails and recognizes them", () => {
+    const email = phoneToInternalEmail("+84912345678");
+    expect(email).toBe("phone_84912345678@phone.eduplan.vn");
+    expect(isInternalPhoneEmail(email)).toBe(true);
+    expect(isInternalPhoneEmail("user@gmail.com")).toBe(false);
+    expect(isInternalPhoneEmail(null)).toBe(false);
   });
 });

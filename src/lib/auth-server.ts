@@ -5,6 +5,7 @@ import { getFirebaseAdminAuth, getFirebaseDb } from "@/lib/firebase-admin";
 import { normalizeSubscriptionPlan, type SubscriptionPlan } from "@/lib/model-strategy";
 import { buildSubscriptionStatus, getSubscriptionSettings, initialSubscriptionFields, normalizeSubscriptionSettings, type SubscriptionStatus } from "@/lib/subscription-policy";
 import { accountBlockedMessage } from "@/lib/account-block";
+import { isInternalPhoneEmail } from "@/lib/phone-utils";
 
 export const SESSION_COOKIE_NAME = "eduplan_session";
 export const DEFAULT_FREE_LIMIT = 3;
@@ -53,9 +54,11 @@ export async function ensureUserProfile(decoded: DecodedIdToken) {
   const snapshot = await ref.get();
   const now = new Date();
   const phoneNumber = userRecord.phoneNumber || (decoded.phone_number as string) || String(snapshot.get("phoneNumber") || "");
-  const isPhoneOnlyVerified = Boolean(!userRecord.email && phoneNumber);
+  const rawEmail = userRecord.email || decoded.email || "";
+  const isInternal = isInternalPhoneEmail(rawEmail);
+  const isPhoneOnlyVerified = Boolean((!rawEmail || isInternal) && phoneNumber);
   const baseProfile = {
-    email: userRecord.email || decoded.email || "",
+    email: isInternal ? "" : rawEmail,
     phoneNumber,
     displayName: userRecord.displayName || decoded.name || (phoneNumber ? `Người dùng ${phoneNumber.slice(-4)}` : ""),
     photoURL: userRecord.photoURL || decoded.picture || "",
@@ -125,11 +128,13 @@ export async function currentUser(): Promise<AuthUser | null> {
   const freeLimit = subscription.free.limit;
   const usedGenerations = subscription.free.used;
   const activeCard = subscription.cards.find((card) => card.id === subscription.activePlan);
-  const isPhoneOnlyUser = Boolean(!profile.email && profile.phoneNumber);
+  const rawEmail = String(profile.email || decoded.email || "");
+  const isInternal = isInternalPhoneEmail(rawEmail);
+  const isPhoneOnlyUser = Boolean((!rawEmail || isInternal) && profile.phoneNumber);
 
   return {
     uid: decoded.uid,
-    email: String(profile.email || decoded.email || ""),
+    email: isInternal ? "" : rawEmail,
     phoneNumber: String(profile.phoneNumber || (decoded.phone_number as string) || ""),
     displayName: String(profile.displayName || decoded.name || ""),
     photoURL: String(profile.photoURL || decoded.picture || ""),
