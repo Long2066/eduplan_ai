@@ -50,6 +50,9 @@ function friendlyAuthError(error: unknown) {
   if (/auth\/configuration-not-found/i.test(message)) {
     return "Firebase Authentication chưa được bật cho project này. Vào Firebase Console > Authentication > Get started, rồi bật Phone, Email/Password và Google.";
   }
+  if (/auth\/billing-not-enabled/i.test(message)) {
+    return "Firebase yêu cầu dự án phải liên kết tài khoản thanh toán (gói Blaze) để gửi SMS thật ra số điện thoại bên ngoài. Bạn cần nâng cấp lên gói Blaze trong Firebase Console hoặc thêm số này vào danh sách 'Số điện thoại thử nghiệm'.";
+  }
   if (/region.*enabled|sms.*region/i.test(message)) {
     return "Firebase chưa bật gửi SMS về vùng Việt Nam (+84). Vào Firebase Console > Authentication > Paramètres (Settings) > SMS region policy, thêm Việt Nam (+84).";
   }
@@ -846,8 +849,8 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 ) : null}
 
                 <button
-                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
-                  disabled={isSubmitting}
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting || (mode === "register" && !acceptedPolicy)}
                   onClick={handleEmailAuth}
                 >
                   {isSubmitting ? "Đang xử lý..." : title}
@@ -1001,8 +1004,8 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 ) : null}
 
                 <button
-                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
-                  disabled={isSubmitting}
+                  className="btn-primary auth-submit-btn w-full py-4 text-lg font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting || (mode === "register" && !acceptedPolicy)}
                   onClick={handleSendPhoneOtp}
                 >
                   {isSubmitting ? "Đang gửi mã OTP..." : mode === "register" ? "Gửi mã đăng ký SMS" : "Gửi mã đăng nhập SMS"}
