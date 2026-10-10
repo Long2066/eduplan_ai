@@ -377,7 +377,53 @@ textarea {
   }
 
   .app-shell {
-    padding-top: 7.6rem !important;
+    padding-top: clamp(5.8rem, 14vh, 6.6rem) !important;
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  /* Prevent iOS Safari auto-zoom on input focus */
+  .input-field,
+  .auth-input-field,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Auth mobile responsive sizing */
+  .auth-shell {
+    max-height: none !important;
+    border-radius: 1.25rem !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08) !important;
+  }
+  .auth-page {
+    padding: 0.75rem 0.5rem 1.75rem !important;
+    align-items: flex-start !important;
+  }
+  .auth-form-container {
+    padding: 1.25rem 0.95rem !important;
+  }
+
+  /* A4 Preview Shell Touch & Fit */
+  .a4-preview-shell {
+    padding: 0.35rem !important;
+    border-radius: 0.75rem !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .a4-preview-shell .a4-document {
+    margin: 0 auto;
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
   }
 }
 

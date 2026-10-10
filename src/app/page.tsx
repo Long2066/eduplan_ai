@@ -168,6 +168,7 @@ export default function Home() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isIntroVisible, setIsIntroVisible] = useState(false);
   const [isGuideVisible, setIsGuideVisible] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
   const [generationJob, setGenerationJob] = useState<ClientGenerationJob | null>(null);
   const [isCancellingGeneration, setIsCancellingGeneration] = useState(false);
   const [generationPipelineMode, setGenerationPipelineMode] = useState<"legacy" | "staged">("legacy");
@@ -428,6 +429,7 @@ export default function Home() {
     setIsGenerating(true);
     setGenerationError("");
     setPedagogyAudit(null);
+    setMobileTab("preview");
     if (generationPipelineMode === "legacy") setGenerationJob(null);
     let stagedController: AbortController | null = null;
 
@@ -519,6 +521,7 @@ export default function Home() {
     setLesson(nextLesson);
     setPedagogyAudit(null);
     setToastMessage("Đã mở giáo án từ lịch sử.");
+    setMobileTab("preview");
   }
 
   async function handleResendVerification() {
@@ -716,10 +719,43 @@ export default function Home() {
         <IntroductionModal isOpen={isIntroVisible} onClose={() => setIsIntroVisible(false)} />
         <GuideModal isOpen={isGuideVisible} onClose={() => setIsGuideVisible(false)} />
 
+        {/* Mobile View Switcher (< xl) */}
+        <div className="mb-3 flex xl:hidden items-center rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-900/5">
+          <button
+            type="button"
+            className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 active:scale-[0.98] ${
+              mobileTab === "form"
+                ? "bg-brand-600 text-white shadow-sm shadow-brand-600/25"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+            onClick={() => setMobileTab("form")}
+          >
+            <span>📝</span>
+            <span>Soạn giáo án</span>
+          </button>
+          <button
+            type="button"
+            className={`relative flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 active:scale-[0.98] ${
+              mobileTab === "preview"
+                ? "bg-brand-600 text-white shadow-sm shadow-brand-600/25"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+            onClick={() => setMobileTab("preview")}
+          >
+            <span>📄</span>
+            <span>Xem giáo án A4</span>
+            {lesson ? (
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
+            ) : isGenerating ? (
+              <span className="h-2 w-2 animate-ping rounded-full bg-amber-400" />
+            ) : null}
+          </button>
+        </div>
+
         {/* ── BODY: Form + Preview ── */}
         <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[420px_1fr] xl:gap-5 xl:overflow-hidden">
           {/* Left: Form */}
-          <div className="xl:min-h-0 xl:overflow-hidden xl:pr-1">
+          <div className={`xl:block xl:min-h-0 xl:overflow-hidden xl:pr-1 ${mobileTab === "form" ? "block" : "hidden"}`}>
             <LessonForm
               input={input}
               errors={errors}
@@ -731,7 +767,7 @@ export default function Home() {
           </div>
 
           {/* Right: Preview */}
-          <div className="fixed-preview-pane xl:flex xl:min-h-0 xl:flex-col xl:overflow-hidden">
+          <div className={`fixed-preview-pane xl:flex xl:min-h-0 xl:flex-col xl:overflow-hidden ${mobileTab === "preview" ? "block" : "hidden"}`}>
             {/* Config error banner */}
             {pipelineConfigError ? (
               <div className="toast-banner mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold leading-5 text-amber-900 shadow-sm">

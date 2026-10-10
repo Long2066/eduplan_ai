@@ -228,36 +228,41 @@ function AiLoadingPreview() {
 export function LessonPreview({ lesson, isGenerating = false }: LessonPreviewProps) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const [previewZoom, setPreviewZoom] = useState(0.7);
+  const [zoomMode, setZoomMode] = useState<"fit" | "full">("fit");
 
   useEffect(() => {
     if (!lesson || !shellRef.current) return;
     const shell = shellRef.current;
     const updateZoom = () => {
-      const availableWidth = Math.max(shell.clientWidth - 28, 320);
+      if (zoomMode === "full") {
+        setPreviewZoom(1);
+        return;
+      }
+      const availableWidth = Math.max(shell.clientWidth - 16, 260);
       const a4Width = 794;
-      const nextZoom = Math.min(0.95, Math.max(0.58, availableWidth / a4Width));
+      const nextZoom = Math.min(1, Math.max(0.32, availableWidth / a4Width));
       setPreviewZoom(Number(nextZoom.toFixed(3)));
     };
     updateZoom();
     const observer = new ResizeObserver(updateZoom);
     observer.observe(shell);
     return () => observer.disconnect();
-  }, [lesson]);
+  }, [lesson, zoomMode]);
 
   if (isGenerating) return <AiLoadingPreview />;
 
   if (!lesson) {
     return (
-      <section className="flex min-h-[480px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-surface-50 to-brand-50/30 p-8 text-center shadow-soft xl:h-full xl:min-h-0">
+      <section className="flex min-h-[380px] sm:min-h-[480px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-surface-50 to-brand-50/30 p-6 sm:p-8 text-center shadow-soft xl:h-full xl:min-h-0">
         <div className="flex max-w-md flex-col items-center">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-lg font-bold text-brand-600 shadow-soft">
+          <div className="mb-4 sm:mb-5 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-base sm:text-lg font-bold text-brand-600 shadow-soft">
             A4
           </div>
-          <h2 className="gradient-text text-xl font-bold">
+          <h2 className="gradient-text text-lg sm:text-xl font-bold">
             Bản xem trước giáo án sẽ xuất hiện tại đây
           </h2>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-500">
-            Preview đã được thu nhỏ để dễ bao quát bố cục trang.
+          <p className="mt-2.5 max-w-md text-xs sm:text-sm leading-relaxed text-slate-500">
+            Khổ A4 tự động co giãn vừa vặn với kích thước màn hình điện thoại hoặc máy tính.
           </p>
         </div>
       </section>
@@ -268,7 +273,18 @@ export function LessonPreview({ lesson, isGenerating = false }: LessonPreviewPro
   const previewStyle = { "--a4-preview-zoom": String(previewZoom) } as CSSProperties;
 
   return (
-    <div ref={shellRef} className="a4-preview-shell animate-fade-in" style={previewStyle}>
+    <div ref={shellRef} className="a4-preview-shell animate-fade-in relative" style={previewStyle}>
+      <div className="sticky top-2 z-20 flex justify-end px-2 mb-1.5 pointer-events-none">
+        <button
+          type="button"
+          onClick={() => setZoomMode((m) => (m === "fit" ? "full" : "fit"))}
+          className="pointer-events-auto inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-slate-900/85 px-3 py-1.5 text-xs font-semibold text-white shadow-md backdrop-blur-sm transition-all hover:bg-slate-900 active:scale-95"
+          title="Bấm để chuyển giữa Vừa màn hình và 100%"
+        >
+          <span>{zoomMode === "fit" ? "🔍 Phóng to 100%" : "📐 Vừa màn hình"}</span>
+          <span className="font-mono text-[11px] opacity-75">{Math.round(previewZoom * 100)}%</span>
+        </button>
+      </div>
       <div className="a4-document">
         {periods.map((period) => (
           <LessonPeriodPage key={period.periodNumber} lesson={lesson} period={period} />

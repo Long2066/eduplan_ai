@@ -642,7 +642,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       : "Tạo tài khoản mới để bắt đầu sử dụng EduPlan AI.";
 
   return (
-    <main className="auth-page flex min-h-screen items-center justify-center px-4 py-7 sm:px-6 lg:px-8">
+    <main className="auth-page flex min-h-screen items-center justify-center px-3 py-4 sm:px-6 sm:py-7 lg:px-8">
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}
@@ -651,7 +651,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
         />
       ) : null}
 
-      <div className="auth-shell animate-fade-in flex w-full max-w-6xl overflow-hidden bg-white shadow-float md:min-h-[600px] lg:min-h-[660px]">
+      <div className="auth-shell animate-fade-in flex w-full max-w-6xl overflow-hidden rounded-2xl sm:rounded-[1.4rem] bg-white shadow-float md:min-h-[600px] lg:min-h-[660px]">
         <div className="auth-hero relative hidden w-[48%] flex-shrink-0 overflow-hidden px-10 py-9 text-white md:flex md:flex-col lg:px-14">
           <div className="auth-hero-dots pointer-events-none absolute inset-0" />
           <div className="auth-hero-wave pointer-events-none absolute inset-0" />
@@ -713,9 +713,9 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </p>
         </div>
 
-        <div className="auth-form-container flex w-full flex-1 flex-col overflow-y-auto px-6 py-9 sm:px-10 md:px-12 lg:px-16 xl:px-20">
-          <div className="mb-7 flex items-center gap-3 md:hidden">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/20">
+        <div className="auth-form-container flex w-full flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-10 md:px-12 lg:px-16 xl:px-20">
+          <div className="mb-5 flex items-center gap-2.5 md:hidden">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-md shadow-brand-600/20">
               <BookLogoIcon />
             </span>
             <span className="text-xl font-black text-slate-950">EduPlan AI</span>
@@ -723,17 +723,16 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
           <div className="flex flex-1 flex-col justify-center">
             {mode !== "reset" ? (
-              <div className="auth-switcher-container mb-8 text-center">
-                <div className="relative inline-flex rounded-full bg-surface-100 p-1.5 shadow-inner">
+              <div className="auth-switcher-container mb-5 sm:mb-8 text-center">
+                <div className="relative inline-flex w-full max-w-[280px] sm:max-w-xs rounded-full bg-surface-100 p-1 shadow-inner">
                   <div
-                    className="absolute inset-y-1.5 rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
+                    className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
                     style={{
-                      width: "50%",
-                      left: mode === "login" ? "6px" : "calc(50% - 0px)",
+                      left: mode === "login" ? "4px" : "calc(50%)",
                     }}
                   />
                   <button
-                    className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
+                    className={`relative z-10 flex-1 rounded-full py-2 text-sm sm:text-base font-black transition-colors duration-200 active:scale-95 ${
                       mode === "login" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
                     }`}
                     onClick={() => switchMode("login")}
@@ -741,7 +740,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                     Đăng nhập
                   </button>
                   <button
-                    className={`relative z-10 min-w-[128px] rounded-full px-6 py-2.5 text-base font-black transition-colors duration-200 ${
+                    className={`relative z-10 flex-1 rounded-full py-2 text-sm sm:text-base font-black transition-colors duration-200 active:scale-95 ${
                       mode === "register" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
                     }`}
                     onClick={() => switchMode("register")}
@@ -752,19 +751,19 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
               </div>
             ) : null}
 
-            <div className="auth-header-container mb-6">
-              <h2 className="text-4xl font-black leading-tight text-slate-950">
+            <div className="auth-header-container mb-4 sm:mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-slate-950">
                 {title}
               </h2>
-              <p className="mt-2.5 text-base leading-relaxed text-slate-500">
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base leading-relaxed text-slate-500">
                 {subtitle}
               </p>
             </div>
 
-            <div className="mb-6 grid grid-cols-2 gap-1.5 rounded-2xl bg-surface-100 p-1.5 text-sm font-bold">
+            <div className="mb-4 sm:mb-6 grid grid-cols-2 gap-1.5 rounded-2xl bg-surface-100 p-1 sm:p-1.5 text-xs sm:text-sm font-bold">
               <button
                 type="button"
-                className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all ${
+                className={`flex min-h-[44px] items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-4 py-2 transition-all active:scale-[0.98] ${
                   authMethod === "email"
                     ? "bg-white text-brand-700 shadow-sm"
                     : "text-slate-500 hover:text-slate-800"
@@ -776,11 +775,11 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 }}
               >
                 <MailIcon />
-                <span>Email</span>
+                <span className="truncate">Email</span>
               </button>
               <button
                 type="button"
-                className={`flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all ${
+                className={`flex min-h-[44px] items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-2 sm:px-4 py-2 transition-all active:scale-[0.98] ${
                   authMethod === "phone"
                     ? "bg-white text-brand-700 shadow-sm"
                     : "text-slate-500 hover:text-slate-800"
@@ -792,7 +791,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 }}
               >
                 <PhoneIcon />
-                <span>Số điện thoại</span>
+                <span className="truncate">Số điện thoại</span>
               </button>
             </div>
 
@@ -1207,7 +1206,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             )}
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-base">
+          <div className="mt-5 sm:mt-8 flex flex-wrap items-center justify-center gap-x-4 sm:gap-x-5 gap-y-2 text-sm sm:text-base">
             {mode !== "login" ? (
               <button
                 className="font-bold text-brand-700 transition-colors hover:text-brand-800"
@@ -1234,7 +1233,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             ) : null}
           </div>
 
-          <div className="mt-8 border-t border-slate-100 pt-6 text-center text-sm leading-6 text-slate-400">
+          <div className="mt-5 sm:mt-8 border-t border-slate-100 pt-4 sm:pt-6 text-center text-xs sm:text-sm leading-5 sm:leading-6 text-slate-400">
             Khi sử dụng EduPlan AI, bạn đồng ý tuân thủ{" "}
             <button className="font-bold text-brand-600 transition-colors hover:text-brand-700 hover:underline" type="button" onClick={() => setPolicyTitle("Điều khoản sử dụng")}>
               Điều khoản sử dụng
