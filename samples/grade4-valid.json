@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "metadata": {
+    "grade": 4,
+    "subject": "Tiếng Việt",
+    "series": "Kết nối tri thức với cuộc sống",
+    "lesson_title": "Minh họa hoạt động đọc lớp 4 (dữ liệu tự tạo, không phải SGK)",
+    "lesson_number": null,
+    "lesson_type": "reading",
+    "minutes_per_period": 35,
+    "textbook_volume": null
+  },
+  "sources": [
+    {
+      "source_id": "P1",
+      "title": "Văn bản đọc ví dụ do người dùng dự kiến hoặc tự biên soạn",
+      "source_type": "user_material",
+      "verified": true,
+      "anchor": "văn bản mô phỏng nội bộ tại sample"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "R1",
+      "text": "Đọc một đoạn rõ ràng và trả lời ý chính",
+      "observable_evidence": "Học sinh đọc và trả lời có chi tiết chứng minh"
+    }
+  ],
+  "periods": [
+    {
+      "index": 1,
+      "duration_minutes": 35,
+      "activities": [
+        {
+          "id": "B1",
+          "title": "Khởi động",
+          "minutes": 5,
+          "objective_ids": [
+            "R1"
+          ],
+          "teacher_script": "Quan sát tiêu đề văn bản ví dụ. Em dự đoán nội dung sẽ nói về điều gì?",
+          "student_actions": "Học sinh dự đoán theo nhan đề, chia sẻ trong nhóm đôi.",
+          "expected_output": "Một ý dự đoán hợp lý",
+          "assessment": "HS giải thích lí do dự đoán",
+          "misconception_support": "GV gợi một từ khóa trong tiêu đề",
+          "source_ids": [
+            "P1"
+          ]
+        },
+        {
+          "id": "B2",
+          "title": "Đọc và tìm hiểu",
+          "minutes": 25,
+          "objective_ids": [
+            "R1"
+          ],
+          "teacher_script": "Các em tự đọc đoạn ví dụ rồi chỉ chi tiết giúp xác định ý chính, thảo luận cùng bạn.",
+          "student_actions": "HS đọc cá nhân, đánh dấu bằng chứng và trả lời có căn cứ.",
+          "expected_output": "Một câu ý chính và chi tiết minh chứng",
+          "assessment": "GV xem lời giải thích và câu trả lời",
+          "misconception_support": "GV cho học sinh tìm câu đầu hoặc từ khóa, không trả lời thay",
+          "source_ids": [
+            "P1"
+          ]
+        },
+        {
+          "id": "B3",
+          "title": "Vận dụng",
+          "minutes": 5,
+          "objective_ids": [
+            "R1"
+          ],
+          "teacher_script": "Em nêu một điều đã hiểu và kể một tình huống gần gũi để vận dụng.",
+          "student_actions": "HS phát biểu ngắn, nghe bạn và bổ sung một ý mới.",
+          "expected_output": "Một câu vận dụng",
+          "assessment": "Câu trả lời phù hợp nội dung",
+          "misconception_support": "Cho khung nói Em học được rằng ...",
+          "source_ids": [
+            "P1"
+          ]
+        }
+      ]
+    }
+  ],
+  "source_conflicts": [],
+  "digital_integration": {
+    "is_applicable": false
+  },
+  "status": "draft",
+  "human_approval": false
+}

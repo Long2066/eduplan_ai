@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pedagogical Review Report",
+  "type": "object",
+  "required": [
+    "plan_id",
+    "review_status",
+    "issues",
+    "human_review_required"
+  ],
+  "properties": {
+    "plan_id": {
+      "type": "string"
+    },
+    "review_status": {
+      "enum": [
+        "not_reviewed",
+        "blocked",
+        "needs_rewrite",
+        "ready_for_human_review",
+        "human_approved"
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "issue_id",
+          "severity",
+          "activity_id",
+          "evidence",
+          "why_wrong",
+          "proposed_fix",
+          "resolved"
+        ],
+        "properties": {
+          "issue_id": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "blocker",
+              "major",
+              "minor"
+            ]
+          },
+          "activity_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "why_wrong": {
+            "type": "string"
+          },
+          "proposed_fix": {
+            "type": "string"
+          },
+          "resolved": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "score": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 40
+    },
+    "human_review_required": {
+      "type": "boolean"
+    }
+  }
+}

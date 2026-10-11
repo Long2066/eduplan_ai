@@ -1,0 +1,212 @@
+{
+  "schema_version": "1.0.0",
+  "metadata": {
+    "grade": 1,
+    "subject": "Tiếng Việt",
+    "series": "Kết nối tri thức với cuộc sống",
+    "lesson_title": "Bài minh họa vần an, ăn, ân (ngữ liệu mô phỏng, không phải nguyên văn SGK)",
+    "lesson_number": null,
+    "lesson_type": "grade1_phonics",
+    "minutes_per_period": 35,
+    "textbook_volume": null
+  },
+  "sources": [
+    {
+      "source_id": "S1",
+      "title": "Nguồn bài học mô phỏng do dự án tạo để test (KHÔNG PHẢI SGK)",
+      "source_type": "pedagogical_inference",
+      "verified": false,
+      "anchor": ""
+    },
+    {
+      "source_id": "S2",
+      "title": "Tài liệu mẫu nét viết do người dùng xác nhận trực quan trong fixture",
+      "source_type": "user_material",
+      "verified": true,
+      "anchor": "trang mẫu: chữ a và n (giả lập test; thay nguồn thật khi triển khai)"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "O1",
+      "text": "Đọc được vần trong bản thử nghiệm",
+      "observable_evidence": "Đọc cá nhân và ghép thẻ"
+    },
+    {
+      "id": "O2",
+      "text": "Luyện viết trong bản thử nghiệm",
+      "observable_evidence": "Bảng con và vở"
+    }
+  ],
+  "periods": [
+    {
+      "index": 1,
+      "duration_minutes": 35,
+      "activities": [
+        {
+          "id": "A1",
+          "title": "Mở đầu ôn tiền đề",
+          "minutes": 4,
+          "objective_ids": [
+            "O1"
+          ],
+          "teacher_script": "Giáo viên hỏi: Các em nhìn vào thẻ chữ và đọc âm đã học.",
+          "student_actions": "Học sinh đọc thẻ chữ cá nhân, chỉ ra âm đã biết và nghe bạn.",
+          "expected_output": "Đọc đúng âm ôn tập",
+          "assessment": "Giáo viên gọi cá nhân đọc và sửa lỗi",
+          "misconception_support": "Nếu HS chưa nhận ra, GV chỉ từng chữ và cho thử lại",
+          "source_ids": [
+            "S1"
+          ]
+        },
+        {
+          "id": "A2",
+          "title": "Phân tích và đọc vần",
+          "minutes": 22,
+          "objective_ids": [
+            "NO_SUCH_OBJECTIVE"
+          ],
+          "teacher_script": "Các em ghép thẻ a và n. Hãy chỉ âm đầu phần vần và âm cuối, rồi đánh vần chậm.",
+          "student_actions": "Ghép a và n, chỉ từng thẻ, so sánh an với ăn và ân, đọc cá nhân.",
+          "expected_output": "Ghép và đọc đúng các vần",
+          "assessment": "Kiểm tra ghép thẻ và gọi 3 HS đọc",
+          "misconception_support": "Nếu lẫn dấu phụ ă/â, GV đặt ba thẻ cạnh nhau và gợi chỉ chữ khác",
+          "source_ids": [
+            "S1"
+          ]
+        },
+        {
+          "id": "A3",
+          "title": "Viết bảng con ngắn",
+          "minutes": 9,
+          "objective_ids": [
+            "O2"
+          ],
+          "teacher_script": "Quan sát chữ mẫu trên giấy. Cô viết mẫu từng nét, các em viết thử bằng ngón tay rồi bảng con.",
+          "student_actions": "HS viết trên không và bảng con, giơ bảng để cô nhận xét; sửa nét sai.",
+          "expected_output": "Một vần viết theo mẫu",
+          "assessment": "Đối chiếu mẫu và nhận xét vị trí nét",
+          "misconception_support": "HS cầm bút yếu được GV chậm lại từng nét và luyện thêm bảng",
+          "source_ids": [
+            "S2"
+          ]
+        },
+        {
+          "id": "A4",
+          "title": "Củng cố ngắn",
+          "minutes": 4,
+          "objective_ids": [
+            "O1"
+          ],
+          "teacher_script": "Cả lớp nhìn ba thẻ và cho biết thẻ nào có dấu mũ, thẻ nào có dấu breve.",
+          "student_actions": "HS giơ thẻ và nói ngắn điểm khác nhau, tự sửa theo đáp án.",
+          "expected_output": "Chỉ đúng thẻ",
+          "assessment": "Giơ thẻ và gọi cá nhân",
+          "misconception_support": "Nếu HS nhầm, GV cho quan sát thẻ nét to và gọi đọc lại",
+          "source_ids": [
+            "S1"
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "duration_minutes": 35,
+      "activities": [
+        {
+          "id": "A5",
+          "title": "Ôn vần đầu tiết",
+          "minutes": 4,
+          "objective_ids": [
+            "O1"
+          ],
+          "teacher_script": "Các em tự chỉ vần và đọc một lần theo thứ tự cô chỉ, sau đó thử đọc ngược.",
+          "student_actions": "HS đọc lần lượt ba vần, đánh vần lại khi sai, quan sát bạn.",
+          "expected_output": "Đọc rõ ba vần",
+          "assessment": "Gọi học sinh chưa được kiểm tra tiết trước",
+          "misconception_support": "HS còn lẫn được nhìn thẻ rời và đọc có trợ giúp",
+          "source_ids": [
+            "SOURCE_UNKNOWN"
+          ]
+        },
+        {
+          "id": "A6",
+          "title": "Luyện viết theo mẫu",
+          "minutes": 16,
+          "objective_ids": [
+            "O2"
+          ],
+          "teacher_script": "Cô nhắc tư thế, mở vở, quan sát điểm bắt đầu và viết một dòng theo mẫu đã xác nhận.",
+          "student_actions": "HS thực hành viết, tự soi nét theo mẫu, đổi vở nhận xét một lỗi.",
+          "expected_output": "Mẫu chữ rõ nét theo nguồn",
+          "assessment": "GV xem vở và sửa lỗi từng nhóm",
+          "misconception_support": "Đối với em viết chậm, giảm số chữ nhưng không bỏ mẫu nét cần đạt",
+          "source_ids": [
+            "S2"
+          ]
+        },
+        {
+          "id": "A7",
+          "title": "Luyện đọc câu bổ sung",
+          "minutes": 10,
+          "objective_ids": [
+            "O1"
+          ],
+          "teacher_script": "Đọc câu ví dụ do giáo viên biên soạn; đây không phải nguyên văn SGK.",
+          "student_actions": "HS tìm tiếng có vần đang học và nói nghĩa ngắn, đọc cả câu.",
+          "expected_output": "Đọc được một câu ngắn",
+          "assessment": "Đọc cá nhân và trả lời câu hỏi",
+          "misconception_support": "Tách tiếng cần luyện, cho đánh vần rồi ghép thành câu",
+          "source_ids": [
+            "S1"
+          ]
+        },
+        {
+          "id": "A8",
+          "title": "Củng cố cuối bài",
+          "minutes": 5,
+          "objective_ids": [
+            "O1",
+            "O2"
+          ],
+          "teacher_script": "Hãy nói một điều em vừa học và chỉ một chữ trên vở mà em đã tự sửa.",
+          "student_actions": "HS đọc một vần và chỉ ra chữ đã sửa, giải thích điểm khác.",
+          "expected_output": "Một vần đọc và một chữ tự sửa",
+          "assessment": "Quan sát 2 minh chứng thực hành",
+          "misconception_support": "GV đưa lựa chọn hai thẻ để em cần hỗ trợ chọn và giải thích",
+          "source_ids": [
+            "S1",
+            "S2"
+          ]
+        }
+      ]
+    }
+  ],
+  "source_conflicts": [
+    "Số bài chưa xác minh"
+  ],
+  "writing_instruction": [
+    {
+      "target": "a (fixture kỹ thuật)",
+      "reference_source_id": "S2",
+      "reference_anchor": "trang mẫu chữ a - chỉ dùng để test cấu trúc",
+      "strokes": [
+        {
+          "name": "nét mẫu 1",
+          "start": "theo hình nguồn S2",
+          "path": "theo số thứ tự trên hình S2",
+          "end": "theo hình nguồn S2"
+        }
+      ],
+      "joins": "Đối chiếu mô hình nét nối trong S2; dữ liệu fixture không phải mẫu dạy thật",
+      "diacritics": "Khi viết ă/â, so sánh hình nguồn có dấu phụ",
+      "teacher_demonstration_script": "GV chỉ trực tiếp hình nét đã xác minh; không dùng mô tả giả định của fixture",
+      "error_fix": "Cho học sinh sửa theo hình nguồn"
+    }
+  ],
+  "digital_integration": {
+    "is_applicable": false
+  },
+  "status": "approved",
+  "human_approval": false
+}

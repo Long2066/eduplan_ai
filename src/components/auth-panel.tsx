@@ -721,7 +721,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
 
           <div className="flex flex-1 flex-col justify-center">
 
-            <div className="auth-header-container mb-4 sm:mb-6">
+            <div className="auth-header-container mb-4 sm:mb-6 text-center">
               <h2 className="text-lg sm:text-xl md:text-2xl font-black leading-tight text-slate-950">
                 {title}
               </h2>

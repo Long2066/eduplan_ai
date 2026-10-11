@@ -1,0 +1,66 @@
+{
+  "version": "1.0.0",
+  "note": "Workflow hints from user infographics and sample lesson plans; not official fixed timetable.",
+  "routes": [
+    {
+      "grade": 1,
+      "lesson_type": "grade1_phonics",
+      "skills": [
+        "tv-grade1-phonics",
+        "tv-grade1-handwriting"
+      ]
+    },
+    {
+      "grade": 1,
+      "lesson_type": "grade1_reading",
+      "skills": [
+        "tv-grade1-reading"
+      ]
+    },
+    {
+      "grade": 1,
+      "lesson_type": "grade1_review_story",
+      "skills": [
+        "tv-grade1-review-story"
+      ]
+    },
+    {
+      "grade": 2,
+      "lesson_type": "*",
+      "skills": [
+        "tv-grade2"
+      ]
+    },
+    {
+      "grade": 3,
+      "lesson_type": "*",
+      "skills": [
+        "tv-grade3"
+      ]
+    },
+    {
+      "grade": 4,
+      "lesson_type": "*",
+      "skills": [
+        "tv-grade4"
+      ]
+    },
+    {
+      "grade": 5,
+      "lesson_type": "*",
+      "skills": [
+        "tv-grade5"
+      ]
+    }
+  ],
+  "always": [
+    "tv-source-audit",
+    "tv-route-curriculum",
+    "tv-pedagogy-audit"
+  ],
+  "conditional": {
+    "digital": "tv-digital-integration",
+    "docx": "tv-docx-export",
+    "app_engineering": "tv-build-lesson-app"
+  }
+}

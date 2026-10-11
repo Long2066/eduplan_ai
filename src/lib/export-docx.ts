@@ -294,11 +294,116 @@ export function buildLessonDocxDocument(lesson: LessonPlan) {
     generalInfo: { ...lesson.generalInfo, lessonTitle },
   };
   const periods = normalizedPeriods(documentLesson);
-  const children = periods.flatMap((period, index) => (
-    index === 0
-      ? periodChildren(documentLesson, period)
-      : [pageBreak(), ...periodChildren(documentLesson, period)]
-  ));
+  const isMultiPeriod = periods.length > 1;
+  const firstPeriod = periods[0];
+  const heading = lessonDocumentHeading(documentLesson, firstPeriod);
+  const outcomes = documentLesson.outcomes;
+  const displayOptions: ActivityDocumentOptions = {
+    compact: documentLesson.meta?.plan === "free",
+    concise: true,
+  };
+
+  const children: Array<Paragraph | Table> = [];
+
+  // 1. Header block
+  if (lessonNeedsAdjustment(documentLesson)) {
+    children.push(paragraph([text(lessonValidationLabel(documentLesson), { bold: true, color: RED })], {
+      alignment: AlignmentType.CENTER,
+      spacingAfter: 80,
+    }));
+  }
+  children.push(
+    paragraph([text(heading.documentTitle, { bold: true, color: BLUE, size: 36 })], {
+      alignment: AlignmentType.CENTER,
+      spacingAfter: 90,
+    }),
+    paragraph([text(`${heading.schoolLabel} `, { bold: true }), text("................................")], { alignment: AlignmentType.LEFT, spacingAfter: 60 }),
+    paragraph(
+      [
+        text("Lớp: ", { bold: true }),
+        text(`${heading.grade} `),
+        text("Sĩ số: ", { bold: true }),
+        text("............................. "),
+        text("Thời lượng: ", { bold: true }),
+        text(`${heading.durationMinutes} phút${isMultiPeriod ? ` (${periods.length} tiết)` : ""}`),
+      ],
+      { alignment: AlignmentType.LEFT, spacingAfter: 60 },
+    ),
+    paragraph([text("Người dạy: ", { bold: true }), text("............................. "), text("Môn: ", { bold: true }), text(heading.subject)], {
+      alignment: AlignmentType.LEFT,
+      spacingAfter: 90,
+    }),
+    paragraph([text(lessonHeadingTitle(heading.lessonTitle), { bold: true, color: BRIGHT_BLUE, size: 34 })], {
+      alignment: AlignmentType.CENTER,
+      spacingAfter: 20,
+    }),
+    paragraph([text(isMultiPeriod ? `(TIẾT 1)` : heading.periodLabel, { bold: true, color: RED, size: 34 })], {
+      alignment: AlignmentType.CENTER,
+      spacingAfter: 70,
+    }),
+    paragraph([text(heading.dateLabel, { italic: true })], {
+      alignment: AlignmentType.RIGHT,
+      spacingAfter: 120,
+    }),
+
+    // I. YÊU CẦU CẦN ĐẠT (duy nhất 1 lần cho toàn bài)
+    sectionTitle("I. YÊU CẦU CẦN ĐẠT"),
+    subTitle("1. Kiến thức, kĩ năng:"),
+    ...dashList(outcomes.knowledgeAndSkills),
+    subTitle("2. Năng lực chung:"),
+    ...dashList(outcomes.generalCompetencies),
+    subTitle("3. Năng lực đặc thù môn học:"),
+    ...dashList(outcomes.specificCompetencies),
+    ...(outcomes.digitalCompetencies && outcomes.digitalCompetencies.length > 0 ? [
+      subTitle("4. Năng lực số:"),
+      ...dashList(outcomes.digitalCompetencies),
+      subTitle("5. Phẩm chất:"),
+    ] : [
+      subTitle("4. Phẩm chất:"),
+    ]),
+    ...dashList(outcomes.qualities),
+
+    // II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU (duy nhất 1 lần cho toàn bài)
+    sectionTitle("II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU"),
+    subTitle("1. Giáo viên:"),
+    ...dashList(sanitizeMaterialList(documentLesson.materials?.teacher)),
+    subTitle("2. Học sinh:"),
+    ...dashList(sanitizeMaterialList(documentLesson.materials?.students)),
+
+    // III. TIẾN TRÌNH DẠY HỌC
+    sectionTitle("III. TIẾN TRÌNH DẠY HỌC"),
+  );
+
+  // Các tiết trong Mục III
+  periods.forEach((period, idx) => {
+    if (isMultiPeriod) {
+      if (idx > 0) {
+        children.push(pageBreak());
+        children.push(
+          paragraph([text(lessonHeadingTitle(heading.lessonTitle), { bold: true, color: BRIGHT_BLUE, size: 28 })], {
+            alignment: AlignmentType.CENTER,
+            spacingAfter: 20,
+          }),
+        );
+      }
+      children.push(
+        paragraph(
+          [text(`(TIẾT ${period.periodNumber})${period.focus ? `: ${period.focus.toUpperCase()}` : ""}`, { bold: true, color: RED, size: 30 })],
+          { alignment: AlignmentType.CENTER, spacingAfter: 80 },
+        ),
+      );
+    }
+    children.push(activitiesTable(period.activities, displayOptions));
+  });
+
+  // IV. ĐIỀU CHỈNH SAU BÀI DẠY (duy nhất 1 lần ở cuối bài dạy)
+  children.push(
+    sectionTitle("IV. ĐIỀU CHỈNH SAU BÀI DẠY"),
+    blankLine(),
+    blankLine(),
+    blankLine(),
+    blankLine(),
+  );
 
   return new Document({
     sections: [

@@ -121,7 +121,19 @@ function ActivityTable({ activities, displayMode }: { activities: LessonActivity
   );
 }
 
-function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: PeriodPlan }) {
+function LessonPeriodPage({
+  lesson,
+  period,
+  isFirst = true,
+  isLast = true,
+  totalPeriods = 1,
+}: {
+  lesson: LessonPlan;
+  period: PeriodPlan;
+  isFirst?: boolean;
+  isLast?: boolean;
+  totalPeriods?: number;
+}) {
   const outcomes = period.outcomes || lesson.outcomes;
   const heading = lessonDocumentHeading(lesson, period);
   const compact = lesson.meta?.plan === "free";
@@ -129,6 +141,36 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
     compact,
     concise: true,
   };
+  const isMultiPeriod = totalPeriods > 1;
+
+  if (!isFirst) {
+    return (
+      <article className="a4-page period-lesson">
+        <header className="lesson-heading avoid-break text-center mb-6">
+          <h3 className="text-center">
+            {lessonHeadingTitle(heading.lessonTitle)}
+            <br />
+            <span className="text-red-600 font-bold">{heading.periodLabel}{period.focus ? `: ${period.focus.toUpperCase()}` : ""}</span>
+          </h3>
+        </header>
+
+        <A4Section title="III. TIẾN TRÌNH DẠY HỌC (TIẾP THEO)">
+          <ActivityTable activities={period.activities} displayMode={displayMode} />
+        </A4Section>
+
+        {isLast ? (
+          <A4Section title="IV. ĐIỀU CHỈNH SAU BÀI DẠY">
+            <div className="adjustment-lines">
+              <p>........................................................................................................................................</p>
+              <p>........................................................................................................................................</p>
+              <p>........................................................................................................................................</p>
+              <p>........................................................................................................................................</p>
+            </div>
+          </A4Section>
+        ) : null}
+      </article>
+    );
+  }
 
   return (
     <article className="a4-page period-lesson">
@@ -147,7 +189,7 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
             <strong>{heading.schoolLabel}</strong> {blank}
           </p>
           <p>
-            <strong>Lớp:</strong> {heading.grade} <strong>Sĩ số:</strong> {blank} <strong>Thời lượng:</strong> {heading.durationMinutes} phút
+            <strong>Lớp:</strong> {heading.grade} <strong>Sĩ số:</strong> {blank} <strong>Thời lượng:</strong> {heading.durationMinutes} phút{isMultiPeriod ? ` (${totalPeriods} tiết)` : ""}
           </p>
           <p>
             <strong>Người dạy:</strong> {blank} <strong>Môn:</strong> {heading.subject}
@@ -156,7 +198,7 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
         <h3>
           {lessonHeadingTitle(heading.lessonTitle)}
           <br />
-          <span>{heading.periodLabel}</span>
+          <span>{isMultiPeriod ? `(TIẾT 1)` : heading.periodLabel}</span>
         </h3>
         <p className="date-line">{heading.dateLabel}</p>
       </header>
@@ -188,17 +230,24 @@ function LessonPeriodPage({ lesson, period }: { lesson: LessonPlan; period: Peri
       </A4Section>
 
       <A4Section title="III. TIẾN TRÌNH DẠY HỌC">
+        {isMultiPeriod ? (
+          <p className="text-center font-bold text-red-600 mb-2">
+            (TIẾT 1){period.focus ? `: ${period.focus.toUpperCase()}` : ""}
+          </p>
+        ) : null}
         <ActivityTable activities={period.activities} displayMode={displayMode} />
       </A4Section>
 
-      <A4Section title="IV. ĐIỀU CHỈNH SAU BÀI DẠY">
-        <div className="adjustment-lines">
-          <p>........................................................................................................................................</p>
-          <p>........................................................................................................................................</p>
-          <p>........................................................................................................................................</p>
-          <p>........................................................................................................................................</p>
-        </div>
-      </A4Section>
+      {isLast ? (
+        <A4Section title="IV. ĐIỀU CHỈNH SAU BÀI DẠY">
+          <div className="adjustment-lines">
+            <p>........................................................................................................................................</p>
+            <p>........................................................................................................................................</p>
+            <p>........................................................................................................................................</p>
+            <p>........................................................................................................................................</p>
+          </div>
+        </A4Section>
+      ) : null}
     </article>
   );
 }
@@ -286,8 +335,15 @@ export function LessonPreview({ lesson, isGenerating = false }: LessonPreviewPro
         </button>
       </div>
       <div className="a4-document">
-        {periods.map((period) => (
-          <LessonPeriodPage key={period.periodNumber} lesson={lesson} period={period} />
+        {periods.map((period, index) => (
+          <LessonPeriodPage
+            key={period.periodNumber}
+            lesson={lesson}
+            period={period}
+            isFirst={index === 0}
+            isLast={index === periods.length - 1}
+            totalPeriods={periods.length}
+          />
         ))}
       </div>
     </div>

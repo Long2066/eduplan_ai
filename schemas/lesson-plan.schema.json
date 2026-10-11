@@ -1,0 +1,396 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:tv-kntt:lesson-plan:v1",
+  "title": "Kế hoạch bài dạy Tiếng Việt KNTT (có truy vết nguồn)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "metadata",
+    "sources",
+    "objectives",
+    "periods",
+    "source_conflicts",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grade",
+        "subject",
+        "series",
+        "lesson_title",
+        "lesson_type",
+        "minutes_per_period"
+      ],
+      "properties": {
+        "grade": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "subject": {
+          "const": "Tiếng Việt"
+        },
+        "series": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lesson_title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lesson_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lesson_type": {
+          "enum": [
+            "grade1_phonics",
+            "grade1_reading",
+            "grade1_review_story",
+            "reading",
+            "handwriting",
+            "dictation",
+            "vocabulary_grammar",
+            "writing",
+            "speaking_listening",
+            "extended_reading",
+            "review"
+          ]
+        },
+        "minutes_per_period": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "textbook_volume": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "objectives": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/objective"
+      }
+    },
+    "periods": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/period"
+      }
+    },
+    "source_conflicts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "writing_instruction": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/writing"
+      }
+    },
+    "digital_integration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/digital"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "needs_source_review",
+        "needs_handwriting_reference",
+        "blocked_pedagogy",
+        "ready_for_human_review",
+        "approved",
+        "exported",
+        "visual_qa_pending"
+      ]
+    },
+    "human_approval": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "title",
+        "source_type",
+        "verified",
+        "anchor"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_type": {
+          "enum": [
+            "official_verified",
+            "user_material",
+            "sample",
+            "training",
+            "pedagogical_inference"
+          ]
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "anchor": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text",
+        "observable_evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 4
+        },
+        "observable_evidence": {
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "duration_minutes",
+        "activities"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "duration_minutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "activities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/activity"
+          }
+        }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "minutes",
+        "objective_ids",
+        "teacher_script",
+        "student_actions",
+        "expected_output",
+        "assessment",
+        "misconception_support",
+        "source_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3
+        },
+        "minutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "objective_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "teacher_script": {
+          "type": "string",
+          "minLength": 12
+        },
+        "student_actions": {
+          "type": "string",
+          "minLength": 10
+        },
+        "expected_output": {
+          "type": "string",
+          "minLength": 5
+        },
+        "assessment": {
+          "type": "string",
+          "minLength": 6
+        },
+        "misconception_support": {
+          "type": "string",
+          "minLength": 8
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "offline_fallback": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "writing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "reference_source_id",
+        "reference_anchor",
+        "strokes",
+        "joins",
+        "diacritics",
+        "teacher_demonstration_script",
+        "error_fix"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference_source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference_anchor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strokes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "start",
+              "path",
+              "end"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "start": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "joins": {
+          "type": "string"
+        },
+        "diacritics": {
+          "type": "string"
+        },
+        "teacher_demonstration_script": {
+          "type": "string"
+        },
+        "error_fix": {
+          "type": "string"
+        }
+      }
+    },
+    "digital": {
+      "type": "object",
+      "required": [
+        "is_applicable"
+      ],
+      "properties": {
+        "is_applicable": {
+          "type": "boolean"
+        },
+        "indicator_reference": {
+          "type": "string"
+        },
+        "student_action": {
+          "type": "string"
+        },
+        "digital_tool": {
+          "type": "string"
+        },
+        "product": {
+          "type": "string"
+        },
+        "assessment": {
+          "type": "string"
+        },
+        "offline_fallback": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
