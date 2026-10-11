@@ -722,40 +722,12 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </div>
 
           <div className="flex flex-1 flex-col justify-center">
-            {mode !== "reset" ? (
-              <div className="auth-switcher-container mb-5 sm:mb-8 text-center">
-                <div className="relative inline-flex w-full max-w-[280px] sm:max-w-xs rounded-full bg-surface-100 p-1 shadow-inner">
-                  <div
-                    className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full bg-white shadow-soft transition-all duration-300 ease-out"
-                    style={{
-                      left: mode === "login" ? "4px" : "calc(50%)",
-                    }}
-                  />
-                  <button
-                    className={`relative z-10 flex-1 rounded-full py-2 text-sm sm:text-base font-black transition-colors duration-200 active:scale-95 ${
-                      mode === "login" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
-                    }`}
-                    onClick={() => switchMode("login")}
-                  >
-                    Đăng nhập
-                  </button>
-                  <button
-                    className={`relative z-10 flex-1 rounded-full py-2 text-sm sm:text-base font-black transition-colors duration-200 active:scale-95 ${
-                      mode === "register" ? "text-brand-700" : "text-slate-400 hover:text-slate-600"
-                    }`}
-                    onClick={() => switchMode("register")}
-                  >
-                    Đăng ký
-                  </button>
-                </div>
-              </div>
-            ) : null}
 
             <div className="auth-header-container mb-4 sm:mb-6">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-slate-950">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-black leading-tight text-slate-950">
                 {title}
               </h2>
-              <p className="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base leading-relaxed text-slate-500">
+              <p className="mt-1 sm:mt-1.5 text-[11px] sm:text-xs md:text-sm leading-relaxed text-slate-500">
                 {subtitle}
               </p>
             </div>
@@ -1223,7 +1195,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
                 Đăng ký
               </button>
             ) : null}
-            {mode !== "reset" ? (
+            {mode === "login" ? (
               <button
                 className="font-medium text-slate-400 transition-colors hover:text-slate-600"
                 onClick={() => switchMode("reset")}
