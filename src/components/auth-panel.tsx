@@ -266,22 +266,20 @@ function DocumentIcon() {
   );
 }
 
-function BotIcon() {
+
+
+function BookOpenIcon() {
   return (
-    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
-      <path d="M8 9h8a4 4 0 0 1 4 4v4H4v-4a4 4 0 0 1 4-4Z" stroke="currentColor" strokeWidth="2" />
-      <path d="M12 9V5M9 5h6M9 14h.01M15 14h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M8.5 18.5h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg aria-hidden="true" className="h-7 w-7 shrink-0" viewBox="0 0 24 24" fill="none">
+      <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function GraduationIcon() {
+function LightningIcon() {
   return (
-    <svg aria-hidden="true" className="h-7 w-7" viewBox="0 0 24 24" fill="none">
-      <path d="M12 3L2 8l10 5 10-5-10-5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M6 10v6c0 3 6 3 6 3s6 0 6-3v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M22 8v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg aria-hidden="true" className="h-7 w-7 shrink-0" viewBox="0 0 24 24" fill="none">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -662,47 +660,47 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             <span className="text-2xl font-black tracking-tight">EduPlan AI</span>
           </div>
 
-          <div className="relative z-10 mt-12 max-w-lg">
-            <h1 className="text-5xl font-black leading-tight tracking-normal text-white lg:text-6xl">
-              EduPlan AI
+          <div className="relative z-10 mt-10 max-w-lg">
+            <h1 className="text-4xl font-black leading-tight tracking-normal text-white lg:text-5xl">
+              Trợ lý soạn Giáo án
             </h1>
-            <p className="mt-4 max-w-md text-xl font-bold leading-snug text-white/95">
-              Soạn giáo án chuẩn Công văn 2345 - Chương trình GDPT 2018 trong vài phút
+            <p className="mt-3 max-w-md text-lg font-bold leading-snug text-white/95">
+              Chuẩn Công văn 2345 & Chương trình GDPT 2018
             </p>
           </div>
 
-          <ul className="relative z-10 mt-8 max-w-[520px] space-y-4 text-base font-medium leading-relaxed text-white/95">
+          <ul className="relative z-10 mt-7 max-w-[520px] space-y-3.5 text-base font-medium leading-relaxed text-white/95">
             {[
-              "Tải ảnh SGK, AI tự soạn giáo án đầy đủ",
-              "Xem trước khổ A4, xuất Word nhanh chóng",
-              "Tùy chỉnh linh hoạt, phù hợp từng lớp học",
+              "Chọn trực tiếp SGK số hóa từ NXB Giáo Dục",
+              "AI thiết kế tiến trình 4 hoạt động: Khởi động, Khám phá, Luyện tập, Vận dụng",
+              "Xem trước khổ A4 chuẩn lề, tải file Word (.docx) chỉnh sửa được",
             ].map((item) => (
-              <li key={item} className="flex items-center gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-brand-700 shadow-lg shadow-brand-950/20">
+              <li key={item} className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-brand-700 shadow-md shadow-brand-950/20">
                   <CheckIcon />
                 </span>
-                <span>{item}</span>
+                <span className="text-sm font-semibold sm:text-[15px] leading-snug">{item}</span>
               </li>
             ))}
           </ul>
 
-          <div className="relative z-10 mt-auto grid grid-cols-[210px_minmax(0,1fr)] items-end gap-5 pt-8">
+          <div className="relative z-10 mt-auto grid grid-cols-[220px_minmax(0,1fr)] items-end gap-5 pt-8">
             <div className="space-y-3">
               <div className="auth-feature-chip">
-                <ShieldIcon />
-                <span>Chuẩn CV 2345</span>
+                <BookOpenIcon />
+                <span>Kho SGK NXBGD tích hợp</span>
               </div>
               <div className="auth-feature-chip">
-                <GraduationIcon />
-                <span>Chuẩn CT GDPT 2018</span>
+                <ShieldIcon />
+                <span className="text-[0.8rem] leading-snug">Chuẩn bảng biểu CV 2345/BGDĐT-GDTH</span>
               </div>
               <div className="auth-feature-chip">
                 <DocumentIcon />
-                <span>Xuất Word</span>
+                <span>Xuất Word (.docx) chuẩn in</span>
               </div>
               <div className="auth-feature-chip">
-                <BotIcon />
-                <span>AI hỗ trợ giáo viên</span>
+                <LightningIcon />
+                <span>Tiết kiệm 90% thời gian</span>
               </div>
             </div>
             <LessonMockup />
