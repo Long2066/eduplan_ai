@@ -17,6 +17,8 @@ pnpm-debug.log*
 .math-export-fixtures/*.docx
 .agents
 .codex
+__pycache__/
+*.pyc
 
 # Tài liệu nguồn/bàn giao cục bộ, không phải runtime assets.
 /HANDOFF_ANTIGRAVITY.md

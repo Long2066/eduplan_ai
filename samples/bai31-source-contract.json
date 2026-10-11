@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0.0",
+  "metadata": {
+    "grade": 1,
+    "subject": "Tiếng Việt",
+    "series": "Kết nối tri thức với cuộc sống",
+    "lesson_title": "Bài 31. an ăn ân",
+    "lesson_number": "31",
+    "lesson_type": "grade1_phonics",
+    "minutes_per_period": 35,
+    "textbook_volume": "Tập một"
+  },
+  "sources": [
+    {
+      "source_id": "sgk_tv1_t1_p74_75",
+      "title": "SGK Tiếng Việt 1, tập một, tr. 74–75 (NXB Giáo dục Việt Nam)",
+      "source_type": "official_verified",
+      "verified": true,
+      "anchor": "trang 74-75"
+    },
+    {
+      "source_id": "sgv_tv1_t1_bai31",
+      "title": "Sách giáo viên Tiếng Việt 1, tập một (NXB Giáo dục Việt Nam)",
+      "source_type": "official_verified",
+      "verified": true,
+      "anchor": "Bài 31 an ăn ân"
+    },
+    {
+      "source_id": "mau_viet_tv1",
+      "title": "Mẫu chữ viết lớp 1 chuẩn Bộ GDĐT",
+      "source_type": "user_material",
+      "verified": true,
+      "anchor": "chữ a, ă, â, n và các chữ ghi từ ngữ"
+    }
+  ],
+  "source_content": {
+    "target_rhymes": ["an", "ăn", "ân"],
+    "rhyme_structures": [
+      { "rhyme": "an", "nucleus": "a", "coda": "n" },
+      { "rhyme": "ăn", "nucleus": "ă", "coda": "n" },
+      { "rhyme": "ân", "nucleus": "â", "coda": "n" }
+    ],
+    "recognition_sentence": "Cả đàn gà cứ tha thẩn gần chân mẹ.",
+    "recognition_keywords": ["đàn", "gần", "chân"],
+    "phonics_model": {
+      "initial": "b",
+      "rhyme": "an",
+      "step1": "b + an = ban",
+      "tone": "nặng",
+      "step2": "ban + nặng = bạn",
+      "target_word": "bạn"
+    },
+    "words": ["bàn", "nhãn", "gắn", "lặn", "bận", "gần"],
+    "application_words": ["bạn thân", "khăn rằn", "quả mận"],
+    "writing_targets": ["an", "ăn", "ân", "bạn thân", "khăn rằn"],
+    "reading_passage": {
+      "text": "Đàn gà cứ tha thẩn gần chân mẹ. Đã có mẹ che chở, cả đàn chả sợ gì lũ quạ dữ.",
+      "page": 75,
+      "must_contain": ["chả sợ", "tha thẩn", "gần chân mẹ", "lũ quạ dữ"]
+    },
+    "speaking_topic": {
+      "topic": "Xin lỗi",
+      "context": "Nói lời xin lỗi theo tranh"
+    }
+  },
+  "objectives": [
+    {
+      "id": "YCCD1",
+      "text": "Nhận biết cấu tạo vần an, ăn, ân (âm chính a, ă, â và âm cuối n); phân biệt được điểm giống và khác nhau giữa 3 vần.",
+      "observable_evidence": "Học sinh ghép thẻ và phân tích miệng âm chính, âm cuối."
+    },
+    {
+      "id": "YCCD2",
+      "text": "Đánh vần và đọc trơn đúng các vần an, ăn, ân; ghép được tiếng bạn theo mô hình 2 bước (b + an = ban; ban + nặng = bạn).",
+      "observable_evidence": "Đọc đúng cá nhân các vần và thực hiện đúng thao tác ghép thẻ 2 bước."
+    },
+    {
+      "id": "YCCD3",
+      "text": "Đọc đúng các tiếng bàn, nhãn, gắn, lặn, bận, gần và từ ngữ ứng dụng bạn thân, khăn rằn, quả mận.",
+      "observable_evidence": "Đọc trơn đúng từng tiếng/từ trong SGK tr. 74."
+    },
+    {
+      "id": "YCCD4",
+      "text": "Viết đúng chữ ghi vần an, ăn, ân và các từ bạn thân, khăn rằn theo đúng độ cao, khoảng cách và nét nối.",
+      "observable_evidence": "Sản phẩm viết trên bảng con và vở tập viết."
+    },
+    {
+      "id": "YCCD5",
+      "text": "Đọc đúng đoạn văn ứng dụng; hiểu nội dung đàn gà có mẹ che chở nên chả sợ gì lũ quạ dữ; thực hành nói lời xin lỗi theo tranh.",
+      "observable_evidence": "Đọc đúng đoạn văn tr. 75 và đóng vai nói lời xin lỗi phù hợp ngữ cảnh."
+    }
+  ],
+  "writing_instruction": [
+    {
+      "target": "an",
+      "reference_source_id": "mau_viet_tv1",
+      "reference_anchor": "trang chữ viết vần an",
+      "strokes": [
+        { "name": "chữ a", "start": "dưới đường kẻ 3", "path": "cong kín 2 ô li", "end": "đường kẻ 1 lia bút nét móc ngược dừng ở đường kẻ 2" },
+        { "name": "nét nối sang n", "start": "điểm dừng bút chữ a", "path": "rê bút sang điểm đặt bút chữ n", "end": "đường kẻ 2" },
+        { "name": "chữ n", "start": "giữa đường kẻ 2 và 3", "path": "móc xuôi và móc hai đầu", "end": "đường kẻ 2" }
+      ],
+      "joins": "Nối liền nét móc ngược của chữ a sang nét móc xuôi của chữ n",
+      "diacritics": "Không có",
+      "teacher_demonstration_script": "Cô viết chữ a cao 2 ô li, lia bút nối tiếp viết chữ n cao 2 ô li, dừng bút ở đường kẻ 2.",
+      "error_fix": "Nếu khoảng cách giữa a và n quá rộng, nhắc HS điểm dừng chữ a nối liền sang chữ n cách 1 khoảng vừa phải."
+    },
+    {
+      "target": "ăn",
+      "reference_source_id": "mau_viet_tv1",
+      "reference_anchor": "trang chữ viết vần ăn",
+      "strokes": [
+        { "name": "vần an", "start": "dưới đường kẻ 3", "path": "viết như an", "end": "đường kẻ 2" },
+        { "name": "dấu phụ ă", "start": "trên đầu chữ a", "path": "nét cong dưới nhỏ", "end": "cân đối trên thân chữ a" }
+      ],
+      "joins": "Viết chữ an trước, sau đó lia bút viết dấu phụ",
+      "diacritics": "Dấu breve nhỏ trên đầu chữ a",
+      "teacher_demonstration_script": "Viết vần an, lia bút đặt dấu cong dưới nhỏ xinh ngay trên đầu chữ a.",
+      "error_fix": "Không đặt dấu phụ chạm vào chữ a."
+    },
+    {
+      "target": "ân",
+      "reference_source_id": "mau_viet_tv1",
+      "reference_anchor": "trang chữ viết vần ân",
+      "strokes": [
+        { "name": "vần an", "start": "dưới đường kẻ 3", "path": "viết như an", "end": "đường kẻ 2" },
+        { "name": "dấu phụ â", "start": "trên đầu chữ a", "path": "nét thắt nhọn (dấu mũ)", "end": "cân đối trên đầu chữ a" }
+      ],
+      "joins": "Viết chữ an trước, sau đó lia bút viết dấu mũ",
+      "diacritics": "Dấu mũ nhọn cân đối",
+      "teacher_demonstration_script": "Viết vần an, lia bút viết dấu mũ trên đầu chữ a để được vần ân.",
+      "error_fix": "Dấu mũ không quá to, không lệch sang chữ n."
+    },
+    {
+      "target": "bạn thân",
+      "reference_source_id": "mau_viet_tv1",
+      "reference_anchor": "trang từ ngữ bạn thân",
+      "strokes": [
+        { "name": "tiếng bạn", "start": "đường kẻ 2", "path": "chữ b cao 5 ô li, nối sang an, đặt dấu nặng dưới a", "end": "dưới chữ a" },
+        { "name": "khoảng cách", "start": "sau tiếng bạn", "path": "cách một khoảng bằng con chữ o", "end": "bắt đầu tiếng thân" },
+        { "name": "tiếng thân", "start": "đường kẻ 2", "path": "th nối sang ân", "end": "đường kẻ 2" }
+      ],
+      "joins": "Nối b sang an, th sang ân; khoảng cách giữa 2 tiếng bằng 1 thân chữ o",
+      "diacritics": "Dấu nặng dưới chữ a ở tiếng bạn; dấu mũ trên a ở tiếng thân",
+      "teacher_demonstration_script": "Viết tiếng bạn, cách 1 chữ o viết tiếng thân.",
+      "error_fix": "Chữ b cao đúng 5 ô li, chữ h cao 5 ô li, chữ t cao 3 ô li."
+    },
+    {
+      "target": "khăn rằn",
+      "reference_source_id": "mau_viet_tv1",
+      "reference_anchor": "trang từ ngữ khăn rằn",
+      "strokes": [
+        { "name": "tiếng khăn", "start": "đường kẻ 2", "path": "kh nối sang ăn", "end": "đường kẻ 2" },
+        { "name": "khoảng cách", "start": "sau tiếng khăn", "path": "cách một khoảng bằng con chữ o", "end": "bắt đầu tiếng rằn" },
+        { "name": "tiếng rằn", "start": "đường kẻ 1", "path": "r nối sang ăn, dấu huyền trên ă", "end": "trên chữ ă" }
+      ],
+      "joins": "Nối kh sang ăn, r sang ăn; khoảng cách giữa 2 tiếng bằng 1 thân chữ o",
+      "diacritics": "Dấu phụ chữ ă; dấu thanh huyền trên đầu chữ ă trong rằn",
+      "teacher_demonstration_script": "Viết tiếng khăn, cách 1 con chữ o viết tiếng rằn.",
+      "error_fix": "Chữ k, h cao 5 ô li, chữ r cao hơn 2 ô li một chút (2.25 ô li)."
+    }
+  ],
+  "periods": [
+    {
+      "index": 1,
+      "duration_minutes": 35,
+      "activities": [
+        {
+          "id": "P1_A1",
+          "title": "Khởi động và Nhận biết vần mới (5 phút)",
+          "minutes": 5,
+          "objective_ids": ["YCCD1"],
+          "teacher_script": "GV giới thiệu tranh tr. 74: 'Các em quan sát tranh xem có những con vật nào?' Sau khi HS trả lời, GV đọc câu nhận biết: 'Cả đàn gà cứ tha thẩn gần chân mẹ.' GV chỉ vào các tiếng 'đàn', 'gần', 'chân', rút ra các vần mới an, ăn, ân.",
+          "student_actions": "HS quan sát tranh đàn gà con bên gà mẹ, nêu nhanh các con vật. Lắng nghe GV đọc câu nhận biết, nhắc lại câu và chỉ ra các vần an, ăn, ân.",
+          "expected_output": "Nhận diện được 3 vần mới an, ăn, ân từ câu nhận biết nguyên văn SGK.",
+          "assessment": "GV quan sát tinh thần khởi động và kiểm tra nhận diện 3 vần của HS.",
+          "misconception_support": "Nếu HS chưa tìm ra tiếng chứa vần, GV đọc chậm từng tiếng đàn - gần - chân và cho HS giơ thẻ.",
+          "source_ids": ["sgk_tv1_t1_p74_75"]
+        },
+        {
+          "id": "P1_A2",
+          "title": "Phân tích cấu tạo vần, đánh vần và đọc trơn (12 phút)",
+          "minutes": 12,
+          "objective_ids": ["YCCD1", "YCCD2"],
+          "teacher_script": "GV hướng dẫn cấu tạo vần: 'Vần an gồm âm chính a và âm cuối n. Vần ăn gồm âm chính ă và âm cuối n. Vần ân gồm âm chính â và âm cuối n.' GV đánh vần mẫu: 'a - nờ - an; á - nờ - ăn; ớ - nờ - ân'. Hướng dẫn ghép tiếng mẫu theo mô hình 2 bước: 'Bước 1: b ghép với an thành ban (bờ - an - ban). Bước 2: ban thêm dấu nặng thành bạn (ban - nặng - bạn)'.",
+          "student_actions": "HS ghép thẻ âm chính và âm cuối trên bảng cài; so sánh điểm giống nhau (cùng kết thúc bằng n) và khác nhau (âm chính a, ă, â). Đánh vần và đọc trơn cá nhân, nhóm, cả lớp. Thao tác ghép tiếng bạn theo đúng 2 bước trên bảng cài.",
+          "expected_output": "Đọc đúng 3 vần an, ăn, ân và ghép đúng tiếng bạn qua mô hình 2 bước rõ ràng.",
+          "assessment": "Kiểm tra từng cá nhân đọc và kiểm tra bảng cài ghép tiếng của HS.",
+          "misconception_support": "Nếu HS nhảy cóc b + an = bạn, GV nhắc lại quy trình ngữ âm: ghép âm đầu với vần được tiếng cơ sở trước, sau đó mới thêm thanh điệu.",
+          "source_ids": ["sgk_tv1_t1_p74_75"]
+        },
+        {
+          "id": "P1_A3",
+          "title": "Luyện đọc tiếng và từ ngữ ứng dụng (10 phút)",
+          "minutes": 10,
+          "objective_ids": ["YCCD3"],
+          "teacher_script": "GV chỉ các tiếng trong SGK tr. 74: bàn, nhãn, gắn, lặn, bận, gần. Yêu cầu HS phân tích tiếng 'bàn' (âm đầu b, vần an, thanh huyền). Sau đó chỉ các từ ứng dụng: bạn thân, khăn rằn, quả mận; giải nghĩa ngắn bằng vật thật hoặc tranh.",
+          "student_actions": "HS đọc nối tiếp từng tiếng: bàn, nhãn, gắn, lặn, bận, gần. Đọc trơn các từ ứng dụng: bạn thân, khăn rằn, quả mận theo hình thức cá nhân và đồng thanh.",
+          "expected_output": "Đọc trơn đúng 100% các tiếng và từ ngữ SGK tr. 74, phát âm rõ vần an, ăn, ân.",
+          "assessment": "GV lắng nghe phát âm từng HS, kịp thời sửa lỗi lẫn lộn giữa ăn và ân.",
+          "misconception_support": "Nếu HS đọc sai tiếng 'bàn' thành 'bạn', GV chỉ rõ vần an mang thanh huyền là 'bàn', còn thanh nặng là 'bạn'.",
+          "source_ids": ["sgk_tv1_t1_p74_75"]
+        },
+        {
+          "id": "P1_A4",
+          "title": "Viết bảng con: an, ăn, ân, bạn thân (8 phút)",
+          "minutes": 8,
+          "objective_ids": ["YCCD4"],
+          "teacher_script": "GV hướng dẫn viết chữ mẫu trên bảng lớp theo đúng quy trình: vần an (nối a sang n), vần ăn (thêm dấu breve), vần ân (thêm dấu mũ), từ bạn thân. GV làm mẫu chậm và phân tích điểm đặt bút, dừng bút.",
+          "student_actions": "HS quan sát GV viết mẫu, viết trên không trung, sau đó thực hành viết vào bảng con các vần an, ăn, ân và từ bạn thân. Giơ bảng theo hiệu lệnh.",
+          "expected_output": "Viết đúng mẫu, độ cao 2 ô li cho các chữ a, ă, â, n và nối nét chuẩn xác.",
+          "assessment": "GV quan sát cả lớp giơ bảng con, nhận xét trực tiếp và chữa lỗi khoảng cách nét nối.",
+          "misconception_support": "Với HS viết dấu mũ quá to hoặc viết nét nối gãy, GV cầm tay hướng dẫn rê bút mềm mại.",
+          "source_ids": ["sgk_tv1_t1_p74_75", "mau_viet_tv1"]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "duration_minutes": 35,
+      "activities": [
+        {
+          "id": "P2_A1",
+          "title": "Khởi động và Viết vở Tập viết (10 phút)",
+          "minutes": 10,
+          "objective_ids": ["YCCD4"],
+          "teacher_script": "GV cho HS đọc lại 3 vần an, ăn, ân trên bảng. Hướng dẫn tư thế ngồi viết, cách cầm bút và yêu cầu HS viết vào vở Tập viết: an, ăn, ân, bạn thân, khăn rằn.",
+          "student_actions": "HS đọc ôn lại vần. Ngồi đúng tư thế lưng thẳng, mắt cách vở 25-30cm, viết cẩn thận từng dòng vào vở Tập viết theo mẫu.",
+          "expected_output": "Hoàn thành các dòng chữ vần và từ ngữ trong vở Tập viết sạch đẹp, đúng ô li.",
+          "assessment": "GV chấm nhanh 5-7 bài, nhận xét nét chữ, nét nối và độ sạch sẽ.",
+          "misconception_support": "Nhắc nhở HS viết sai độ cao chữ k, b (5 ô li), chữ r (hơn 2 ô li).",
+          "source_ids": ["sgk_tv1_t1_p74_75", "mau_viet_tv1"]
+        },
+        {
+          "id": "P2_A2",
+          "title": "Đọc đoạn văn ứng dụng tr. 75 (13 phút)",
+          "minutes": 13,
+          "objective_ids": ["YCCD5"],
+          "teacher_script": "GV đọc mẫu toàn đoạn tr. 75: 'Đàn gà cứ tha thẩn gần chân mẹ. Đã có mẹ che chở, cả đàn chả sợ gì lũ quạ dữ.' Nhấn giọng cụm từ 'chả sợ gì lũ quạ dữ'. Hướng dẫn HS tìm tiếng có vần vừa học và luyện đọc ngắt nghỉ ở dấu chấm, dấu phẩy.",
+          "student_actions": "HS đọc thầm, dùng bút chì gạch chân tiếng chứa vần an, ăn, ân trong đoạn (đàn, tha thẩn, gần, chân). Luyện đọc câu nối tiếp theo cặp rồi đọc trước lớp.",
+          "expected_output": "Đọc trơn lưu loát toàn đoạn văn, ngắt nghỉ đúng chỗ, đọc chính xác từ 'chả sợ' theo nguyên văn SGK.",
+          "assessment": "Đánh giá khả năng đọc trơn và ngắt câu của HS.",
+          "misconception_support": "Nếu HS đọc chưa chuẩn, GV chỉ ngay vào chữ 'chả sợ' trên bảng/sách và yêu cầu HS đọc chuẩn xác theo nguyên văn SGK.",
+          "source_ids": ["sgk_tv1_t1_p74_75"]
+        },
+        {
+          "id": "P2_A3",
+          "title": "Đọc hiểu và Luyện nói: Chủ đề 'Xin lỗi' (9 phút)",
+          "minutes": 9,
+          "objective_ids": ["YCCD5"],
+          "teacher_script": "GV hỏi câu hỏi đọc hiểu: 'Nhờ đâu cả đàn gà không sợ lũ quạ dữ?' Sau đó chuyển ý sang luyện nói: Cho HS quan sát tranh luyện nói tr. 75 và nêu chủ đề: 'Xin lỗi'. Đặt câu hỏi: 'Khi nào em cần nói lời xin lỗi? Em nói lời xin lỗi như thế nào cho lịch sự?'",
+          "student_actions": "HS trả lời câu hỏi đọc hiểu (vì có mẹ che chở). Quan sát tranh, thảo luận nhóm đôi và đóng vai thể hiện lời xin lỗi chân thành trong tình huống va phải bạn hoặc làm rơi đồ của bạn.",
+          "expected_output": "Nêu được ý chính của đoạn đọc và thực hành nói được câu xin lỗi lịch sự, đúng mực.",
+          "assessment": "GV khen ngợi các cặp HS đóng vai tự nhiên, nói rõ ràng, thái độ lễ phép.",
+          "misconception_support": "Gợi ý cho HS còn rụt rè câu mẫu: 'Xin lỗi bạn, mình vô ý quá' hoặc 'Em xin lỗi cô ạ'.",
+          "source_ids": ["sgk_tv1_t1_p74_75"]
+        },
+        {
+          "id": "P2_A4",
+          "title": "Củng cố và Dặn dò (3 phút)",
+          "minutes": 3,
+          "objective_ids": ["YCCD1", "YCCD5"],
+          "teacher_script": "GV chốt lại bài học: Hôm nay chúng ta học 3 vần gì? Khen ngợi tinh thần học tập của cả lớp. Dặn dò HS về nhà đọc lại bài và tìm thêm các từ có vần an, ăn, ân xung quanh.",
+          "student_actions": "Cả lớp đồng thanh nhắc lại 3 vần an, ăn, ân. Lắng nghe dặn dò.",
+          "expected_output": "Ghi nhớ 3 vần và hào hứng vận dụng tìm từ mới ở nhà.",
+          "assessment": "GV nhận xét chung tiết học.",
+          "misconception_support": "Khuyến khích các em còn phát âm yếu tiếp tục luyện đọc cùng người thân.",
+          "source_ids": ["sgk_tv1_t1_p74_75"]
+        }
+      ]
+    }
+  ],
+  "source_conflicts": [],
+  "status": "approved",
+  "human_approval": true
+}

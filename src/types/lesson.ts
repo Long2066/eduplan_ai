@@ -80,6 +80,18 @@ export type LessonActivity = {
   sourceUnitIds?: string[];
   sourceClusterIds?: string[];
   coveragePurpose?: string;
+  /** Cropped SGK visuals / images embedded directly in the teacher's column */
+  teacherVisuals?: LessonActivityVisual[];
+};
+
+export type LessonActivityVisual = {
+  id?: string;
+  caption?: string;
+  dataUrl?: string;
+  sourcePage?: string;
+  widthPx?: number;
+  heightPx?: number;
+  alt?: string;
 };
 
 export type LessonSourceUnit = {

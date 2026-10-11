@@ -80,6 +80,22 @@ function ActivityRow({ activity, index, displayMode }: { activity: LessonActivit
             <p className="learning-product"><strong>* Sản phẩm/đánh giá:</strong> <em><MathText>{block.products}</MathText></em></p>
           ) : null}
           <ActivityDetailLines details={block.details} />
+          {activity.teacherVisuals && activity.teacherVisuals.length > 0 ? (
+            <div className="my-2 space-y-2">
+              {activity.teacherVisuals.map((vis, visIdx) => (
+                <div key={vis.id || visIdx} className="p-1.5 bg-slate-50 border border-slate-200 rounded text-center">
+                  <p className="text-xs font-semibold text-sky-800 mb-1">* Ảnh học liệu SGK: {vis.caption || "Hình ảnh minh họa"}</p>
+                  {vis.dataUrl ? (
+                    <img
+                      src={vis.dataUrl}
+                      alt={vis.caption || "Ảnh SGK"}
+                      className="max-w-[260px] mx-auto rounded shadow-sm border border-slate-200/60"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
           <p>
             <strong className="blue-italic">* Cách tiến hành:</strong>
           </p>
@@ -103,9 +119,18 @@ function ActivityRow({ activity, index, displayMode }: { activity: LessonActivit
   );
 }
 
-function ActivityTable({ activities, displayMode }: { activities: LessonActivity[]; displayMode: ActivityDisplayMode }) {
+function ActivityTable({ activities, displayMode, periodBanner }: { activities: LessonActivity[]; displayMode: ActivityDisplayMode; periodBanner?: string }) {
   return (
     <table className="lesson-table">
+      {periodBanner ? (
+        <thead>
+          <tr>
+            <th colSpan={2} className="bg-slate-100 text-center font-bold text-red-600 py-2 border border-slate-300">
+              {periodBanner}
+            </th>
+          </tr>
+        </thead>
+      ) : null}
       <thead>
         <tr>
           <th>Hoạt động của giáo viên</th>
@@ -149,13 +174,11 @@ function LessonPeriodPage({
         <header className="lesson-heading avoid-break text-center mb-6">
           <h3 className="text-center">
             {lessonHeadingTitle(heading.lessonTitle)}
-            <br />
-            <span className="text-red-600 font-bold">{heading.periodLabel}{period.focus ? `: ${period.focus.toUpperCase()}` : ""}</span>
           </h3>
         </header>
 
         <A4Section title="III. TIẾN TRÌNH DẠY HỌC (TIẾP THEO)">
-          <ActivityTable activities={period.activities} displayMode={displayMode} />
+          <ActivityTable activities={period.activities} displayMode={displayMode} periodBanner={`(TIẾT ${period.periodNumber})${period.focus ? `: ${period.focus.toUpperCase()}` : ""}`} />
         </A4Section>
 
         {isLast ? (
@@ -230,12 +253,11 @@ function LessonPeriodPage({
       </A4Section>
 
       <A4Section title="III. TIẾN TRÌNH DẠY HỌC">
-        {isMultiPeriod ? (
-          <p className="text-center font-bold text-red-600 mb-2">
-            (TIẾT 1){period.focus ? `: ${period.focus.toUpperCase()}` : ""}
-          </p>
-        ) : null}
-        <ActivityTable activities={period.activities} displayMode={displayMode} />
+        <ActivityTable
+          activities={period.activities}
+          displayMode={displayMode}
+          periodBanner={isMultiPeriod ? `(TIẾT 1)${period.focus ? `: ${period.focus.toUpperCase()}` : ""}` : undefined}
+        />
       </A4Section>
 
       {isLast ? (
