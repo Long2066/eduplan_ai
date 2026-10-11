@@ -282,6 +282,7 @@ export async function advanceStagedGenerationJobV2(
   uid: string,
   jobId: string,
   submittedAsset?: UploadedAsset,
+  depth = 0,
 ): Promise<GenerationJob> {
   const initialJob = await getGenerationJobForUser(jobId, uid);
   if (!initialJob) {
@@ -477,7 +478,35 @@ export async function advanceStagedGenerationJobV2(
   if (!updated) {
     throw new GenerationJobRequestError("Không tìm thấy yêu cầu tạo giáo án.", "GENERATION_JOB_NOT_FOUND", 404);
   }
-  return updated;
+
+  // Fast-track: Chain zero-cost deterministic stages (assembly -> validation -> persistence -> quota)
+  // directly on the server to eliminate unnecessary HTTP roundtrips over the network.
+  let currentResult = updated;
+  if (depth === 0) {
+    const FAST_CHAINABLE_STAGES: ReadonlySet<GenerationJobStage> = new Set([
+      "source-preparation",
+      "assembly",
+      "subject-validation",
+      "final-validation",
+      "persistence",
+      "quota-settlement",
+    ]);
+
+    let chainCount = 0;
+    const maxChainedSteps = 6;
+
+    while (
+      currentResult
+      && currentResult.status === "waiting_next_step"
+      && FAST_CHAINABLE_STAGES.has(currentResult.currentStage)
+      && chainCount < maxChainedSteps
+    ) {
+      chainCount += 1;
+      currentResult = await advanceStagedGenerationJobV2(uid, jobId, undefined, depth + 1);
+    }
+  }
+
+  return currentResult;
 }
 
 type ExecutionContext = {
