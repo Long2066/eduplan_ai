@@ -642,7 +642,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       : "Tạo tài khoản mới để bắt đầu sử dụng EduPlan AI.";
 
   return (
-    <main className="auth-page flex min-h-screen items-center justify-center px-3 py-4 sm:px-6 sm:py-7 lg:px-8">
+    <main className="auth-page flex min-h-screen items-start justify-center px-3 py-4 sm:px-6 sm:py-7 lg:px-8">
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}
@@ -651,7 +651,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
         />
       ) : null}
 
-      <div className="auth-shell animate-fade-in flex w-full max-w-6xl overflow-hidden rounded-2xl sm:rounded-[1.4rem] bg-white shadow-float md:min-h-[600px] lg:min-h-[660px]">
+      <div className="auth-shell animate-fade-in flex w-full max-w-6xl overflow-hidden rounded-2xl sm:rounded-[1.4rem] bg-white shadow-float my-auto">
         <div className="auth-hero relative hidden w-[48%] flex-shrink-0 overflow-hidden px-10 py-9 text-white md:flex md:flex-col lg:px-14">
           <div className="auth-hero-dots pointer-events-none absolute inset-0" />
           <div className="auth-hero-wave pointer-events-none absolute inset-0" />

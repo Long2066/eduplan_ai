@@ -1022,7 +1022,7 @@ textarea {
 .auth-shell {
   border-radius: 1.4rem;
   transition: all 0.3s ease-in-out;
-  max-height: 92vh;
+  max-height: none;
 }
 
 .auth-hero-wave {
