@@ -161,6 +161,24 @@ export function TaphuanPagePickerModal({
     }
   }
 
+  // Keyboard navigation for page flipping (ArrowLeft / ArrowRight)
+  useEffect(() => {
+    if (!isOpen || !totalPages) return;
+    const maxPage = totalPages;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentPage((p) => Math.max(1, p - 1));
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentPage((p) => Math.min(maxPage, p + 1));
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, totalPages]);
+
   const isCurrentSelected = selectedPages.includes(currentPage);
 
   return (
@@ -168,19 +186,24 @@ export function TaphuanPagePickerModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
     >
-      <div className="flex flex-col w-full max-w-5xl max-h-[94vh] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+      <div className="flex flex-col w-full max-w-6xl h-[94vh] max-h-[96vh] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4 bg-slate-50/80">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 sm:px-6 py-3.5 bg-slate-50/90 shrink-0">
           <div>
-            <span className="inline-block rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">
-              Bộ sách Thống nhất
-            </span>
-            <h2 id="modal-title" className="mt-1 text-base sm:text-lg font-bold text-slate-900">
+            <div className="flex items-center gap-2">
+              <span className="inline-block rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">
+                Bộ sách Thống nhất
+              </span>
+              <span className="hidden sm:inline-block text-[11px] font-medium text-slate-400">
+                • Dùng phím ← / → để lật trang
+              </span>
+            </div>
+            <h2 id="modal-title" className="mt-0.5 text-base sm:text-lg font-bold text-slate-900">
               Chọn trang SGK bài dạy
             </h2>
-            <p className="mt-0.5 text-[12px] text-slate-500 line-clamp-1">
+            <p className="text-[12px] text-slate-500 line-clamp-1">
               {book.title} &bull; Nguồn: {book.source}
             </p>
           </div>
@@ -189,214 +212,248 @@ export function TaphuanPagePickerModal({
             onClick={onClose}
             disabled={isSubmitting}
             aria-label="Đóng"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors active:scale-95 disabled:opacity-50"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition-colors active:scale-95 disabled:opacity-50"
           >
-            <span className="text-xl font-bold leading-none">&times;</span>
+            <span className="text-2xl font-bold leading-none">&times;</span>
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {isLoadingBook ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-              <p className="text-sm font-medium text-slate-600">
-                Đang kết nối reader taphuan.nxbgd.vn...
+            <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-3">
+              <div className="h-9 w-9 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+              <p className="text-sm font-semibold text-slate-600">
+                Đang kết nối kho SGK số hóa taphuan.nxbgd.vn...
               </p>
             </div>
           ) : bookError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50/70 p-4 text-center">
-              <p className="text-sm font-semibold text-red-700">{bookError}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setBookError("");
-                  setIsLoadingBook(true);
-                }}
-                className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-              >
-                Thử lại
-              </button>
-            </div>
-          ) : totalPages ? (
-            <>
-              {/* Search / Jump Bar */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleQuickSearch()}
-                    placeholder={`Nhập số trang hoặc dải (ví dụ: 156 hoặc 156-157)...`}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  />
-                </div>
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+              <div className="max-w-md rounded-2xl border border-red-200 bg-red-50/80 p-6">
+                <p className="text-sm font-semibold text-red-700">{bookError}</p>
                 <button
                   type="button"
-                  onClick={handleQuickSearch}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 active:scale-[0.98] transition-colors"
+                  onClick={() => {
+                    setBookError("");
+                    setIsLoadingBook(true);
+                  }}
+                  className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 active:scale-95 transition-all"
                 >
-                  Xem & Chọn trang
+                  Thử lại kết nối
                 </button>
               </div>
-
-              {/* Page Preview Box */}
-              <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-slate-50/60 p-3 sm:p-4">
-                <div className="relative flex items-center justify-center w-full min-h-[320px] max-h-[60vh] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+            </div>
+          ) : totalPages ? (
+            <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden">
+              {/* LEFT COLUMN: 9:16 Portrait Book Reader */}
+              <div className="flex flex-col w-full md:w-[58%] lg:w-[62%] h-auto md:h-full bg-slate-900/5 p-3 sm:p-4 border-b md:border-b-0 md:border-r border-slate-200/80 shrink-0">
+                {/* Book Page Frame (Portrait 9:16 / 3:4 Fit) */}
+                <div className="relative flex-1 min-h-[320px] md:min-h-0 flex items-center justify-center rounded-xl bg-slate-800/5 p-2 overflow-hidden shadow-inner">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     key={currentPage}
                     src={`/api/taphuan/page-image?bookKey=${encodeURIComponent(book.key)}&page=${currentPage}`}
                     alt={`Trang ${currentPage} - ${book.title}`}
-                    className="max-h-[60vh] w-auto object-contain transition-opacity duration-200"
+                    className="h-full w-auto max-w-full max-h-[46vh] md:max-h-[72vh] object-contain rounded-lg shadow-lg bg-white transition-opacity duration-200"
                     loading="lazy"
                   />
                   {isCurrentSelected ? (
-                    <div className="absolute top-2 right-2 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white shadow-md flex items-center gap-1">
-                      <span>✓ Đã chọn</span>
+                    <div className="absolute top-4 right-4 rounded-xl bg-emerald-600/95 backdrop-blur-sm px-3 py-1.5 text-xs font-bold text-white shadow-lg flex items-center gap-1.5 animate-scale-in">
+                      <span className="text-sm">✓</span>
+                      <span>Đã chọn trang này</span>
                     </div>
                   ) : null}
                 </div>
 
-                {/* Page Navigation Controls */}
-                <div className="mt-3 flex w-full items-center justify-between gap-2">
+                {/* Reader Controls: Navigation */}
+                <div className="mt-3 flex items-center justify-between gap-3 shrink-0 bg-white rounded-xl p-2 shadow-sm ring-1 ring-slate-900/5">
                   <button
                     type="button"
                     disabled={currentPage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-40"
+                    className="inline-flex min-h-[42px] min-w-[100px] items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-35 transition-all"
                   >
-                    &larr; Trang trước
+                    <span>&larr;</span>
+                    <span>Trang trước</span>
                   </button>
 
-                  <div className="text-center">
-                    <span className="text-sm font-bold text-slate-800 tabular-nums font-mono">
-                      Trang {currentPage} / {totalPages}
+                  <div className="flex items-center gap-1 text-center">
+                    <span className="text-xs text-slate-500 font-medium">Trang</span>
+                    <span className="text-base font-black text-brand-700 tabular-nums font-mono px-1">
+                      {currentPage}
                     </span>
+                    <span className="text-xs text-slate-400 font-medium">/ {totalPages}</span>
                   </div>
 
                   <button
                     type="button"
                     disabled={currentPage >= totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-40"
+                    className="inline-flex min-h-[42px] min-w-[100px] items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-35 transition-all"
                   >
-                    Trang sau &rarr;
-                  </button>
-                </div>
-
-                {/* Toggle Current Page Button */}
-                <div className="mt-2.5 w-full">
-                  <button
-                    type="button"
-                    onClick={() => togglePage(currentPage)}
-                    className={`w-full inline-flex min-h-[44px] items-center justify-center rounded-xl py-2.5 px-4 text-xs font-bold transition-all active:scale-[0.98] ${
-                      isCurrentSelected
-                        ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
-                        : "bg-brand-600 text-white shadow-sm hover:bg-brand-700 shadow-brand-500/20"
-                    }`}
-                  >
-                    {isCurrentSelected ? `✕ Bỏ chọn trang ${currentPage}` : `+ Chọn trang ${currentPage}`}
+                    <span>Trang sau</span>
+                    <span>&rarr;</span>
                   </button>
                 </div>
               </div>
 
-              {/* Selected Pages Tray */}
-              <div className="rounded-xl border border-slate-100 bg-white p-3 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                  <span>
-                    Các trang đã chọn: <strong>{selectedPages.length}</strong> (còn trống {Math.max(0, remainingSlots - selectedPages.length)} slot)
-                  </span>
-                  {selectedPages.length > 0 ? (
+              {/* RIGHT COLUMN: Action & Selection Panel */}
+              <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 bg-white">
+                <div className="space-y-4 flex-1">
+                  {/* Select Current Page Action Button */}
+                  <div>
                     <button
                       type="button"
-                      onClick={() => setSelectedPages([])}
-                      className="text-[11px] text-red-500 hover:underline"
+                      onClick={() => togglePage(currentPage)}
+                      className={`w-full inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-black transition-all active:scale-[0.98] shadow-sm ${
+                        isCurrentSelected
+                          ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                          : "bg-brand-600 text-white hover:bg-brand-700 shadow-brand-500/25"
+                      }`}
                     >
-                      Xóa tất cả
+                      {isCurrentSelected ? (
+                        <>
+                          <span className="text-base font-bold">&times;</span>
+                          <span>Bỏ chọn trang {currentPage}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-base font-bold">+</span>
+                          <span>Chọn trang {currentPage} vào bài dạy</span>
+                        </>
+                      )}
                     </button>
-                  ) : null}
-                </div>
+                  </div>
 
-                {selectedPages.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">
-                    Chưa chọn trang nào. Nhập số trang ở trên hoặc duyệt qua các trang để chọn.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedPages.map((page) => (
-                      <span
-                        key={page}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 border border-brand-100"
+                  {/* Search / Jump Range */}
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 space-y-2">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      Nhảy trang hoặc chọn dải trang
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleQuickSearch()}
+                        placeholder={`Ví dụ: 15 hoặc 15-17...`}
+                        className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleQuickSearch}
+                        className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-slate-900 text-white px-3.5 py-2 text-xs font-bold hover:bg-slate-800 active:scale-95 transition-all"
                       >
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setCurrentPage(page)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setCurrentPage(page);
-                            }
-                          }}
-                          className="cursor-pointer hover:underline"
-                        >
-                          Trang {page}
-                        </span>
+                        Xem & Chọn
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Selected Pages Tray */}
+                  <div className="rounded-xl border border-slate-100 bg-white p-3.5 space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <span className="font-semibold text-slate-700">
+                        Đã chọn: <strong className="text-brand-700 text-sm font-black">{selectedPages.length}</strong> trang
+                        <span className="text-slate-400 font-normal"> (còn trống {Math.max(0, remainingSlots - selectedPages.length)} slot)</span>
+                      </span>
+                      {selectedPages.length > 0 ? (
                         <button
                           type="button"
-                          onClick={() => togglePage(page)}
-                          className="text-brand-400 hover:text-red-500 font-bold ml-0.5"
-                          title="Bỏ chọn"
+                          onClick={() => setSelectedPages([])}
+                          className="text-[11px] font-bold text-rose-600 hover:underline"
                         >
-                          &times;
+                          Xóa tất cả
                         </button>
-                      </span>
-                    ))}
+                      ) : null}
+                    </div>
+
+                    {selectedPages.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic py-2">
+                        Chưa chọn trang nào. Bấm nút chọn ở trên hoặc nhập số trang để chọn.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto pr-1">
+                        {selectedPages.map((page) => (
+                          <span
+                            key={page}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
+                              page === currentPage
+                                ? "bg-brand-600 text-white shadow-sm ring-2 ring-brand-300"
+                                : "bg-brand-50 text-brand-700 border border-brand-100 hover:bg-brand-100/70"
+                            }`}
+                          >
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => setCurrentPage(page)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }
+                              }}
+                              className="cursor-pointer"
+                              title="Bấm để xem lại trang này"
+                            >
+                              Trang {page}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => togglePage(page)}
+                              className={`font-black ml-0.5 ${page === currentPage ? "text-white/80 hover:text-white" : "text-brand-400 hover:text-rose-600"}`}
+                              title="Bỏ chọn trang này"
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Inline Feedback / Warning */}
+                  {submitError ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-3 text-xs font-semibold text-rose-700 animate-slide-up">
+                      {submitError}
+                    </div>
+                  ) : null}
+
+                  {/* Copyright Note */}
+                  <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-500">
+                    <span className="font-semibold text-slate-700">Nguồn:</span> {book.source}.{" "}
+                    Bản quyền thuộc <strong>{book.copyright}</strong>. Phục vụ soạn giáo án cá nhân theo quy định.
+                  </div>
+                </div>
+
+                {/* Footer Confirm Actions in Right Column */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedPages.length === 0 || isSubmitting}
+                    onClick={handleConfirm}
+                    className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2 text-xs sm:text-sm font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98] shadow-brand-500/20 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        <span>Đang nạp ảnh SGK...</span>
+                      </>
+                    ) : (
+                      <span>Nạp {selectedPages.length} trang vào bài dạy</span>
+                    )}
+                  </button>
+                </div>
               </div>
-            </>
+            </div>
           ) : null}
-
-          {/* Inline Feedback / Warning */}
-          {submitError ? (
-            <p className="text-xs font-medium text-red-600 animate-slide-up">{submitError}</p>
-          ) : null}
-
-          {/* Copyright Note */}
-          <div className="rounded-xl bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-500">
-            <span className="font-semibold text-slate-700">Nguồn dữ liệu:</span> {book.source}.{" "}
-            Bản quyền SGK thuộc về <strong>{book.copyright}</strong>. Phục vụ mục đích soạn giáo án cá nhân của giáo viên theo quy định.
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/80 px-5 py-3.5">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200/60 active:scale-95 transition-colors disabled:opacity-50"
-          >
-            Hủy
-          </button>
-          <button
-            type="button"
-            disabled={selectedPages.length === 0 || isSubmitting}
-            onClick={handleConfirm}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 active:scale-[0.98] shadow-brand-500/20 transition-all disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                <span>Đang nạp ảnh SGK...</span>
-              </>
-            ) : (
-              <span>Nạp {selectedPages.length} trang vào bài dạy</span>
-            )}
-          </button>
         </div>
       </div>
     </div>
