@@ -170,7 +170,7 @@ export function TaphuanPagePickerModal({
       aria-labelledby="modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
     >
-      <div className="flex flex-col w-full max-w-2xl max-h-[92vh] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+      <div className="flex flex-col w-full max-w-5xl max-h-[94vh] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4 bg-slate-50/80">
           <div>
@@ -243,13 +243,13 @@ export function TaphuanPagePickerModal({
 
               {/* Page Preview Box */}
               <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-slate-50/60 p-3 sm:p-4">
-                <div className="relative flex items-center justify-center w-full min-h-[260px] max-h-[380px] overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+                <div className="relative flex items-center justify-center w-full min-h-[320px] max-h-[60vh] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     key={currentPage}
                     src={`/api/taphuan/page-image?bookKey=${encodeURIComponent(book.key)}&page=${currentPage}`}
                     alt={`Trang ${currentPage} - ${book.title}`}
-                    className="max-h-[380px] w-auto object-contain transition-opacity duration-200"
+                    className="max-h-[60vh] w-auto object-contain transition-opacity duration-200"
                     loading="lazy"
                   />
                   {isCurrentSelected ? (
