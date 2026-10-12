@@ -561,6 +561,10 @@ export default function Home() {
     setIsGuideVisible(true);
   }
 
+  function closeGuide() {
+    setIsGuideVisible(false);
+  }
+
   function goHome() {
     setIsSupportOpen(false);
     setIsIntroVisible(false);
@@ -577,6 +581,10 @@ export default function Home() {
     });
   }
 
+  function closeIntro() {
+    setIsIntroVisible(false);
+  }
+
   /* ── Loading auth ── */
   if (!authLoaded) {
     return (
@@ -591,7 +599,17 @@ export default function Home() {
 
   /* ── Not logged in ── */
   if (!user) {
-    return <AuthPanel onSessionReady={loadCurrentUser} />;
+    return (
+      <>
+        <AuthPanel
+          onSessionReady={loadCurrentUser}
+          onOpenGuide={openGuide}
+          onOpenIntro={openIntro}
+        />
+        <GuideModal isOpen={isGuideVisible} onClose={closeGuide} />
+        <IntroductionModal isOpen={isIntroVisible} onClose={closeIntro} />
+      </>
+    );
   }
 
   /* ── Account disabled ── */
@@ -653,14 +671,11 @@ export default function Home() {
             </button>
 
             <nav className="support-nav" aria-label="Thanh điều hướng EduPlan AI">
-              <button type="button" className={`support-nav-item ${!isIntroVisible && !isGuideVisible ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
+              <button type="button" className={`support-nav-item ${!isIntroVisible ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
                 Trang chủ
               </button>
               <button type="button" className={`support-nav-item ${isIntroVisible ? "support-nav-active" : ""}`} title="Giới thiệu EduPlan AI" onClick={openIntro}>
                 Giới thiệu
-              </button>
-              <button type="button" className={`support-nav-item ${isGuideVisible ? "support-nav-active" : ""}`} title="Xem hướng dẫn sử dụng EduPlan AI" onClick={openGuide}>
-                Hướng dẫn
               </button>
               <div className="support-menu-wrap">
                 <button
@@ -674,7 +689,18 @@ export default function Home() {
                 </button>
                 {isSupportOpen ? (
                   <div className="support-menu-popover" role="menu" aria-label="Hỗ trợ EduPlan AI">
-                    <p>Hỗ trợ nhanh</p>
+                    <p>Hỗ trợ & Hướng dẫn</p>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsSupportOpen(false);
+                        openGuide();
+                      }}
+                    >
+                      <strong>Hướng dẫn sử dụng</strong>
+                      <span>Xem lại các bước từ tạo bài đến xuất Word</span>
+                    </button>
                     <a href={ZALO_SUPPORT_GROUP_URL} target="_blank" rel="noreferrer" role="menuitem">
                       <strong>Nhóm Zalo hỗ trợ</strong>
                       <span>Cộng đồng hỗ trợ sử dụng tool</span>

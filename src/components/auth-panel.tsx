@@ -23,6 +23,10 @@ import {
 
 type AuthPanelProps = {
   onSessionReady: () => Promise<void> | void;
+  onOpenGuide?: () => void;
+  onOpenIntro?: () => void;
+  initialMode?: AuthMode;
+  initialMethod?: AuthMethod;
 };
 
 type AuthMode = "login" | "register" | "reset";
@@ -315,9 +319,29 @@ function AuthInputIcon({ children }: { children: ReactNode }) {
   return <span className="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 text-slate-500">{children}</span>;
 }
 
-export function AuthPanel({ onSessionReady }: AuthPanelProps) {
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [authMethod, setAuthMethod] = useState<AuthMethod>("email");
+export function AuthPanel({
+  onSessionReady,
+  onOpenGuide,
+  onOpenIntro,
+  initialMode = "login",
+  initialMethod = "email",
+}: AuthPanelProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(initialMethod);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get("mode");
+      const urlMethod = params.get("method");
+      if (urlMode === "register" || urlMode === "reset" || urlMode === "login") {
+        setMode(urlMode);
+      }
+      if (urlMethod === "phone" || urlMethod === "email") {
+        setAuthMethod(urlMethod);
+      }
+    }
+  }, []);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -640,7 +664,7 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
       : "Tạo tài khoản mới để bắt đầu sử dụng EduPlan AI.";
 
   return (
-    <main className="auth-page flex min-h-screen items-start justify-center px-3 py-4 sm:px-6 sm:py-7 lg:px-8">
+    <main className="auth-page flex min-h-screen flex-col items-center justify-start px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}
@@ -648,6 +672,54 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           onClose={() => setPolicyTitle("")}
         />
       ) : null}
+
+      {/* Thanh điều hướng ngoài màn hình đăng nhập */}
+      <header className="mb-3 sm:mb-5 flex w-full max-w-6xl items-center justify-between rounded-2xl border border-slate-200/80 bg-white/95 px-3.5 py-2.5 shadow-sm backdrop-blur-md sm:px-5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-600/30">
+            <BookLogoIcon />
+          </span>
+          <div className="flex flex-col">
+            <span className="text-base sm:text-lg font-black tracking-tight text-slate-900 leading-tight">EduPlan AI</span>
+            <span className="hidden sm:inline text-[11px] font-semibold text-slate-500">Soạn giáo án chuẩn Công văn 2345</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {onOpenGuide ? (
+            <button
+              type="button"
+              className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-brand-600 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-brand-600/20 hover:bg-brand-700 transition-all active:scale-[0.98]"
+              onClick={onOpenGuide}
+              title="Xem hướng dẫn sử dụng chi tiết từ A đến Z"
+            >
+              <BookOpenIcon />
+              <span>Hướng dẫn sử dụng</span>
+            </button>
+          ) : null}
+
+          {onOpenIntro ? (
+            <button
+              type="button"
+              className="hidden sm:inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-[0.98]"
+              onClick={onOpenIntro}
+              title="Thông tin giới thiệu về EduPlan AI"
+            >
+              <span>Giới thiệu</span>
+            </button>
+          ) : null}
+
+          <a
+            href="https://zalo.me/g/vtyrqi055"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-[42px] items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-brand-700 transition-all"
+            title="Tham gia nhóm Zalo hỗ trợ kỹ thuật"
+          >
+            <span>Hỗ trợ</span>
+          </a>
+        </div>
+      </header>
 
       <div className="auth-shell animate-fade-in flex w-full max-w-6xl overflow-hidden rounded-2xl sm:rounded-[1.4rem] bg-white shadow-float my-auto">
         <div className="auth-hero relative hidden w-[48%] flex-shrink-0 overflow-hidden px-10 py-9 text-white md:flex md:flex-col lg:px-14">
@@ -706,6 +778,20 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
             <LessonMockup />
           </div>
 
+          {onOpenGuide ? (
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              className="relative z-10 mt-5 flex items-center justify-between rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 transition-all hover:bg-white/25 active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-2">
+                <BookOpenIcon />
+                <span>Xem hướng dẫn sử dụng từ A - Z</span>
+              </div>
+              <span className="text-white/80">&rarr;</span>
+            </button>
+          ) : null}
+
           <p className="relative z-10 mt-6 text-xs font-medium text-white/70">
             © 2026 EduPlan AI - Hỗ trợ giáo viên Việt Nam
           </p>
@@ -720,6 +806,26 @@ export function AuthPanel({ onSessionReady }: AuthPanelProps) {
           </div>
 
           <div className="flex flex-1 flex-col justify-center">
+            {onOpenGuide ? (
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-brand-50/80 p-3 text-xs sm:text-sm">
+                <div className="flex items-center gap-2.5 text-brand-950 min-w-0">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white text-xs">
+                    📖
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 truncate">Chưa biết cách dùng?</p>
+                    <p className="text-[11px] font-medium text-slate-600 truncate">Xem các bước từ đăng ký đến xuất Word</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition-all active:scale-95"
+                  onClick={onOpenGuide}
+                >
+                  Xem HDSD
+                </button>
+              </div>
+            ) : null}
 
             <div className="auth-header-container mb-4 sm:mb-6 text-center">
               <h2 className="text-lg sm:text-xl md:text-2xl font-black leading-tight text-slate-950">

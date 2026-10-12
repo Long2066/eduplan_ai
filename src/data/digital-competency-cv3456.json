@@ -1,0 +1,255 @@
+{
+  "framework": "Công văn 3456/BGDĐT-GDPT & Thông tư 02/2025/TT-BGDĐT",
+  "level": "Cấp Tiểu học",
+  "bands": {
+    "CB1": "Lớp 1, Lớp 2, Lớp 3 (Cơ bản 1)",
+    "CB2": "Lớp 4, Lớp 5 (Cơ bản 2)"
+  },
+  "domains": [
+    {
+      "id": "1",
+      "name": "Khai thác dữ liệu và thông tin",
+      "subdomains": [
+        {
+          "id": "1.1",
+          "name": "Duyệt, tìm kiếm và lọc dữ liệu, thông tin và nội dung số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "1.1.CB1a",
+                "description": "Xác định được nhu cầu thông tin, tìm kiếm dữ liệu, thông tin và nội dung thông qua tìm kiếm đơn giản trong môi trường số.",
+                "tieng_viet_context": "Học sinh tìm kiếm hình ảnh minh họa bài thơ/câu chuyện hoặc nghe từ phát âm trên từ điển trực tuyến dưới sự hướng dẫn của GV."
+              },
+              {
+                "code": "1.1.CB1b",
+                "description": "Tìm được cách truy cập những dữ liệu, thông tin và nội dung này cũng như điều hướng giữa chúng.",
+                "tieng_viet_context": "Học sinh bấm mở liên kết SGK điện tử hoặc kho tranh ảnh bài đọc do GV chuẩn bị sẵn."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "1.1.CB2a",
+                "description": "Xác định được nhu cầu thông tin phục vụ nhiệm vụ học tập.",
+                "tieng_viet_context": "Xác định từ khóa để tìm hiểu thông tin tác giả, bài thơ, phong cảnh quê hương phục vụ bài tập làm văn."
+              },
+              {
+                "code": "1.1.CB2b",
+                "description": "Tìm kiếm dữ liệu, thông tin thông qua tìm kiếm đơn giản trong môi trường số.",
+                "tieng_viet_context": "Học sinh tự gõ từ khóa trên kho tư liệu số để tìm tư liệu cho bài thuyết trình Nói và nghe."
+              }
+            ]
+          }
+        },
+        {
+          "id": "1.2",
+          "name": "Đánh giá dữ liệu, thông tin và nội dung số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "1.2.CB1a",
+                "description": "Phát hiện được độ tin cậy và độ chính xác của các nguồn chung của dữ liệu, thông tin và nội dung số.",
+                "tieng_viet_context": "Nhận biết nguồn tài liệu bài đọc từ trang web chính thức của nhà xuất bản hoặc thư viện trường học."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "1.2.CB2a",
+                "description": "Phân tích, so sánh, đánh giá được độ tin cậy và độ chính xác của các nguồn dữ liệu, thông tin và nội dung số đơn giản.",
+                "tieng_viet_context": "So sánh thông tin giữa hai đoạn văn/tranh ảnh tra cứu được trên Internet để chọn nguồn phù hợp nhất."
+              }
+            ]
+          }
+        },
+        {
+          "id": "1.3",
+          "name": "Quản lý dữ liệu, thông tin và nội dung số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "1.3.CB1a",
+                "description": "Xác định được cách tổ chức, lưu trữ và truy xuất dữ liệu, thông tin một cách đơn giản trong môi trường số.",
+                "tieng_viet_context": "Mở đúng thư mục chứa bài ghi âm giọng đọc của bản thân trên máy tính bảng/máy tính phòng học."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "1.3.CB2a",
+                "description": "Sắp xếp, tổ chức và lưu trữ dữ liệu, bài làm trong môi trường số có cấu trúc.",
+                "tieng_viet_context": "Lưu bài viết đoạn văn vào thư mục bài tập của lớp với định dạng tên rõ ràng."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Giao tiếp và hợp tác trong môi trường số",
+      "subdomains": [
+        {
+          "id": "2.1",
+          "name": "Tương tác thông qua các công nghệ số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "2.1.CB1a",
+                "description": "Lựa chọn và sử dụng được các công nghệ số đơn giản để tương tác trong giờ học.",
+                "tieng_viet_context": "HS bấm nút giơ tay hoặc chọn biểu tượng cảm xúc phản hồi bài đọc của bạn trên màn hình tương tác."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "2.1.CB2a",
+                "description": "Sử dụng công nghệ số để tương tác, giao tiếp phù hợp với bối cảnh học tập.",
+                "tieng_viet_context": "HS thảo luận nhóm qua ứng dụng học tập, trình bày ý kiến về nhân vật trong bài đọc."
+              }
+            ]
+          }
+        },
+        {
+          "id": "2.2",
+          "name": "Chia sẻ thông qua các công nghệ số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "2.2.CB1a",
+                "description": "Nhận biết được cách chia sẻ dữ liệu số đơn giản và ghi nguồn cơ bản.",
+                "tieng_viet_context": "Chiếu bài viết chữ đẹp lên bảng lớp thông qua máy soi bài giảng."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "2.2.CB2a",
+                "description": "Chia sẻ sản phẩm học tập và biết ghi rõ nguồn gốc tác giả, tài liệu trích dẫn.",
+                "tieng_viet_context": "Chia sẻ bài văn tả cảnh của nhóm lên không gian học tập chung có trích dẫn tác giả ảnh."
+              }
+            ]
+          }
+        },
+        {
+          "id": "2.4",
+          "name": "Hợp tác thông qua các công nghệ số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "2.4.CB1a",
+                "description": "Tham gia hợp tác theo nhóm với sự hỗ trợ của công cụ số đơn giản.",
+                "tieng_viet_context": "Cùng nhóm ghép các thẻ từ điện tử trên màn hình để tạo câu hoàn chỉnh."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "2.4.CB2a",
+                "description": "Hợp tác xây dựng sản phẩm học tập nhóm trên nền tảng số.",
+                "tieng_viet_context": "Nhóm cùng đóng góp ý tưởng vào sơ đồ tư duy tóm tắt bài đọc trên bảng tương tác."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "name": "Sáng tạo nội dung số",
+      "subdomains": [
+        {
+          "id": "3.1",
+          "name": "Phát triển nội dung số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "3.1.CB1a",
+                "description": "Tạo và chỉnh sửa nội dung số đơn giản ở ít nhất một định dạng (văn bản, âm thanh, hình ảnh).",
+                "tieng_viet_context": "HS tự ghi âm giọng đọc bài thơ/đoạn văn của mình bằng thiết bị số để nghe lại và tự sửa phát âm."
+              },
+              {
+                "code": "3.1.CB1b",
+                "description": "Thể hiện bản thân thông qua việc tạo ra các phương tiện số đơn giản.",
+                "tieng_viet_context": "Vẽ hoặc chọn nhãn dán trang trí kèm theo câu văn tự viết trong hoạt động sáng tạo."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "3.1.CB2a",
+                "description": "Tạo và chỉnh sửa nội dung số ở nhiều định dạng kết hợp (chữ viết kèm âm thanh hoặc hình ảnh minh họa).",
+                "tieng_viet_context": "Tạo trang trình chiếu 1-2 slide hoặc poster số giới thiệu cuốn sách yêu thích trong tiết Đọc mở rộng."
+              }
+            ]
+          }
+        },
+        {
+          "id": "3.4",
+          "name": "Tư duy tính toán và lập trình (Computational Thinking)",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "3.4.CB1a",
+                "description": "Liệt kê và thực hiện được các bước/hướng dẫn đơn giản theo trình tự logic để giải quyết vấn đề.",
+                "tieng_viet_context": "Sắp xếp các bức tranh theo đúng trình tự diễn biến câu chuyện trong tiết Kể chuyện."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "3.4.CB2a",
+                "description": "Lập sơ đồ các bước theo trình tự để giải quyết nhiệm vụ học tập phức tạp hơn.",
+                "tieng_viet_context": "Lập dàn ý phân nhánh cho bài văn miêu tả theo sơ đồ logic."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "name": "An toàn số",
+      "subdomains": [
+        {
+          "id": "4.3",
+          "name": "Bảo vệ sức khỏe và thể chất khi dùng thiết bị số",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "4.3.CB1a",
+                "description": "Nhận biết tư thế ngồi đúng và thời lượng an toàn cho mắt khi tiếp xúc màn hình thiết bị số.",
+                "tieng_viet_context": "Ngồi thẳng lưng, giữ khoảng cách đúng với màn hình khi tham gia trò chơi đọc tương tác."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "4.3.CB2a",
+                "description": "Chủ động điều chỉnh thời gian và tư thế sử dụng thiết bị số để bảo vệ thị lực và sức khỏe.",
+                "tieng_viet_context": "Nhận biết khi nào cần nghỉ mắt sau hoạt động đọc văn bản trên màn hình."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "name": "Giải quyết vấn đề trong môi trường số",
+      "subdomains": [
+        {
+          "id": "5.3",
+          "name": "Sử dụng công nghệ số một cách sáng tạo",
+          "indicators": {
+            "CB1": [
+              {
+                "code": "5.3.CB1a",
+                "description": "Sử dụng công cụ số đơn giản để tạo ra sản phẩm học tập sinh động.",
+                "tieng_viet_context": "Tạo tấm thiệp điện tử đơn giản có lời chúc mừng gửi tặng người thân nhân ngày lễ."
+              }
+            ],
+            "CB2": [
+              {
+                "code": "5.3.CB2a",
+                "description": "Ứng dụng công nghệ số để thiết kế sản phẩm đa phương tiện phục vụ thuyết trình, học tập.",
+                "tieng_viet_context": "Thiết kế cẩm nang du lịch mini hoặc nhật ký đọc sách số bằng phần mềm học tập."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

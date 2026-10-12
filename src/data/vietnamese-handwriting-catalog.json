@@ -1,0 +1,1460 @@
+{
+  "a_lowercase": {
+    "letter": "a",
+    "type": "lowercase",
+    "title": "Chữ a thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 3",
+        "direction": "từ trên xuống dưới",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Nét móc ngược sát nét cong kín, chạm đường kẻ 1.",
+    "image_url": "/handwriting/lower_a.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p2_1.png"
+  },
+  "ă_lowercase": {
+    "letter": "ă",
+    "type": "lowercase",
+    "title": "Chữ ă thường",
+    "height_cells": 2.5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 3",
+        "direction": "từ trên xuống dưới",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 3,
+        "name": "Cong dưới nhỏ (dấu á)",
+        "start": "giữa đường kẻ 3 và đường kẻ 4",
+        "direction": "cong dưới",
+        "end": "cân đối trên đầu chữ a"
+      }
+    ],
+    "note": "Dấu mũ cong dưới nhỏ nằm giữa đường kẻ 3 và 4.",
+    "image_url": "/handwriting/lower_ă.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p2_2.png"
+  },
+  "â_lowercase": {
+    "letter": "â",
+    "type": "lowercase",
+    "title": "Chữ â thường",
+    "height_cells": 2.5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 3",
+        "direction": "từ trên xuống dưới",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 3,
+        "name": "Thẳng xiên ngắn trái",
+        "start": "trên đầu chữ a",
+        "direction": "xiên lên",
+        "end": "giữa đường kẻ 3 và 4"
+      },
+      {
+        "order": 4,
+        "name": "Thẳng xiên ngắn phải",
+        "start": "đỉnh dấu mũ",
+        "direction": "xiên xuống",
+        "end": "tạo dấu mũ cân đối"
+      }
+    ],
+    "note": "Dấu mũ nón đặt cân đối trên đầu chữ a giữa đường kẻ 3 và 4.",
+    "image_url": "/handwriting/lower_â.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p3_1.png"
+  },
+  "b_lowercase": {
+    "letter": "b",
+    "type": "lowercase",
+    "title": "Chữ b thường",
+    "height_cells": 5,
+    "grid_lines": 6,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Khuyết xuôi và móc ngược nối nét xoắn",
+        "start": "trên đường kẻ 2",
+        "direction": "lên đường kẻ 6 uốn lượn xuống đường kẻ 1 rồi vòng lên tạo nét xoắn nhỏ",
+        "end": "gần đường kẻ 3"
+      }
+    ],
+    "note": "Độ cao 5 li. Đầu nét khuyết chạm đường kẻ 6, chân nét chạm đường kẻ 1, vòng xoắn nhỏ dừng ở đường kẻ 3.",
+    "image_url": "/handwriting/lower_b.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p3_2.png"
+  },
+  "c_lowercase": {
+    "letter": "c",
+    "type": "lowercase",
+    "title": "Chữ c thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong trái",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "uốn sang trái xuống đường kẻ 1",
+        "end": "khoảng giữa đường kẻ 1 và đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 2 li, rộng 1.5 li.",
+    "image_url": "/handwriting/lower_c.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p4_1.png"
+  },
+  "d_lowercase": {
+    "letter": "d",
+    "type": "lowercase",
+    "title": "Chữ d thường",
+    "height_cells": 4,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải dài",
+        "start": "đường kẻ 5",
+        "direction": "kéo thẳng xuống đường kẻ 1 uốn lượn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 4 li. Nét móc ngược phải sát nét cong kín.",
+    "image_url": "/handwriting/lower_d.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p4_2.png"
+  },
+  "đ_lowercase": {
+    "letter": "đ",
+    "type": "lowercase",
+    "title": "Chữ đ thường",
+    "height_cells": 4,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải dài",
+        "start": "đường kẻ 5",
+        "direction": "kéo thẳng xuống đường kẻ 1 uốn lên",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 3,
+        "name": "Ngang ngắn",
+        "start": "đường kẻ 4",
+        "direction": "ngang từ trái sang phải",
+        "end": "cắt ngang thân nét móc"
+      }
+    ],
+    "note": "Nét ngang ngắn đặt trùng đường kẻ 4, cân đối hai bên thân chữ.",
+    "image_url": "/handwriting/lower_đ.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p5_1.png"
+  },
+  "e_lowercase": {
+    "letter": "e",
+    "type": "lowercase",
+    "title": "Chữ e thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong phải và cong trái",
+        "start": "trên đường kẻ 1 một chút",
+        "direction": "xiên chéo lên uốn lượn sang trái tạo vòng kín",
+        "end": "khoảng giữa đường kẻ 1 và đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 2 li. Lưng chữ e tựa vào đường kẻ dọc.",
+    "image_url": "/handwriting/lower_e.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p5_2.png"
+  },
+  "ê_lowercase": {
+    "letter": "ê",
+    "type": "lowercase",
+    "title": "Chữ ê thường",
+    "height_cells": 2.5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong phải và cong trái (chữ e)",
+        "start": "trên đường kẻ 1 một chút",
+        "direction": "uốn lượn tạo hình chữ e",
+        "end": "giữa đường kẻ 1 và 2"
+      },
+      {
+        "order": 2,
+        "name": "Dấu mũ (xiên trái và xiên phải)",
+        "start": "trên đầu chữ e",
+        "direction": "nhọn hướng lên",
+        "end": "giữa đường kẻ 3 và 4"
+      }
+    ],
+    "note": "Dấu mũ đặt cân đối trên đầu chữ e.",
+    "image_url": "/handwriting/lower_ê.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p6_1.png"
+  },
+  "g_lowercase": {
+    "letter": "g",
+    "type": "lowercase",
+    "title": "Chữ g thường",
+    "height_cells": 5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Khuyết ngược",
+        "start": "đường kẻ 3",
+        "direction": "kéo thẳng xuống dưới qua đường kẻ 1 thêm 3 li uốn vòng lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li (2 li trên và 3 li dưới dòng kẻ đậm).",
+    "image_url": "/handwriting/lower_g.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p6_2.png"
+  },
+  "h_lowercase": {
+    "letter": "h",
+    "type": "lowercase",
+    "title": "Chữ h thường",
+    "height_cells": 5,
+    "grid_lines": 6,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Khuyết xuôi",
+        "start": "đường kẻ 2",
+        "direction": "xiên lên đường kẻ 6 uốn lượn xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 2,
+        "name": "Móc hai đầu",
+        "start": "gần đường kẻ 2",
+        "direction": "uốn lên đường kẻ 3 rồi kéo xuống",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li. Điểm bắt đầu nét 2 đè lên nét 1 ở gần đường kẻ 2.",
+    "image_url": "/handwriting/lower_h.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p7_1.png"
+  },
+  "i_lowercase": {
+    "letter": "i",
+    "type": "lowercase",
+    "title": "Chữ i thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Hất",
+        "start": "đường kẻ 2",
+        "direction": "xiên lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 3",
+        "direction": "kéo thẳng xuống đường kẻ 1 uốn lên",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 3,
+        "name": "Chấm nhỏ",
+        "start": "trên đầu nét 2",
+        "direction": "chấm nhẹ",
+        "end": "dưới đường kẻ 4 một chút"
+      }
+    ],
+    "note": "Độ cao 2 li.",
+    "image_url": "/handwriting/lower_i.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p7_2.png"
+  },
+  "k_lowercase": {
+    "letter": "k",
+    "type": "lowercase",
+    "title": "Chữ k thường",
+    "height_cells": 5,
+    "grid_lines": 6,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Khuyết xuôi",
+        "start": "đường kẻ 2",
+        "direction": "lên đường kẻ 6 uốn xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 2,
+        "name": "Móc hai đầu có thắt giữa",
+        "start": "gần đường kẻ 2",
+        "direction": "uốn lên đường kẻ 3 tạo vòng xoắn nhỏ ở giữa",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li. Nét thắt nằm ở giữa đường kẻ 2 và đường kẻ 3.",
+    "image_url": "/handwriting/lower_k.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p8_1.png"
+  },
+  "l_lowercase": {
+    "letter": "l",
+    "type": "lowercase",
+    "title": "Chữ l thường",
+    "height_cells": 5,
+    "grid_lines": 6,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Khuyết xuôi nối móc ngược",
+        "start": "đường kẻ 2",
+        "direction": "lên đường kẻ 6 rồi kéo thẳng xuống uốn móc",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/lower_l.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p8_2.png"
+  },
+  "m_lowercase": {
+    "letter": "m",
+    "type": "lowercase",
+    "title": "Chữ m thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc xuôi trái",
+        "start": "giữa đường kẻ 2 và 3",
+        "direction": "lượn lên đường kẻ 3 kéo xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 2,
+        "name": "Móc xuôi thứ hai",
+        "start": "gần đường kẻ 2",
+        "direction": "uốn lên đường kẻ 3 kéo xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 3,
+        "name": "Móc hai đầu",
+        "start": "gần đường kẻ 2",
+        "direction": "uốn lên đường kẻ 3 kéo xuống uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 2 li, gồm 3 nét móc liên tiếp.",
+    "image_url": "/handwriting/lower_m.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p9_1.png"
+  },
+  "n_lowercase": {
+    "letter": "n",
+    "type": "lowercase",
+    "title": "Chữ n thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc xuôi trái",
+        "start": "giữa đường kẻ 2 và 3",
+        "direction": "lượn lên đường kẻ 3 kéo xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 2,
+        "name": "Móc hai đầu",
+        "start": "gần đường kẻ 2",
+        "direction": "uốn lên đường kẻ 3 kéo xuống uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 2 li, gồm 2 nét móc.",
+    "image_url": "/handwriting/lower_n.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p9_2.png"
+  },
+  "o_lowercase": {
+    "letter": "o",
+    "type": "lowercase",
+    "title": "Chữ o thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái tròn đều",
+        "end": "điểm xuất phát"
+      }
+    ],
+    "note": "Độ cao 2 li, rộng 1.5 li. Nét cong tròn đều đặn.",
+    "image_url": "/handwriting/lower_o.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p10_1.png"
+  },
+  "ô_lowercase": {
+    "letter": "ô",
+    "type": "lowercase",
+    "title": "Chữ ô thường",
+    "height_cells": 2.5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín (chữ o)",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "tròn đều",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Dấu mũ (xiên trái và xiên phải)",
+        "start": "giữa đường kẻ 3 và 4",
+        "direction": "tạo nón nhọn",
+        "end": "cân đối trên đầu chữ o"
+      }
+    ],
+    "note": "Dấu mũ nón đặt cân đối trên đầu chữ o.",
+    "image_url": "/handwriting/lower_ô.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p10_2.png"
+  },
+  "ơ_lowercase": {
+    "letter": "ơ",
+    "type": "lowercase",
+    "title": "Chữ ơ thường",
+    "height_cells": 2.5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín (chữ o)",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "tròn đều",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Nét râu",
+        "start": "trên đường kẻ 3 một chút chạm vào chữ o",
+        "direction": "lượn cong nhỏ sang phải",
+        "end": "trên đường kẻ 3 một chút"
+      }
+    ],
+    "note": "Nét râu nhỏ nhắn đặt ở góc trên bên phải chữ o.",
+    "image_url": "/handwriting/lower_ơ.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p11_1.png"
+  },
+  "p_lowercase": {
+    "letter": "p",
+    "type": "lowercase",
+    "title": "Chữ p thường",
+    "height_cells": 4,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Hất",
+        "start": "đường kẻ 2",
+        "direction": "xiên lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 2,
+        "name": "Thẳng đứng",
+        "start": "đường kẻ 3",
+        "direction": "kéo thẳng xuống qua đường kẻ 1 thêm 2 li",
+        "end": "đường kẻ 3 dưới"
+      },
+      {
+        "order": 3,
+        "name": "Móc hai đầu",
+        "start": "đường kẻ 2",
+        "direction": "uốn lên đường kẻ 3 kéo xuống uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 4 li (2 li trên và 2 li dưới dòng kẻ 1).",
+    "image_url": "/handwriting/lower_p.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p11_2.png"
+  },
+  "q_lowercase": {
+    "letter": "q",
+    "type": "lowercase",
+    "title": "Chữ q thường",
+    "height_cells": 4,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "từ phải sang trái",
+        "end": "điểm xuất phát"
+      },
+      {
+        "order": 2,
+        "name": "Thẳng đứng",
+        "start": "đường kẻ 3",
+        "direction": "kéo thẳng xuống qua đường kẻ 1 thêm 2 li",
+        "end": "đường kẻ 3 dưới"
+      }
+    ],
+    "note": "Độ cao 4 li (2 li trên và 2 li dưới).",
+    "image_url": "/handwriting/lower_q.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p12_1.png"
+  },
+  "r_lowercase": {
+    "letter": "r",
+    "type": "lowercase",
+    "title": "Chữ r thường",
+    "height_cells": 2.25,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Thẳng xiên tạo xoắn nhỏ và móc ngược",
+        "start": "trên đường kẻ 1",
+        "direction": "xiên lên qua đường kẻ 3 một chút tạo vòng xoắn nhỏ đưa sang phải kéo xuống",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao hơn 2 li một chút (vòng xoắn nhô trên đường kẻ 3).",
+    "image_url": "/handwriting/lower_r.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p12_2.png"
+  },
+  "s_lowercase": {
+    "letter": "s",
+    "type": "lowercase",
+    "title": "Chữ s thường",
+    "height_cells": 2.25,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Thẳng xiên tạo xoắn nhỏ và cong phải",
+        "start": "trên đường kẻ 1",
+        "direction": "xiên lên qua đường kẻ 3 tạo vòng xoắn lượn cong sang phải",
+        "end": "trên đường kẻ 1 một chút"
+      }
+    ],
+    "note": "Độ cao hơn 2 li một chút do vòng xoắn nhô lên.",
+    "image_url": "/handwriting/lower_s.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p13_1.png"
+  },
+  "t_lowercase": {
+    "letter": "t",
+    "type": "lowercase",
+    "title": "Chữ t thường",
+    "height_cells": 3,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Hất",
+        "start": "đường kẻ 2",
+        "direction": "xiên lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 4",
+        "direction": "kéo thẳng xuống đường kẻ 1 uốn lên",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 3,
+        "name": "Ngang ngắn",
+        "start": "trên đường kẻ 3",
+        "direction": "ngang từ trái sang phải",
+        "end": "cắt ngang thân nét 2"
+      }
+    ],
+    "note": "Độ cao 3 li.",
+    "image_url": "/handwriting/lower_t.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p13_2.png"
+  },
+  "u_lowercase": {
+    "letter": "u",
+    "type": "lowercase",
+    "title": "Chữ u thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Hất",
+        "start": "đường kẻ 2",
+        "direction": "xiên lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược rộng",
+        "start": "đường kẻ 3",
+        "direction": "kéo xuống uốn lượn sang phải",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 3,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 3",
+        "direction": "kéo thẳng xuống uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 2 li.",
+    "image_url": "/handwriting/lower_u.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p13_3.png"
+  },
+  "ư_lowercase": {
+    "letter": "ư",
+    "type": "lowercase",
+    "title": "Chữ ư thường",
+    "height_cells": 2.5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Chữ u thường",
+        "start": "đường kẻ 2",
+        "direction": "viết hoàn chỉnh chữ u",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 2,
+        "name": "Nét râu",
+        "start": "trên đường kẻ 3 chạm vào nét 3",
+        "direction": "uốn lượn nhỏ sang phải",
+        "end": "trên đường kẻ 3"
+      }
+    ],
+    "note": "Nét râu nhỏ ở góc trên bên phải chữ u.",
+    "image_url": "/handwriting/lower_ư.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p14_1.png"
+  },
+  "v_lowercase": {
+    "letter": "v",
+    "type": "lowercase",
+    "title": "Chữ v thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc hai đầu",
+        "start": "giữa đường kẻ 2 và 3",
+        "direction": "uốn lên đường kẻ 3 kéo xuống uốn lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 2,
+        "name": "Nét thắt nhỏ",
+        "start": "đường kẻ 3",
+        "direction": "uốn xoắn nhỏ sang phải",
+        "end": "dưới đường kẻ 3 một chút"
+      }
+    ],
+    "note": "Độ cao 2 li.",
+    "image_url": "/handwriting/lower_v.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p14_2.png"
+  },
+  "x_lowercase": {
+    "letter": "x",
+    "type": "lowercase",
+    "title": "Chữ x thường",
+    "height_cells": 2,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong phải",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "uốn sang phải xuống đường kẻ 1",
+        "end": "khoảng giữa đường kẻ 1 và 2"
+      },
+      {
+        "order": 2,
+        "name": "Cong trái",
+        "start": "dưới đường kẻ 3 một chút",
+        "direction": "uốn sang trái tựa lưng vào nét 1",
+        "end": "khoảng giữa đường kẻ 1 và 2"
+      }
+    ],
+    "note": "Độ cao 2 li, hai nét cong tựa lưng vào nhau.",
+    "image_url": "/handwriting/lower_x.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p15_1.png"
+  },
+  "y_lowercase": {
+    "letter": "y",
+    "type": "lowercase",
+    "title": "Chữ y thường",
+    "height_cells": 5,
+    "grid_lines": 5,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Hất",
+        "start": "đường kẻ 2",
+        "direction": "xiên lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 3",
+        "direction": "kéo xuống uốn lên",
+        "end": "đường kẻ 3"
+      },
+      {
+        "order": 3,
+        "name": "Khuyết ngược",
+        "start": "đường kẻ 3",
+        "direction": "kéo thẳng xuống qua đường kẻ 1 thêm 3 li uốn vòng lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li (2 li trên và 3 li dưới).",
+    "image_url": "/handwriting/lower_y.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p15_2.png"
+  },
+  "A_uppercase": {
+    "letter": "A",
+    "type": "uppercase",
+    "title": "Chữ A hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "đường kẻ 6",
+        "direction": "đưa sang trái viết nét cong kín phần cuối lượn vào trong",
+        "end": "đường kẻ 4 lượn lên một chút"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "lia thẳng lên đường kẻ 6",
+        "direction": "kéo ngược lại từ trên xuống dưới",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Chữ A hoa cỡ nhỡ cao 5 li (đến đường kẻ 6).",
+    "image_url": "/handwriting/upper_a.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p16_1.png"
+  },
+  "B_uppercase": {
+    "letter": "B",
+    "type": "uppercase",
+    "title": "Chữ B hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc ngược trái lượn trên",
+        "start": "đường kẻ 6",
+        "direction": "kéo xuống đường kẻ 1 uốn cong",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 2,
+        "name": "Cong trên và cong phải có thắt giữa",
+        "start": "đường kẻ 6",
+        "direction": "uốn cong sang phải tạo vòng xoắn nhỏ ở thân",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_b.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p18_1.png"
+  },
+  "C_uppercase": {
+    "letter": "C",
+    "type": "uppercase",
+    "title": "Chữ C hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong dưới và cong trái nối liền",
+        "start": "đường kẻ 6",
+        "direction": "lượn sang trái tạo vòng xoắn ở đầu rồi viết nét cong to",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_c.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p18_2.png"
+  },
+  "D_uppercase": {
+    "letter": "D",
+    "type": "uppercase",
+    "title": "Chữ D hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc ngược trái, thắt chân và cong kín",
+        "start": "đường kẻ 6",
+        "direction": "kéo xuống đường kẻ 1 tạo vòng xoắn ở chân rồi uốn cong kín lên đường kẻ 6",
+        "end": "đường kẻ 5 lượn vào trong"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_d.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p19_1.png"
+  },
+  "Đ_uppercase": {
+    "letter": "Đ",
+    "type": "uppercase",
+    "title": "Chữ Đ hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Chữ D hoa",
+        "start": "đường kẻ 6",
+        "direction": "viết như chữ D hoa",
+        "end": "đường kẻ 5"
+      },
+      {
+        "order": 2,
+        "name": "Ngang ngắn",
+        "start": "đường kẻ 4",
+        "direction": "ngang cân đối",
+        "end": "cắt ngang thân chữ D"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_đ.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p19_2.png"
+  },
+  "E_uppercase": {
+    "letter": "E",
+    "type": "uppercase",
+    "title": "Chữ E hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong dưới và 2 nét cong trái nối xoắn",
+        "start": "đường kẻ 6",
+        "direction": "lượn xuống tạo vòng xoắn ở đầu và xoắn giữa thân",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_e.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p20_1.png"
+  },
+  "G_uppercase": {
+    "letter": "G",
+    "type": "uppercase",
+    "title": "Chữ G hoa",
+    "height_cells": 8,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong dưới và cong trái (như chữ C)",
+        "start": "đường kẻ 6",
+        "direction": "uốn vòng xoắn đầu lượn xuống",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 2,
+        "name": "Khuyết ngược dài",
+        "start": "đường kẻ 2",
+        "direction": "kéo thẳng xuống dưới qua dòng kẻ đậm 3 li uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 8 li (5 li trên và 3 li dưới).",
+    "image_url": "/handwriting/upper_g.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p20_3.png"
+  },
+  "H_uppercase": {
+    "letter": "H",
+    "type": "uppercase",
+    "title": "Chữ H hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong trái và lượn ngang",
+        "start": "đường kẻ 5",
+        "direction": "uốn lượn lên đường kẻ 6 rồi kéo xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 2,
+        "name": "Khuyết dưới và khuyết trên nối liền",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng tạo vòng xoắn giữa",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_h.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p22_1.png"
+  },
+  "I_uppercase": {
+    "letter": "I",
+    "type": "uppercase",
+    "title": "Chữ I hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong trái và lượn ngang",
+        "start": "đường kẻ 5",
+        "direction": "uốn lượn lên đường kẻ 6",
+        "end": "đường kẻ 6"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược trái",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống đường kẻ 1 uốn lượn vào",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_i.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p22_2.png"
+  },
+  "L_uppercase": {
+    "letter": "L",
+    "type": "uppercase",
+    "title": "Chữ L hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong dưới, lượn dọc và lượn ngang thắt chân",
+        "start": "đường kẻ 6",
+        "direction": "uốn lượn xuống tạo vòng xoắn nhỏ ở chân chữ",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_l.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p24_1.png"
+  },
+  "M_uppercase": {
+    "letter": "M",
+    "type": "uppercase",
+    "title": "Chữ M hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc ngược trái",
+        "start": "đường kẻ 2",
+        "direction": "lượn lên đường kẻ 6",
+        "end": "đường kẻ 6"
+      },
+      {
+        "order": 2,
+        "name": "Thẳng đứng",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 3,
+        "name": "Thẳng xiên",
+        "start": "đường kẻ 1",
+        "direction": "xiên lên đường kẻ 6",
+        "end": "đường kẻ 6"
+      },
+      {
+        "order": 4,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li, 4 nét.",
+    "image_url": "/handwriting/upper_m.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p24_2.png"
+  },
+  "N_uppercase": {
+    "letter": "N",
+    "type": "uppercase",
+    "title": "Chữ N hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc ngược trái",
+        "start": "đường kẻ 2",
+        "direction": "lượn lên đường kẻ 6",
+        "end": "đường kẻ 6"
+      },
+      {
+        "order": 2,
+        "name": "Thẳng xiên",
+        "start": "đường kẻ 6",
+        "direction": "kéo xiên xuống đường kẻ 1",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 3,
+        "name": "Móc xuôi phải",
+        "start": "đường kẻ 1",
+        "direction": "uốn lượn lên đường kẻ 6 lượn xuống",
+        "end": "đường kẻ 5"
+      }
+    ],
+    "note": "Độ cao 5 li, 3 nét.",
+    "image_url": "/handwriting/upper_n.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p24_3.png"
+  },
+  "O_uppercase": {
+    "letter": "O",
+    "type": "uppercase",
+    "title": "Chữ O hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín",
+        "start": "đường kẻ 6",
+        "direction": "đưa sang trái viết cong kín, cuối nét lượn vào trong bụng chữ",
+        "end": "đường kẻ 4 lượn lên một chút"
+      }
+    ],
+    "note": "Độ cao 5 li, nét cong tròn đều.",
+    "image_url": "/handwriting/upper_o.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p25_1.png"
+  },
+  "Ô_uppercase": {
+    "letter": "Ô",
+    "type": "uppercase",
+    "title": "Chữ Ô hoa",
+    "height_cells": 6,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín (chữ O hoa)",
+        "start": "đường kẻ 6",
+        "direction": "như chữ O hoa",
+        "end": "đường kẻ 4"
+      },
+      {
+        "order": 2,
+        "name": "Dấu mũ (xiên trái và xiên phải)",
+        "start": "chạm đường kẻ 7",
+        "direction": "cân đối trên đầu chữ O",
+        "end": "giữa đầu chữ"
+      }
+    ],
+    "note": "Dấu mũ đặt chạm đường kẻ 7.",
+    "image_url": "/handwriting/upper_ô.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p25_2.png"
+  },
+  "Ơ_uppercase": {
+    "letter": "Ơ",
+    "type": "uppercase",
+    "title": "Chữ Ơ hoa",
+    "height_cells": 6,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín (chữ O hoa)",
+        "start": "đường kẻ 6",
+        "direction": "như chữ O hoa",
+        "end": "đường kẻ 4"
+      },
+      {
+        "order": 2,
+        "name": "Nét râu",
+        "start": "đường kẻ 6",
+        "direction": "uốn cong nhỏ cao hơn đường kẻ 6 một chút",
+        "end": "đường kẻ 6"
+      }
+    ],
+    "note": "Nét râu đặt phía trên bên phải chữ O.",
+    "image_url": "/handwriting/upper_ơ.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p26_1.png"
+  },
+  "P_uppercase": {
+    "letter": "P",
+    "type": "uppercase",
+    "title": "Chữ P hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc ngược trái",
+        "start": "đường kẻ 6",
+        "direction": "kéo xuống uốn lượn",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 2,
+        "name": "Cong trên",
+        "start": "đường kẻ 1",
+        "direction": "lia lên đường kẻ 5 viết nét cong trên rộng sang phải lượn vào trong",
+        "end": "đường kẻ 5"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_p.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p26_2.png"
+  },
+  "Q_uppercase": {
+    "letter": "Q",
+    "type": "uppercase",
+    "title": "Chữ Q hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong kín (như chữ O)",
+        "start": "đường kẻ 6",
+        "direction": "như chữ O hoa",
+        "end": "đường kẻ 4"
+      },
+      {
+        "order": 2,
+        "name": "Lượn ngang (nét gạch)",
+        "start": "trong lòng chữ gần đường kẻ 2",
+        "direction": "lượn từ trong ra ngoài",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_q.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p27_1.png"
+  },
+  "R_uppercase": {
+    "letter": "R",
+    "type": "uppercase",
+    "title": "Chữ R hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc ngược trái",
+        "start": "đường kẻ 6",
+        "direction": "kéo xuống",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 2,
+        "name": "Cong trên và móc ngược phải có thắt giữa",
+        "start": "đường kẻ 5",
+        "direction": "uốn cong tạo thắt ở giữa đường kẻ 3 và 4 rồi kéo xuống",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_r.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p27_2.png"
+  },
+  "S_uppercase": {
+    "letter": "S",
+    "type": "uppercase",
+    "title": "Chữ S hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong dưới và móc ngược trái nối liền xoắn",
+        "start": "đường kẻ 6",
+        "direction": "uốn lượn tạo vòng xoắn to rồi kéo xuống tạo móc ngược",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_s.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p27_3.png"
+  },
+  "T_uppercase": {
+    "letter": "T",
+    "type": "uppercase",
+    "title": "Chữ T hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong trái nhỏ, lượn ngang và cong trái to",
+        "start": "giữa đường kẻ 4 và 5",
+        "direction": "uốn lượn tạo xoắn nhỏ rồi viết cong trái to",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_t.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p28_1.png"
+  },
+  "U_uppercase": {
+    "letter": "U",
+    "type": "uppercase",
+    "title": "Chữ U hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc hai đầu",
+        "start": "đường kẻ 5",
+        "direction": "uốn móc trái cuộn vào trong rồi uốn móc phải",
+        "end": "giữa đường kẻ 2 và 3"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_u.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p28_2.png"
+  },
+  "Ư_uppercase": {
+    "letter": "Ư",
+    "type": "uppercase",
+    "title": "Chữ Ư hoa",
+    "height_cells": 6,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc hai đầu (chữ U hoa)",
+        "start": "đường kẻ 5",
+        "direction": "như chữ U hoa",
+        "end": "giữa đường kẻ 2 và 3"
+      },
+      {
+        "order": 2,
+        "name": "Móc ngược phải",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống uốn lên",
+        "end": "đường kẻ 2"
+      },
+      {
+        "order": 3,
+        "name": "Nét râu",
+        "start": "gần đầu nét 2",
+        "direction": "uốn râu nhỏ",
+        "end": "chạm vào nét 2"
+      }
+    ],
+    "note": "Độ cao 5 li, nét râu nhô lên trên.",
+    "image_url": "/handwriting/upper_ư.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p28_3.png"
+  },
+  "V_uppercase": {
+    "letter": "V",
+    "type": "uppercase",
+    "title": "Chữ V hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Cong trái và lượn ngang",
+        "start": "đường kẻ 5",
+        "direction": "uốn lên đường kẻ 6",
+        "end": "đường kẻ 6"
+      },
+      {
+        "order": 2,
+        "name": "Thẳng đứng hơi lượn",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống",
+        "end": "đường kẻ 1"
+      },
+      {
+        "order": 3,
+        "name": "Móc xuôi phải lượn dưới",
+        "start": "đường kẻ 1",
+        "direction": "uốn lượn lên",
+        "end": "đường kẻ 5"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_v.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p29_1.png"
+  },
+  "X_uppercase": {
+    "letter": "X",
+    "type": "uppercase",
+    "title": "Chữ X hoa",
+    "height_cells": 5,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc hai đầu trái, thẳng xiên và móc hai đầu phải",
+        "start": "đường kẻ 5",
+        "direction": "uốn móc trái xiên chéo giữa thân lên đường kẻ 6 rồi uốn móc phải kéo xuống",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 5 li.",
+    "image_url": "/handwriting/upper_x.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p29_2.png"
+  },
+  "Y_uppercase": {
+    "letter": "Y",
+    "type": "uppercase",
+    "title": "Chữ Y hoa",
+    "height_cells": 8,
+    "grid_lines": 8,
+    "strokes": [
+      {
+        "order": 1,
+        "name": "Móc hai đầu",
+        "start": "đường kẻ 5",
+        "direction": "uốn móc cuộn vào trong lượn xuống rồi uốn lên",
+        "end": "giữa đường kẻ 2 và 3"
+      },
+      {
+        "order": 2,
+        "name": "Khuyết ngược",
+        "start": "đường kẻ 6",
+        "direction": "kéo thẳng xuống qua đường kẻ 1 thêm 3 li uốn lên",
+        "end": "đường kẻ 2"
+      }
+    ],
+    "note": "Độ cao 8 li (5 li trên và 3 li dưới).",
+    "image_url": "/handwriting/upper_y.png",
+    "source_doc": "TIENG VIET/1. HƯỚNG DẪN VIẾT CHỮ CÁI TIẾNG VIỆT.pdf",
+    "source_card": "card_p30_1.png"
+  }
+}
