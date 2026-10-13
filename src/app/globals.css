@@ -2338,11 +2338,26 @@ textarea {
   font-weight: 850 !important;
 }
 
+.guide-step-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 860px) {
+  .guide-step-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+}
+
 .guide-image-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
-  margin-top: 0.85rem;
+  margin-top: 0.75rem;
 }
 
 .guide-image-grid-two {
@@ -2351,27 +2366,35 @@ textarea {
 
 .guide-image-card {
   overflow: hidden;
-  margin: 0.95rem 0 0;
+  margin: 0.5rem 0 0;
   border: 1px solid rgba(203, 213, 225, 0.88);
-  border-radius: 1.05rem;
+  border-radius: 1rem;
   background: #fff;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
-.guide-image-grid .guide-image-card {
+.guide-image-grid .guide-image-card,
+.guide-step-grid .guide-image-card {
   margin-top: 0;
 }
 
 .guide-image-card img {
   display: block;
   width: 100%;
-  max-height: 560px;
+  max-height: 360px;
   object-fit: contain;
   background: #f8fafc;
 }
 
 .guide-image-card-wide img {
-  max-height: 460px;
+  max-height: 320px;
+}
+
+@media (max-width: 640px) {
+  .guide-image-card img,
+  .guide-image-card-wide img {
+    max-height: 240px;
+  }
 }
 
 .guide-image-card figcaption {
