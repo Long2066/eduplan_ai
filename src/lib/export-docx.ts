@@ -126,16 +126,41 @@ function teacherVisualParagraphs(activity: LessonActivity): Paragraph[] {
 
   for (const vis of activity.teacherVisuals) {
     if (!vis.dataUrl) continue;
+    let buffer: Buffer | null = null;
     const match = vis.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) continue;
+    if (match) {
+      try {
+        buffer = Buffer.from(match[2], "base64");
+      } catch {
+        buffer = null;
+      }
+    } else if (typeof window === "undefined" && (vis.dataUrl.startsWith("/") || vis.dataUrl.startsWith("public/"))) {
+      try {
+        const fs = eval("require")("fs");
+        const path = eval("require")("path");
+        const cleanPath = vis.dataUrl.replace(/^\/?(public\/)?/, "");
+        const fullPath = path.join(process.cwd(), "public", cleanPath);
+        if (fs.existsSync(fullPath)) {
+          buffer = fs.readFileSync(fullPath);
+        }
+      } catch {
+        buffer = null;
+      }
+    }
+
+    if (!buffer) continue;
+
     try {
-      const buffer = Buffer.from(match[2], "base64");
       const targetWidth = Math.min(vis.widthPx || 240, 240);
       const aspect = (vis.heightPx && vis.widthPx) ? vis.heightPx / vis.widthPx : 0.65;
       const targetHeight = Math.round(targetWidth * aspect);
 
+      const label = vis.caption?.includes("Mẫu chữ")
+        ? "* Mẫu chữ viết chuẩn"
+        : "* Ảnh học liệu minh họa";
+
       paragraphs.push(
-        metadataParagraph("* Ảnh học liệu SGK minh họa", vis.caption || "Hình ảnh trích xuất từ SGK", "1F4E79"),
+        metadataParagraph(label, vis.caption || "Hình ảnh trích xuất từ SGK", "1F4E79"),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { after: 50 },
@@ -522,8 +547,90 @@ export function buildLessonDocxDocument(lesson: LessonPlan) {
   });
 }
 
+export async function prepareLessonVisualsForDocx(lesson: LessonPlan): Promise<LessonPlan> {
+  const isBrowser = typeof window !== "undefined";
+
+  const hasRelativeVisual = (activities?: LessonActivity[]) =>
+    activities?.some((a) => a.teacherVisuals?.some((v) => v.dataUrl && !v.dataUrl.startsWith("data:")));
+
+  const needConversion =
+    hasRelativeVisual(lesson.activities) ||
+    lesson.periodPlans?.some((p) => hasRelativeVisual(p.activities));
+
+  if (!needConversion) return lesson;
+
+  async function toBase64(url: string): Promise<string | null> {
+    if (url.startsWith("data:")) return url;
+    if (isBrowser) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return await new Promise<string | null>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    } else {
+      try {
+        const fs = eval("require")("fs");
+        const path = eval("require")("path");
+        const cleanPath = url.replace(/^\/?(public\/)?/, "");
+        const fullPath = path.join(process.cwd(), "public", cleanPath);
+        if (fs.existsSync(fullPath)) {
+          const buf = fs.readFileSync(fullPath);
+          return `data:image/png;base64,${buf.toString("base64")}`;
+        }
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  const convertActivities = async (acts: LessonActivity[]) => {
+    return Promise.all(
+      acts.map(async (act) => {
+        if (!act.teacherVisuals?.length) return act;
+        const updated = await Promise.all(
+          act.teacherVisuals.map(async (vis) => {
+            if (!vis.dataUrl || vis.dataUrl.startsWith("data:")) return vis;
+            const b64 = await toBase64(vis.dataUrl);
+            return b64 ? { ...vis, dataUrl: b64 } : vis;
+          }),
+        );
+        return { ...act, teacherVisuals: updated };
+      }),
+    );
+  };
+
+  const updatedPeriods = lesson.periodPlans
+    ? await Promise.all(
+        lesson.periodPlans.map(async (p) => ({
+          ...p,
+          activities: await convertActivities(p.activities || []),
+        })),
+      )
+    : undefined;
+
+  const updatedActivities = lesson.activities
+    ? await convertActivities(lesson.activities)
+    : [];
+
+  return {
+    ...lesson,
+    periodPlans: updatedPeriods,
+    activities: updatedActivities,
+  };
+}
+
 export async function exportLessonToDocx(lesson: LessonPlan, fileName: string) {
-  const doc = buildLessonDocxDocument(lesson);
+  const preparedLesson = await prepareLessonVisualsForDocx(lesson);
+  const doc = buildLessonDocxDocument(preparedLesson);
   const packedBlob = await Packer.toBlob(doc);
   const blob = await injectMathIntoDocx(packedBlob);
   const url = URL.createObjectURL(blob);

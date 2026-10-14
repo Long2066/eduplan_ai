@@ -17,6 +17,7 @@ import { requireResolvedLessonTitle, resolveLessonTitle } from "@/lib/lesson-tit
 import { sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
+import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
 import type {
   LessonActivity,
   LessonInput,
@@ -398,6 +399,15 @@ export function assembleStagedSections(
       return cloned;
     });
 
+    const processedActivities = subjectKind === "vietnamese"
+      ? attachHandwritingVisualsToActivities(
+          activities,
+          title,
+          pBpArt.periodBlueprint.focus,
+          { embedBase64: true },
+        )
+      : activities;
+
     const lastPhase = periodPhases[periodPhases.length - 1];
     const handoffLearned = lastPhase?.handoff?.knowledge?.length
       ? lastPhase.handoff.knowledge.join("; ")
@@ -415,7 +425,7 @@ export function assembleStagedSections(
       periodNumber: pNum,
       focus: pBpArt.periodBlueprint.focus,
       outcomes: periodOutcomes,
-      activities,
+      activities: processedActivities,
       handoff,
     };
     periodPlans.push(periodPlan);

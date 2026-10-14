@@ -3,6 +3,14 @@ import { buildPhaseQualityPromptBlock } from "./lesson-phase-quality";
 import { getNaturalSocialPedagogyProfile } from "./natural-social-pedagogy";
 import { formatNaturalSocialStartupPromptBlock, selectNaturalSocialStartup } from "./natural-social-startup";
 import { classifyVietnameseLesson, getVietnameseGradeWorkflow, vietnameseLessonTypeProfiles } from "./vietnamese-pedagogy";
+import {
+  extractTargetLettersFromWritingText,
+  formatHandwritingInstruction,
+  getHandwritingEntry,
+} from "./vietnamese-handwriting";
+import {
+  suggestTiengVietDigitalActivity,
+} from "./digital-competency-cv3456";
 import type {
   LessonInput,
   LessonPlan,
@@ -1272,6 +1280,65 @@ export const vietnameseStrictGuidance = `QUY TẮC BẮT BUỘC KHI SOẠN GIÁO
 14. Ngữ liệu là Single Source of Truth: Toàn bộ từ ngữ, câu nhận biết, đoạn đọc, từ ứng dụng, chữ viết, chủ đề nói lấy chính xác từ SGK đã xác minh. TUYỆT ĐỐI CẤM AI tự ý sáng tác lại hoặc thay chữ trong câu/đoạn/dãy tiếng SGK (ví dụ: cấm đổi bàn thành bạn, cấm đổi chả sợ thành chẳng sợ).
 15. Tập viết có kiểm chứng: Từng chữ mục tiêu phải có bản ghi mẫu chữ xác minh bằng trang/hình tài liệu; nếu thiếu phải gắn cờ needs_handwriting_reference, yêu cầu giáo viên đối chiếu, không sinh tọa độ/điểm đặt bút tùy ý.`;
 
+export function getHandwritingGuidanceBlock(
+  input: LessonInput,
+  blueprint: VietnameseLessonBlueprint,
+  period: VietnamesePeriodBlueprint,
+): string {
+  const isHandwritingOrPhonics =
+    period.lessonType === "handwriting" ||
+    period.lessonType === "phonics" ||
+    period.lessonType === "spelling";
+
+  if (!isHandwritingOrPhonics) return "";
+
+  const writingText = [
+    period.focus,
+    input.lessonTitle,
+    blueprint.sourceInventory?.writingPrompt?.prompts?.join(" ") || "",
+    blueprint.sourceInventory?.spellingText || "",
+  ].join(" ");
+
+  const letters = extractTargetLettersFromWritingText(writingText);
+  if (letters.length === 0) return "";
+
+  const instructions: string[] = [];
+  for (const letter of letters.slice(0, 4)) {
+    const entry = getHandwritingEntry(letter, "lowercase");
+    if (entry) {
+      instructions.push(formatHandwritingInstruction(entry));
+    }
+  }
+
+  if (instructions.length === 0) return "";
+
+  return `\nQuy chuẩn mẫu chữ viết (Trích xuất từ Hồ sơ Chữ viết Tiếng Việt Tiểu học):
+${instructions.join("\n\n")}
+- Yêu cầu bắt buộc: Khi viết phần Luyện viết (bảng con hoặc vở), GV hướng dẫn HS đúng độ cao (ô li), điểm đặt bút, thứ tự nét và điểm dừng bút như trên. Tuyệt đối không tự bịa quy cách viết khác với mẫu chuẩn.\n`;
+}
+
+export function getDigitalCompetencyPromptBlock(
+  input: LessonInput,
+  lessonType: string,
+): string {
+  if (!input.enableDigitalCompetency) return "";
+
+  const suggestion = suggestTiengVietDigitalActivity(
+    input.grade,
+    lessonType,
+    input.lessonTitle || "bài học",
+  );
+
+  return `\nGỢI Ý TÍCH HỢP NĂNG LỰC SỐ THỰC CHẤT (Theo CV 3456/BGDĐT-GDTH):
+- Mã chỉ báo đề xuất: ${suggestion.indicatorCode} (${suggestion.indicatorDescription})
+- Tên nhiệm vụ số đề xuất: ${suggestion.taskTitle}
+- Hành động GV: ${suggestion.teacherAction}
+- Thao tác HS (HS trực tiếp tương tác/tạo sản phẩm số): ${suggestion.studentAction}
+- Sản phẩm số của HS: ${suggestion.digitalProduct}
+- Tiêu chí đánh giá: ${suggestion.assessmentCriterion}
+(Lưu ý: Không biến việc GV chiếu TV/slide thành năng lực số của HS. Bắt buộc HS phải có thao tác công nghệ số thật).\n`;
+}
+
 export function buildVietnameseBlueprintPrompt(
   input: LessonInput,
   ocrText: string,
@@ -1292,6 +1359,7 @@ ${vietnameseStrictGuidance}
 Khung CTGDPT 2018:
 ${curriculumGuidance}
 ${digitalCompetencyInstruction(input)}
+${getDigitalCompetencyPromptBlock(input, classification.primaryType)}
 
 Chuẩn chất lượng 4 pha:
 ${globalPhaseQualityGuidance("blueprint")}
@@ -1458,13 +1526,15 @@ ${(() => {
   const wf = getVietnameseGradeWorkflow(input, blueprint.classification);
   if (!wf) return "";
   const pNum = period.periodNumber;
-  const periodSteps = pNum && wf.mandatoryStepsByPeriod ? wf.mandatoryStepsByPeriod[pNum] : undefined;
+  const hasMultiplePeriods = Number(input.periods) > 1;
+  const periodSteps = hasMultiplePeriods && pNum && wf.mandatoryStepsByPeriod ? wf.mandatoryStepsByPeriod[pNum] : undefined;
   return `Quy trình bắt buộc của khối lớp (${wf.label}):
 - Trọng tâm khối:
 ${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}
 ${periodSteps ? `- Các bước dạy trọng tâm cho TIẾT ${period.periodNumber}:\n${periodSteps.map((s) => `  * ${s}`).join("\n")}` : `- Toàn bộ tiến trình theo lớp:\n${wf.stepsSummary.map((s) => `  * ${s}`).join("\n")}`}
 `;
 })()}
+${getHandwritingGuidanceBlock(input, blueprint, period)}
 Quy tắc đặc thù kiểu bài:
 - Bắt buộc chép cụ thể ngữ liệu/nhiệm vụ vào giáo án; không chỉ ghi "theo SGK".
 - Bắt buộc bao phủ các nhiệm vụ trong sourceInventory.requiredTasks thuộc tiết này; không được bỏ sót nhiệm vụ có dấu sao/chữ nhỏ như học thuộc lòng, đặt câu, viết vào vở hoặc đọc mở rộng.
@@ -1500,6 +1570,7 @@ Gợi ý cân thời lượng trong 35 phút:
 Khung CTGDPT 2018:
 ${curriculumGuidance}
 ${digitalCompetencyInstruction(input)}
+${getDigitalCompetencyPromptBlock(input, period.lessonType || "mixed")}
 
 Luật Khởi động:
 ${startupGuidance}

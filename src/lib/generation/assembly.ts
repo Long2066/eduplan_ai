@@ -8,6 +8,7 @@ import {
 import { sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
+import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
 import type { SubscriptionPlan } from "@/lib/model-strategy";
 import type {
   LessonActivity,
@@ -215,19 +216,6 @@ export function assembleStagedLesson(
   const blueprint = objectValue(blueprintArtifact.blueprint);
   const orderedArtifacts = periodArtifacts.slice().sort((left, right) => left.periodNumber - right.periodNumber);
   const periods = validateAndOrderPeriods(input, blueprintArtifact, orderedArtifacts);
-  const models = uniqueStrings([
-    blueprintArtifact.model || "",
-    ...orderedArtifacts.map((artifact) => artifact.model),
-  ].filter(Boolean));
-  const providers = uniqueValues([
-    ...(blueprintArtifact.provider ? [blueprintArtifact.provider] : []),
-    ...orderedArtifacts.map((artifact) => artifact.provider),
-  ]);
-  const fallbackMaterials = materialDefaults(blueprintArtifact.subjectKind);
-  const rawMaterials = objectValue(blueprint.materials);
-  const teacherMaterials = stringArray(rawMaterials.teacher);
-  const studentMaterials = stringArray(rawMaterials.students);
-  const rawAssessment = objectValue(blueprint.assessment);
   const title = requireResolvedLessonTitle(resolveLessonTitle({
     subject: input.subject,
     candidates: [
@@ -242,6 +230,30 @@ export function assembleStagedLesson(
       { value: blueprint.lessonTitle, source: "blueprint", confidence: 0.8 },
     ],
   }));
+  const processedPeriods = blueprintArtifact.subjectKind === "vietnamese"
+    ? periods.map((period) => ({
+        ...period,
+        activities: attachHandwritingVisualsToActivities(
+          period.activities,
+          title,
+          period.focus,
+          { embedBase64: true },
+        ),
+      }))
+    : periods;
+  const models = uniqueStrings([
+    blueprintArtifact.model || "",
+    ...orderedArtifacts.map((artifact) => artifact.model),
+  ].filter(Boolean));
+  const providers = uniqueValues([
+    ...(blueprintArtifact.provider ? [blueprintArtifact.provider] : []),
+    ...orderedArtifacts.map((artifact) => artifact.provider),
+  ]);
+  const fallbackMaterials = materialDefaults(blueprintArtifact.subjectKind);
+  const rawMaterials = objectValue(blueprint.materials);
+  const teacherMaterials = stringArray(rawMaterials.teacher);
+  const studentMaterials = stringArray(rawMaterials.students);
+  const rawAssessment = objectValue(blueprint.assessment);
   const modelUsed = orderedArtifacts[orderedArtifacts.length - 1]?.model
     || blueprintArtifact.model
     || "unknown";
@@ -260,16 +272,16 @@ export function assembleStagedLesson(
       grade: input.grade,
       lessonTitle: title,
       book: bookContext(input),
-      periods: periods.length,
+      periods: processedPeriods.length,
       duration: positiveInteger(input.duration, 35),
     },
-    outcomes: mergeOutcomes(blueprint.outcomes, periods),
+    outcomes: mergeOutcomes(blueprint.outcomes, processedPeriods),
     materials: sanitizeMaterials({
       teacher: teacherMaterials.length ? teacherMaterials : fallbackMaterials.teacher,
       students: studentMaterials.length ? studentMaterials : fallbackMaterials.students,
     }),
-    activities: periods.flatMap((period) => period.activities),
-    periodPlans: periods,
+    activities: processedPeriods.flatMap((period) => period.activities),
+    periodPlans: processedPeriods,
     assessment: {
       criteria: stringArray(rawAssessment.criteria),
       evidence: stringArray(rawAssessment.evidence),

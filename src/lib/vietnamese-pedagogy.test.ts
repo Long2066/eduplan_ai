@@ -251,4 +251,84 @@ describe("vietnameseGradeWorkflows & getVietnameseGradeWorkflow", () => {
     expect(wf?.stepsSummary.some((s) => s.includes("Bước 6: Nêu nội dung, ý nghĩa của văn bản"))).toBe(true);
     expect(wf?.stepsSummary.some((s) => s.includes("Bước 7: Luyện đọc lại, đọc diễn cảm"))).toBe(true);
   });
+
+  it("lớp 2 tập làm văn và đọc mở rộng định tuyến đúng", () => {
+    const compInput = makeInput({ grade: "Lớp 2", lessonTitle: "Luyện viết đoạn: Kể về một việc tốt", periods: 1 });
+    const compClass = classifyVietnameseLesson(compInput, "Viết 3-4 câu kể về việc tốt em đã làm.");
+    const compWf = getVietnameseGradeWorkflow(compInput, compClass);
+    expect(compWf?.id).toBe("grade2-composition");
+    expect(compWf?.stepsSummary.some((s) => s.toLowerCase().includes("viết đoạn văn"))).toBe(true);
+
+    const extInput = makeInput({ grade: "Lớp 2", lessonTitle: "Đọc mở rộng: Đọc một bài thơ về trẻ em", periods: 1 });
+    const extClass = classifyVietnameseLesson(extInput, "Đọc thơ và chia sẻ phiếu đọc sách.");
+    const extWf = getVietnameseGradeWorkflow(extInput, extClass);
+    expect(extWf?.id).toBe("grade2-reading-extension");
+  });
+
+  it("lớp 3 chính tả, luyện từ và câu, viết đoạn định tuyến đúng", () => {
+    const spellInput = makeInput({ grade: "Lớp 3", lessonTitle: "Chính tả: Nghe - viết Em học vẽ", periods: 1 });
+    const spellClass = classifyVietnameseLesson(spellInput, "Nghe viết khổ 1, 2. Làm bài tập phân biệt s/x.");
+    const spellWf = getVietnameseGradeWorkflow(spellInput, spellClass);
+    expect(spellWf?.id).toBe("grade3-spelling");
+    expect(spellWf?.stepsSummary.some((s) => s.includes("soát lỗi"))).toBe(true);
+
+    const lkInput = makeInput({ grade: "Lớp 3", lessonTitle: "Luyện từ và câu: Mở rộng vốn từ Trường học", periods: 1 });
+    const lkClass = classifyVietnameseLesson(lkInput, "Tìm từ chỉ hoạt động ở trường. Đặt câu.");
+    const lkWf = getVietnameseGradeWorkflow(lkInput, lkClass);
+    expect(lkWf?.id).toBe("grade3-language-knowledge");
+    expect(lkWf?.stepsSummary.some((s) => s.includes("Nhận biết"))).toBe(true);
+
+    const compInput = makeInput({ grade: "Lớp 3", lessonTitle: "Luyện viết đoạn: Kể lại một buổi lao động", periods: 1 });
+    const compClass = classifyVietnameseLesson(compInput, "Viết đoạn văn từ 5 đến 7 câu.");
+    const compWf = getVietnameseGradeWorkflow(compInput, compClass);
+    expect(compWf?.id).toBe("grade3-composition");
+    expect(compWf?.stepsSummary.some((s) => s.includes("Đọc soát & Chỉnh sửa"))).toBe(true);
+  });
+
+  it("lớp 4 nói nghe 7 bước, viết quy trình, luyện từ câu và đọc mở rộng định tuyến đúng", () => {
+    const slInput = makeInput({ grade: "Lớp 4", lessonTitle: "Nói và nghe: Kể chuyện Cây khế", periods: 1 });
+    const slClass = classifyVietnameseLesson(slInput, "Nghe kể chuyện và tập kể lại.");
+    const slWf = getVietnameseGradeWorkflow(slInput, slClass);
+    expect(slWf?.id).toBe("grade4-speaking-listening-7steps");
+    expect(slWf?.stepsSummary.some((s) => s.includes("4. Thực hành nói"))).toBe(true);
+
+    const compInput = makeInput({ grade: "Lớp 4", lessonTitle: "Viết: Lập dàn ý cho bài văn miêu tả cây cối", periods: 1 });
+    const compClass = classifyVietnameseLesson(compInput, "Lập dàn ý chi tiết bài văn miêu tả.");
+    const compWf = getVietnameseGradeWorkflow(compInput, compClass);
+    expect(compWf?.id).toBe("grade4-composition-process");
+    expect(compWf?.stepsSummary.some((s) => s.toLowerCase().includes("lập dàn ý"))).toBe(true);
+
+    const lkInput = makeInput({ grade: "Lớp 4", lessonTitle: "Luyện từ và câu: Danh từ", periods: 1 });
+    const lkClass = classifyVietnameseLesson(lkInput, "Tìm danh từ chỉ người, vật, hiện tượng.");
+    const lkWf = getVietnameseGradeWorkflow(lkInput, lkClass);
+    expect(lkWf?.id).toBe("grade4-language-knowledge");
+
+    const extInput = makeInput({ grade: "Lớp 4", lessonTitle: "Đọc mở rộng: Đọc sách về các nhà thám hiểm", periods: 1 });
+    const extClass = classifyVietnameseLesson(extInput, "Tìm đọc bài viết về thám hiểm và ghi phiếu đọc sách.");
+    const extWf = getVietnameseGradeWorkflow(extInput, extClass);
+    expect(extWf?.id).toBe("grade4-reading-extension");
+  });
+
+  it("lớp 5 nói nghe, viết quy trình, luyện từ câu và đọc mở rộng định tuyến đúng", () => {
+    const slInput = makeInput({ grade: "Lớp 5", lessonTitle: "Nói và nghe: Thuyết trình về vấn đề ô nhiễm môi trường", periods: 1 });
+    const slClass = classifyVietnameseLesson(slInput, "Chuẩn bị bài nói và trao đổi với các bạn.");
+    const slWf = getVietnameseGradeWorkflow(slInput, slClass);
+    expect(slWf?.id).toBe("grade5-speaking-listening-7steps");
+
+    const compInput = makeInput({ grade: "Lớp 5", lessonTitle: "Viết: Viết bài văn tả cảnh sông nước", periods: 1 });
+    const compClass = classifyVietnameseLesson(compInput, "Dựa vào dàn ý đã lập, viết bài văn hoàn chỉnh.");
+    const compWf = getVietnameseGradeWorkflow(compInput, compClass);
+    expect(compWf?.id).toBe("grade5-composition-process");
+    expect(compWf?.stepsSummary.some((s) => s.includes("Đọc soát"))).toBe(true);
+
+    const lkInput = makeInput({ grade: "Lớp 5", lessonTitle: "Luyện từ và câu: Từ đồng nghĩa", periods: 1 });
+    const lkClass = classifyVietnameseLesson(lkInput, "Tìm từ đồng nghĩa hoàn toàn và không hoàn toàn.");
+    const lkWf = getVietnameseGradeWorkflow(lkInput, lkClass);
+    expect(lkWf?.id).toBe("grade5-language-knowledge");
+
+    const extInput = makeInput({ grade: "Lớp 5", lessonTitle: "Đọc mở rộng: Tìm đọc truyện lịch sử", periods: 1 });
+    const extClass = classifyVietnameseLesson(extInput, "Ghi chép sự kiện lịch sử vào phiếu đọc sách.");
+    const extWf = getVietnameseGradeWorkflow(extInput, extClass);
+    expect(extWf?.id).toBe("grade5-reading-extension");
+  });
 });

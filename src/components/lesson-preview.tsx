@@ -84,7 +84,11 @@ function ActivityRow({ activity, index, displayMode }: { activity: LessonActivit
             <div className="my-2 space-y-2">
               {activity.teacherVisuals.map((vis, visIdx) => (
                 <div key={vis.id || visIdx} className="p-1.5 bg-slate-50 border border-slate-200 rounded text-center">
-                  <p className="text-xs font-semibold text-sky-800 mb-1">* Ảnh học liệu SGK: {vis.caption || "Hình ảnh minh họa"}</p>
+                  <p className="text-xs font-semibold text-sky-800 mb-1">
+                    {vis.caption?.includes("Mẫu chữ")
+                      ? `* ${vis.caption}`
+                      : `* Ảnh học liệu minh họa: ${vis.caption || "Hình ảnh minh họa"}`}
+                  </p>
                   {vis.dataUrl ? (
                     <img
                       src={vis.dataUrl}

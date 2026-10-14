@@ -1,5 +1,5 @@
 import handwritingCatalog from "@/data/vietnamese-handwriting-catalog.json";
-import type { LessonActivityVisual } from "@/types/lesson";
+import type { LessonActivity, LessonActivityVisual } from "@/types/lesson";
 
 export interface HandwritingStroke {
   order: number;
@@ -57,7 +57,27 @@ export function formatHandwritingInstruction(entry: HandwritingEntry): string {
     .join("\n");
 }
 
-export function getHandwritingVisualsForLetters(letters: string[]): LessonActivityVisual[] {
+function loadLocalImageAsBase64(imageUrl: string): string | null {
+  if (typeof window !== "undefined") return null;
+  try {
+    const fs = eval("require")("fs");
+    const path = eval("require")("path");
+    const cleanPath = imageUrl.replace(/^\/?(public\/)?/, "");
+    const fullPath = path.join(process.cwd(), "public", cleanPath);
+    if (fs.existsSync(fullPath)) {
+      const buffer = fs.readFileSync(fullPath);
+      return `data:image/png;base64,${buffer.toString("base64")}`;
+    }
+  } catch {
+    // fallback
+  }
+  return null;
+}
+
+export function getHandwritingVisualsForLetters(
+  letters: string[],
+  options?: { embedBase64?: boolean }
+): LessonActivityVisual[] {
   const visuals: LessonActivityVisual[] = [];
   const seen = new Set<string>();
 
@@ -70,10 +90,12 @@ export function getHandwritingVisualsForLetters(letters: string[]): LessonActivi
     const entry = getHandwritingEntry(char, isUpper ? "uppercase" : "lowercase");
     if (!entry) continue;
 
+    const b64 = options?.embedBase64 ? loadLocalImageAsBase64(entry.image_url) : null;
+
     visuals.push({
       id: `hw-${entry.letter}-${entry.type}`,
       caption: `Mẫu chữ ${entry.letter} (${entry.type === "uppercase" ? "chữ hoa" : "chữ thường"}) - Độ cao ${entry.height_cells} ô li`,
-      dataUrl: entry.image_url,
+      dataUrl: b64 || entry.image_url,
       alt: entry.title,
       widthPx: 240,
     });
@@ -82,13 +104,23 @@ export function getHandwritingVisualsForLetters(letters: string[]): LessonActivi
   return visuals;
 }
 
+const INSTRUCTION_STOPWORDS = new Set([
+  "bài", "tiết", "luyện", "tập", "viết", "bảng", "con", "vở",
+  "học", "vần", "đúng", "quy", "trình", "các", "chữ", "cho",
+  "với", "trong", "thực", "hành", "mẫu", "theo", "hướng", "dẫn",
+  "giáo", "viên", "sinh", "hoạt", "động", "bước"
+]);
+
 export function extractTargetLettersFromWritingText(writingText: string): string[] {
-  // Normalize and extract individual distinct letters or compound letters
-  const tokens = writingText.replace(/[,;:.!?]/g, " ").split(/\s+/).filter(Boolean);
+  // Normalize and filter instructional stopwords
+  const rawTokens = writingText.replace(/[,;:.!?()\/\\-]/g, " ").split(/\s+/).filter(Boolean);
+  const meaningfulTokens = rawTokens.filter((t) => !INSTRUCTION_STOPWORDS.has(t.toLowerCase()));
+  const candidateTokens = meaningfulTokens.length > 0 ? meaningfulTokens : rawTokens;
+
   const result: string[] = [];
   const seen = new Set<string>();
 
-  for (const token of tokens) {
+  for (const token of candidateTokens) {
     for (const char of token) {
       const lower = char.toLowerCase();
       if (catalog[`${lower}_lowercase`] && !seen.has(lower)) {
@@ -99,4 +131,33 @@ export function extractTargetLettersFromWritingText(writingText: string): string
   }
 
   return result;
+}
+
+export function attachHandwritingVisualsToActivities(
+  activities: (LessonActivity & { [key: string]: any })[],
+  lessonTitle: string,
+  focus?: string,
+  options?: { embedBase64?: boolean }
+): LessonActivity[] {
+  return activities.map((act) => {
+    const text = `${act.phase || ""} ${act.title || ""} ${act.objective || ""}`.toLowerCase();
+    const isWritingActivity = /viết bảng|viết vở|tập viết|luyện viết|mẫu chữ/i.test(text);
+    if (!isWritingActivity) return act as LessonActivity;
+
+    if (act.teacherVisuals?.some((v: any) => v.id && String(v.id).startsWith("hw-"))) {
+      return act as LessonActivity;
+    }
+
+    const contextText = `${act.title || ""} ${act.objective || ""} ${focus || ""} ${lessonTitle || ""}`;
+    const letters = extractTargetLettersFromWritingText(contextText);
+    if (letters.length === 0) return act as LessonActivity;
+
+    const visuals = getHandwritingVisualsForLetters(letters.slice(0, 3), options);
+    if (visuals.length === 0) return act as LessonActivity;
+
+    return {
+      ...act,
+      teacherVisuals: [...(act.teacherVisuals || []), ...visuals],
+    } as LessonActivity;
+  });
 }

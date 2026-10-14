@@ -810,10 +810,70 @@ export const vietnameseGradeWorkflows: Record<string, VietnameseGradeWorkflow> =
       "3. Luyện tập: hệ thống hóa nội dung, luyện tập từ ngữ/câu gắn với bài đọc, hoàn thành phiếu học tập hoặc bài tập SGK.",
       "4. Vận dụng: liên hệ bản thân/thực tế, nói điều học được, viết 1-2 câu cảm nghĩ, tìm thêm thông tin.",
     ],
+    mandatoryStepsByPeriod: {
+      1: [
+        "Khởi động: tạo tâm thế kết nối chủ điểm bài đọc",
+        "Luyện đọc thành tiếng: đọc mẫu, chia đoạn, đọc nối tiếp câu/đoạn, luyện phát âm từ khó và câu dài",
+        "Tìm hiểu nghĩa từ ngữ: giải nghĩa từ ngữ qua ngữ cảnh, tranh ảnh hoặc đặt câu",
+      ],
+      2: [
+        "Đọc hiểu văn bản: đọc thầm, trả lời hệ thống câu hỏi tìm chi tiết, nội dung, nhân vật, bài học",
+        "Luyện tập sau bài đọc: bài tập củng cố từ ngữ hoặc câu văn gắn với bài đọc",
+        "Vận dụng: liên hệ bản thân, viết 1-2 câu cảm nghĩ hoặc việc làm phù hợp",
+      ],
+    },
     pedagogicalFocus: [
       "Tách bạch 3 hoạt động trong Khám phá: Luyện đọc thành tiếng → Nghĩa từ ngữ → Đọc hiểu",
       "Cấu trúc tuần học lớp 3 thường tích hợp: Đọc + Nói-nghe (3 tiết đầu) hoặc Đọc + Viết chữ hoa/Đọc mở rộng (4 tiết sau)",
       "Vận dụng yêu cầu liên hệ bản thân hoặc viết 1-2 câu cảm nghĩ",
+    ],
+  },
+  "grade3-spelling": {
+    id: "grade3-spelling",
+    grade: 3,
+    label: "Lớp 3: Mạch Viết chính tả và bài tập chính tả",
+    applicableTypes: ["spelling"],
+    stepsSummary: [
+      "1. Nghe - viết (nhìn - viết / nhớ - viết): nêu yêu cầu, đọc đoạn mẫu, hướng dẫn từ khó/chữ dễ sai (tên riêng, dấu thanh, âm đầu), đọc từng cụm từ, soát lỗi.",
+      "2. Hoàn thành bài tập chính tả: luyện tập củng cố viết đúng âm, vần, dấu thanh, tên riêng, dấu câu (bài tập bắt buộc + bài tập lựa chọn).",
+      "3. Củng cố, chữa bài: nhận xét bài viết, sửa lỗi phổ biến.",
+    ],
+    pedagogicalFocus: [
+      "Rèn luyện kĩ năng nghe - viết chính xác, đúng tốc độ lớp 3",
+      "Phân biệt các âm/vần dễ lẫn (ch/tr, s/x, d/gi/r, l/n, dấu hỏi/ngã)",
+    ],
+  },
+  "grade3-language-knowledge": {
+    id: "grade3-language-knowledge",
+    grade: 3,
+    label: "Lớp 3: Mạch Luyện từ và câu",
+    applicableTypes: ["language-knowledge"],
+    stepsSummary: [
+      "1. Khởi động: trò chơi hoặc tình huống dẫn dắt vào bài học từ ngữ/câu.",
+      "2. Khám phá & Nhận biết: quan sát ngữ liệu, phân tích mẫu câu/từ ngữ, nhận biết đặc điểm ngữ pháp (mở rộng vốn từ, dấu câu, biện pháp so sánh).",
+      "3. Thực hành, luyện tập: làm bài tập vận dụng (tìm từ, đặt câu, điền dấu câu, viết câu có hình ảnh so sánh).",
+      "4. Vận dụng: sử dụng từ ngữ/câu vừa học vào giao tiếp hoặc viết câu văn ngắn.",
+    ],
+    pedagogicalFocus: [
+      "Lớp 3 trọng tâm: mở rộng vốn từ theo chủ điểm, dấu chấm/phẩy/hỏi/than, biện pháp tu từ so sánh",
+      "Học sinh phải được tự đặt câu và vận dụng, không chỉ làm bài tập điền khuyết",
+    ],
+  },
+  "grade3-composition": {
+    id: "grade3-composition",
+    grade: 3,
+    label: "Lớp 3: Mạch Tập làm văn / Luyện viết đoạn văn",
+    applicableTypes: ["composition"],
+    stepsSummary: [
+      "1. Khởi động: dẫn dắt tạo hứng thú theo đề tài bài viết (kể, tả, cảm nghĩ, giới thiệu).",
+      "2. Chuẩn bị viết (Nói trước khi viết): quan sát tranh/gợi ý/trải nghiệm bản thân, thảo luận nhóm, tìm ý và sắp xếp ý.",
+      "3. Thực hành viết đoạn văn: HS viết đoạn văn ngắn (5-7 câu) vào vở theo yêu cầu đề bài.",
+      "4. Đọc soát & Chỉnh sửa: đọc lại đoạn văn, tự soát lỗi chính tả/dùng từ, đổi vở góp ý cho bạn, GV nhận xét tuyên dương.",
+    ],
+    pedagogicalFocus: [
+      "Tổ chức cho HS nói và chia sẻ ý tưởng trước khi bắt tay vào viết",
+      "Đoạn văn ngắn 5-7 câu, chú ý mở đoạn, các câu phát triển ý và kết đoạn",
+      "Rèn thói quen tự soát lỗi dấu câu và chữ hoa đầu câu",
     ],
   },
 
@@ -832,6 +892,19 @@ export const vietnameseGradeWorkflows: Record<string, VietnameseGradeWorkflow> =
       "Bước 6: Luyện đọc lại, đọc diễn cảm (chọn đoạn tiêu biểu, đọc cá nhân/cặp/nhóm, chú ý cảm xúc/nhịp thơ/mạch lạc).",
       "Bước 7: Vận dụng sau đọc (liên hệ cuộc sống, nói điều học được, viết cảm nghĩ, tìm hiểu thêm thông tin).",
     ],
+    mandatoryStepsByPeriod: {
+      1: [
+        "Bước 1: Khởi động, kết nối tạo hứng thú vào bài học",
+        "Bước 2: Đọc mẫu và định hướng giọng đọc (tốc độ, ngắt nghỉ, nhấn giọng)",
+        "Bước 3: Luyện đọc đúng (nối tiếp câu/đoạn/khổ, sửa phát âm, ngắt nghỉ câu dài)",
+        "Bước 4: Giải nghĩa từ ngữ (ngữ cảnh, từ điển, từ gần/trái nghĩa)",
+      ],
+      2: [
+        "Bước 5: Tìm hiểu bài (trả lời hệ thống câu hỏi đọc hiểu, tìm chi tiết, nội dung chính)",
+        "Bước 6: Luyện đọc lại, đọc diễn cảm (chọn đoạn tiêu biểu, thể hiện cảm xúc, phân vai)",
+        "Bước 7: Vận dụng sau đọc (liên hệ cuộc sống, viết cảm nghĩ, hành động thực tế)",
+      ],
+    },
     pedagogicalFocus: [
       "Bắt buộc có Bước 6: Luyện đọc lại và đọc diễn cảm đoạn tiêu biểu",
       "Bước 4 giải nghĩa từ qua ngữ cảnh và từ điển/từ gần nghĩa",
@@ -857,6 +930,54 @@ export const vietnameseGradeWorkflows: Record<string, VietnameseGradeWorkflow> =
       "Người nghe có nhiệm vụ lắng nghe, hỏi lại, nhận xét lịch sự",
     ],
   },
+  "grade4-language-knowledge": {
+    id: "grade4-language-knowledge",
+    grade: 4,
+    label: "Lớp 4: Mạch Luyện từ và câu",
+    applicableTypes: ["language-knowledge"],
+    stepsSummary: [
+      "1. Khởi động: trò chơi tạo tình huống ngôn ngữ.",
+      "2. Hình thành kiến thức: phân tích ngữ liệu mẫu, rút ra ghi nhớ về từ loại (danh từ, động từ, tính từ) hoặc quy tắc dấu câu, biện pháp nhân hóa.",
+      "3. Luyện tập: thực hành bài tập nhận diện, phân loại và đặt câu.",
+      "4. Vận dụng: viết đoạn văn ngắn có sử dụng kiến thức từ/câu vừa học.",
+    ],
+    pedagogicalFocus: [
+      "Quy nạp từ ngữ liệu thực tế trước khi rút ra ghi nhớ",
+      "Nhận biết và vận dụng các biện pháp tu từ (nhân hóa) và từ loại trong ngữ cảnh",
+    ],
+  },
+  "grade4-composition-process": {
+    id: "grade4-composition-process",
+    grade: 4,
+    label: "Lớp 4: Mạch Viết đoạn văn, bài văn theo quy trình",
+    applicableTypes: ["composition"],
+    stepsSummary: [
+      "1. Khởi động & Xác định yêu cầu đề bài: phân tích đề, xác định thể loại (kể chuyện, miêu tả con vật/cây cối, viết đoạn nêu ý kiến).",
+      "2. Chuẩn bị & Tìm ý: quan sát đối tượng, ghi chép chi tiết, lập dàn ý 3 phần (Mở bài, Thân bài, Kết bài).",
+      "3. Thực hành viết: viết đoạn văn/bài văn hoàn chỉnh, chú ý liên kết câu và từ ngữ gợi tả/gợi cảm.",
+      "4. Đọc soát & Chỉnh sửa: đối chiếu tiêu chí đánh giá, soát lỗi chính tả/ngữ pháp/dùng từ, đổi bài góp ý.",
+    ],
+    pedagogicalFocus: [
+      "Dạy viết theo quy trình: Chuẩn bị/Tìm ý → Lập dàn ý → Viết bài → Chỉnh sửa",
+      "Rèn luyện kĩ năng liên kết câu và sử dụng hình ảnh so sánh, nhân hóa",
+    ],
+  },
+  "grade4-reading-extension": {
+    id: "grade4-reading-extension",
+    grade: 4,
+    label: "Lớp 4: Mạch Đọc mở rộng",
+    applicableTypes: ["reading", "speaking-listening"],
+    stepsSummary: [
+      "1. Khởi động: giới thiệu chủ điểm đọc mở rộng.",
+      "2. Chia sẻ & Giới thiệu bài đọc: HS chia sẻ tên bài thơ/câu chuyện/bài văn đã đọc theo chủ điểm.",
+      "3. Ghi chép & Đọc hiểu: hoàn thành Phiếu đọc sách (tên bài, tác giả, chi tiết yêu thích, cảm nhận).",
+      "4. Trao đổi & Thảo luận: thi đọc đoạn hay, trao đổi về thông điệp và ý nghĩa bài đọc.",
+    ],
+    pedagogicalFocus: [
+      "Phát triển thói quen đọc sách độc lập và ghi chép nhật ký/phiếu đọc sách",
+      "Khuyến khích chia sẻ cảm xúc và bình luận về nhân vật/chi tiết",
+    ],
+  },
 
   // LỚP 5
   "grade5-reading-8steps": {
@@ -874,6 +995,20 @@ export const vietnameseGradeWorkflows: Record<string, VietnameseGradeWorkflow> =
       "Bước 7: Luyện đọc lại, đọc diễn cảm (chọn đoạn tiêu biểu, đọc phân vai/cá nhân, giọng đọc phù hợp, thể hiện cảm xúc).",
       "Bước 8: Vận dụng sau đọc (nói điều học được, liên hệ bản thân, viết cảm nghĩ, hành động việc làm phù hợp).",
     ],
+    mandatoryStepsByPeriod: {
+      1: [
+        "Bước 1: Khởi động, kết nối vào bài tạo hứng thú và định hướng chủ điểm",
+        "Bước 2: Đọc mẫu, định hướng giọng đọc (xác định cảm xúc: vui tươi/xúc động/trang trọng, tốc độ, nhấn giọng)",
+        "Bước 3: Đọc nối tiếp đoạn/khổ (luyện từ khó, câu dài, hướng dẫn ngắt nghỉ, nhấn giọng)",
+        "Bước 4: Giải nghĩa từ ngữ, hình ảnh (dựa chú thích/ngữ cảnh, tìm từ đồng nghĩa/trái nghĩa, tranh ảnh minh họa)",
+      ],
+      2: [
+        "Bước 5: Tìm hiểu nội dung bài đọc (trả lời câu hỏi đọc hiểu, tìm thông tin, giải thích chi tiết, nhận xét suy luận)",
+        "Bước 6: Nêu nội dung, ý nghĩa của văn bản (xác định nội dung chính, thông điệp tác giả gửi gắm, GV chốt ngắn gọn)",
+        "Bước 7: Luyện đọc lại, đọc diễn cảm (chọn đoạn tiêu biểu, đọc phân vai/cá nhân, giọng đọc phù hợp, thể hiện cảm xúc)",
+        "Bước 8: Vận dụng sau đọc (nói điều học được, liên hệ bản thân, viết cảm nghĩ, hành động việc làm phù hợp)",
+      ],
+    },
     pedagogicalFocus: [
       "Bước 6 tách riêng: Nêu nội dung, ý nghĩa và thông điệp của văn bản",
       "Bước 7 đọc diễn cảm nâng cao (thể hiện sắc thái cảm xúc, nhịp điệu, phân vai)",
@@ -896,6 +1031,54 @@ export const vietnameseGradeWorkflows: Record<string, VietnameseGradeWorkflow> =
     ],
     pedagogicalFocus: [
       "Mức độ nói và nghe cao hơn: trình bày quan điểm, giải thích lí lẽ, phản hồi văn minh",
+    ],
+  },
+  "grade5-language-knowledge": {
+    id: "grade5-language-knowledge",
+    grade: 5,
+    label: "Lớp 5: Mạch Luyện từ và câu",
+    applicableTypes: ["language-knowledge"],
+    stepsSummary: [
+      "1. Khởi động: trò chơi ngôn ngữ kết nối kiến thức.",
+      "2. Khám phá kiến thức mới: phân tích ví dụ ngữ liệu, rút ra bản chất (từ đồng nghĩa/trái nghĩa/đồng âm/nhiều nghĩa, đại từ, quan hệ từ, câu ghép).",
+      "3. Luyện tập thực hành: nhận diện, giải nghĩa, phân biệt và đặt câu trong văn cảnh.",
+      "4. Vận dụng: viết đoạn văn ngắn vận dụng kiến thức từ/câu đã học.",
+    ],
+    pedagogicalFocus: [
+      "Mức độ phân tích ngữ nghĩa sâu hơn (phân biệt nghĩa gốc/nghĩa chuyển, sắc thái biểu cảm)",
+      "Vận dụng câu ghép và quan hệ từ để liên kết câu mạch lạc",
+    ],
+  },
+  "grade5-composition-process": {
+    id: "grade5-composition-process",
+    grade: 5,
+    label: "Lớp 5: Mạch Viết bài văn hoàn chỉnh theo quy trình",
+    applicableTypes: ["composition"],
+    stepsSummary: [
+      "1. Khởi động & Tìm hiểu đề: xác định yêu cầu trọng tâm, thể loại (tả cảnh, tả người, viết đoạn văn thể hiện tình cảm/cảm xúc, viết bài văn giải thích/thuyết phục).",
+      "2. Tìm ý & Lập dàn ý: lựa chọn chi tiết tiêu biểu, lập dàn ý 3 phần chi tiết có phân nhánh.",
+      "3. Thực hành viết bài: viết bài văn hoàn chỉnh, sử dụng từ ngữ gợi cảm, hình ảnh so sánh, nhân hóa, bày tỏ quan điểm.",
+      "4. Đọc soát, hoàn thiện & Đánh giá: tự soát lỗi, chỉnh sửa diễn đạt, đổi bài nhận xét theo bảng tiêu chí rõ ràng.",
+    ],
+    pedagogicalFocus: [
+      "Yêu cầu bài văn có cảm xúc chân thật, quan điểm rõ ràng và dẫn chứng thuyết phục",
+      "Bố cục chặt chẽ: mở bài gián tiếp, thân bài phát triển nhiều đoạn, kết bài mở rộng",
+    ],
+  },
+  "grade5-reading-extension": {
+    id: "grade5-reading-extension",
+    grade: 5,
+    label: "Lớp 5: Mạch Đọc mở rộng",
+    applicableTypes: ["reading", "speaking-listening"],
+    stepsSummary: [
+      "1. Khởi động: giới thiệu đề tài đọc mở rộng.",
+      "2. Báo cáo & Chia sẻ kết quả đọc: giới thiệu tác phẩm, tác giả, thể loại và thông điệp cốt lõi.",
+      "3. Đọc trích đoạn & Thảo luận: đọc diễn cảm đoạn văn/thơ tâm đắc, chia sẻ bài học rút ra.",
+      "4. Hoàn thiện Phiếu đọc sách & Vận dụng: ghi chép suy ngẫm, lan tỏa thói quen đọc sách.",
+    ],
+    pedagogicalFocus: [
+      "Nâng cao năng lực tự học và tự đọc tài liệu đa dạng",
+      "Khả năng tóm tắt, khái quát ý nghĩa và đánh giá thông điệp tác phẩm",
     ],
   },
 };
@@ -942,6 +1125,15 @@ export function getVietnameseGradeWorkflow(
   }
 
   if (gradeNum === 3) {
+    if (type === "spelling" || /chính tả|nghe[- ]viết/i.test(title)) {
+      return vietnameseGradeWorkflows["grade3-spelling"];
+    }
+    if (type === "language-knowledge" || /từ và câu|mở rộng vốn từ/i.test(title)) {
+      return vietnameseGradeWorkflows["grade3-language-knowledge"];
+    }
+    if (type === "composition" || /viết đoạn|tập làm văn/i.test(title)) {
+      return vietnameseGradeWorkflows["grade3-composition"];
+    }
     return vietnameseGradeWorkflows["grade3-reading"];
   }
 
@@ -949,12 +1141,30 @@ export function getVietnameseGradeWorkflow(
     if (type === "speaking-listening" || /nói và nghe|kể chuyện/i.test(title)) {
       return vietnameseGradeWorkflows["grade4-speaking-listening-7steps"];
     }
+    if (type === "composition" || /viết đoạn|bài văn/i.test(title)) {
+      return vietnameseGradeWorkflows["grade4-composition-process"];
+    }
+    if (type === "language-knowledge" || /từ và câu/i.test(title)) {
+      return vietnameseGradeWorkflows["grade4-language-knowledge"];
+    }
+    if (/đọc mở rộng/i.test(title)) {
+      return vietnameseGradeWorkflows["grade4-reading-extension"];
+    }
     return vietnameseGradeWorkflows["grade4-reading-7steps"];
   }
 
   if (gradeNum === 5) {
     if (type === "speaking-listening" || /nói và nghe|kể chuyện/i.test(title)) {
       return vietnameseGradeWorkflows["grade5-speaking-listening-7steps"];
+    }
+    if (type === "composition" || /viết bài văn|tả cảnh|tả người/i.test(title)) {
+      return vietnameseGradeWorkflows["grade5-composition-process"];
+    }
+    if (type === "language-knowledge" || /từ và câu|từ đồng nghĩa|câu ghép/i.test(title)) {
+      return vietnameseGradeWorkflows["grade5-language-knowledge"];
+    }
+    if (/đọc mở rộng/i.test(title)) {
+      return vietnameseGradeWorkflows["grade5-reading-extension"];
     }
     return vietnameseGradeWorkflows["grade5-reading-8steps"];
   }

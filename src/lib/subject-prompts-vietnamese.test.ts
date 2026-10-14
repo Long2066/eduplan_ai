@@ -133,6 +133,37 @@ describe("buildVietnamesePeriodPrompt", () => {
     expect(prompt1).toContain("Luyện viết bảng: GV viết mẫu điểm đặt bút/nét nối/cỡ chữ, HS viết bảng con");
     expect(prompt2).toContain("Luyện viết vở: tô và viết âm/chữ/vần/từ ngữ vào Vở tập viết, đúng tư thế");
   });
+
+  it("nhúng hướng dẫn nét chữ chuẩn từ catalog khi có nội dung viết", () => {
+    const input = makeInput({ grade: "Lớp 1", lessonTitle: "Bài 1. a b", periods: 1 });
+    const classification = classifyVietnameseLesson(input, "Chữ a, chữ b. Luyện viết a, b.");
+    const period: VietnamesePeriodBlueprint = { periodNumber: 1, focus: "Tập viết chữ a, b", lessonType: "phonics" };
+    const blueprint: VietnameseLessonBlueprint = { lessonTitle: input.lessonTitle, classification, periods: [period] };
+    const prompt = buildVietnamesePeriodPrompt(input, "a b", blueprint, period, null);
+
+    expect(prompt).toContain("Quy chuẩn mẫu chữ viết");
+    expect(prompt).toContain("Độ cao: 2 ô li");
+    expect(prompt).toContain("Đặt bút");
+    expect(prompt).toContain("Tuyệt đối không tự bịa quy cách viết");
+  });
+
+  it("nhúng gợi ý NLS chuẩn CV 3456 khi bật enableDigitalCompetency", () => {
+    const input = makeInput({
+      grade: "Lớp 3",
+      lessonTitle: "Bài đọc: Ngôi nhà thân yêu",
+      periods: 1,
+      enableDigitalCompetency: true,
+    });
+    const classification = classifyVietnameseLesson(input, "Đọc bài và trả lời câu hỏi.");
+    const period: VietnamesePeriodBlueprint = { periodNumber: 1, focus: "Đọc hiểu", lessonType: "reading" };
+    const blueprint: VietnameseLessonBlueprint = { lessonTitle: input.lessonTitle, classification, periods: [period] };
+    const prompt = buildVietnamesePeriodPrompt(input, "Đọc bài", blueprint, period, null);
+
+    expect(prompt).toContain("GỢI Ý TÍCH HỢP NĂNG LỰC SỐ THỰC CHẤT (Theo CV 3456/BGDĐT-GDTH)");
+    expect(prompt).toContain("Mã chỉ báo đề xuất");
+    expect(prompt).toContain("Thao tác HS");
+    expect(prompt).toContain("Không biến việc GV chiếu TV/slide thành năng lực số");
+  });
 });
 
 describe("buildVietnamesePeriodRepairPrompt", () => {
