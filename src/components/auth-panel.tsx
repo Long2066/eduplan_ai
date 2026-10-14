@@ -710,13 +710,13 @@ export function AuthPanel({
           ) : null}
 
           <a
-            href="https://zalo.me/g/vtyrqi055"
+            href="https://zalo.me/g/iunsqm93yttvc2wx99cq"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex min-h-[42px] items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-brand-700 transition-all"
+            className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-brand-700 transition-all active:scale-[0.98]"
             title="Tham gia nhóm Zalo hỗ trợ kỹ thuật"
           >
-            <span>Hỗ trợ</span>
+            <span>Nhóm Zalo hỗ trợ</span>
           </a>
         </div>
       </header>
@@ -806,27 +806,6 @@ export function AuthPanel({
           </div>
 
           <div className="flex flex-1 flex-col justify-center">
-            {onOpenGuide ? (
-              <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-brand-50/80 p-3 text-xs sm:text-sm">
-                <div className="flex items-center gap-2.5 text-brand-950 min-w-0">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white text-xs">
-                    📖
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-900 truncate">Chưa biết cách dùng?</p>
-                    <p className="text-[11px] font-medium text-slate-600 truncate">Xem các bước từ đăng ký đến xuất Word</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="shrink-0 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition-all active:scale-95"
-                  onClick={onOpenGuide}
-                >
-                  Xem HDSD
-                </button>
-              </div>
-            ) : null}
-
             <div className="auth-header-container mb-4 sm:mb-6 text-center">
               <h2 className="text-lg sm:text-xl md:text-2xl font-black leading-tight text-slate-950">
                 {title}
