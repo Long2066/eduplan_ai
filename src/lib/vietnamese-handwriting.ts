@@ -133,6 +133,17 @@ export function extractTargetLettersFromWritingText(writingText: string): string
   return result;
 }
 
+/**
+ * Auto-attach handwriting reference visuals to writing activities.
+ * 
+ * IMPORTANT: Phân biệt 2 loại ảnh trong giáo án:
+ * 1. Ảnh mẫu chữ viết (handwriting): tự động chèn từ catalog PNG khi activity là luyện viết.
+ *    Label: "Mẫu chữ viết chuẩn". Source: public/handwriting/*.png
+ * 2. Ảnh SGK crop: cắt từ ảnh SGK user upload khi OCR. Được xử lý riêng trong
+ *    upload pipeline (image-crop), KHÔNG phải ở đây. Label: "Ảnh SGK minh họa".
+ * 
+ * ponytail: Khi có pipeline crop ảnh SGK, thêm attachSgkCropVisualsToActivities() riêng.
+ */
 export function attachHandwritingVisualsToActivities(
   activities: (LessonActivity & { [key: string]: any })[],
   lessonTitle: string,
@@ -161,3 +172,4 @@ export function attachHandwritingVisualsToActivities(
     } as LessonActivity;
   });
 }
+

@@ -1,0 +1,291 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Kịch bản dạy học mẫu theo từng dạng bài Tiếng Việt Lớp 1–5 KNTT. Trích xuất từ giáo án mẫu đã kiểm chứng.",
+  "templates": {
+    "grade1_phonics_write": {
+      "label": "Lớp 1 – Phần VIẾT của bài Âm-Chữ-Vần",
+      "description": "Quy trình dạy viết vần và từ ngữ ứng dụng trên bảng con + vở tập viết",
+      "activityStructure": [
+        {
+          "phase": "Khởi động",
+          "title": "Hát/trò chơi dẫn vào bài viết",
+          "durationMinutes": 3,
+          "scriptPattern": {
+            "teacherDo": "Cho HS hát bài liên quan hoặc trò chơi ôn vần đã học. Sau đó hỏi liên hệ nội dung bài → dẫn dắt vào phần viết.",
+            "studentDo": "Hát/chơi trò chơi. Trả lời câu hỏi liên hệ, nhận ra vần cần viết.",
+            "exampleGV": "\"Vừa rồi các em hát bài gì? Trong bài hát có tiếng nào chứa vần đã học? → Hôm nay chúng ta cùng nhau học viết vần an ăn ân và các từ ứng dụng. Mở SGK trang 74 nhé.\"",
+            "exampleHS": "\"Bài hát nói về bạn thân. Chứa vần an và ân ạ.\""
+          }
+        },
+        {
+          "phase": "Khám phá",
+          "title": "Hướng dẫn viết vần",
+          "durationMinutes": 12,
+          "subActivities": [
+            {
+              "title": "Xác định các nét chữ thành phần",
+              "scriptPattern": {
+                "teacherDo": "Chiếu/viết mẫu vần lên bảng. Hỏi từng chữ: gồm mấy nét? Là những nét nào? Cao mấy ô li? Rộng mấy ô li?",
+                "studentDo": "Quan sát và trả lời cụ thể: tên nét, số lượng nét, độ cao, độ rộng.",
+                "exampleGV": "\"GV chiếu mẫu vần an và hỏi: Để viết vần an, chúng ta sẽ viết chữ nào trước? Chữ a gồm mấy nét? Chữ a rộng bao nhiêu ô li?\"",
+                "exampleHS": "\"Viết chữ a trước, viết chữ n sau. Chữ a gồm 2 nét (nét cong kín, nét móc ngược phải). Chữ a rộng 2,5 ô li.\"",
+                "commonErrors": ["HS nhầm số nét của chữ n (2 nét: móc xuôi trái + móc 2 đầu)", "HS nói sai độ cao/rộng"],
+                "teacherFix": "GV nhận xét, kết luận chính xác: 'Chữ a cao 2 ô li, rộng 2,5 ô li. Chữ a gồm 2 nét: nét 1 là nét cong kín và nét 2 là nét móc ngược phải.'"
+              }
+            },
+            {
+              "title": "Hướng dẫn viết từng vần (viết mẫu + bảng con)",
+              "scriptPattern": {
+                "teacherDo": "HD cách viết vần: mô tả điểm đặt bút, hướng viết từng nét, nối nét sang chữ tiếp theo. Cho HS viết trên không → viết bảng con. Quan sát, hỗ trợ HS chậm.",
+                "studentDo": "Quan sát GV viết mẫu. Mô phỏng nét viết trên không. Viết vào bảng con. Giơ bảng theo hiệu lệnh.",
+                "exampleGV": "\"Đặt bút dưới đường kẻ 3 một chút, viết nét cong kín từ phải sang trái. Từ điểm dừng bút nét 1, lia bút lên đường kẻ 3, viết nét móc ngược phải sát nét cong kín. Ta được chữ a. Tiếp tục lia bút sang phải viết chữ n. Ta được vần an.\"",
+                "exampleHS": "HS quan sát, lắng nghe và mô phỏng nét viết trên không. Viết vần an vào bảng con.",
+                "commonErrors": ["Khoảng cách giữa a và n quá rộng", "Nét nối gãy", "Dấu phụ (ă, â) quá to hoặc lệch"],
+                "teacherFix": "GV cầm tay hướng dẫn HS viết mềm mại, nhắc điểm dừng chữ a nối liền sang chữ n."
+              }
+            },
+            {
+              "title": "Hướng dẫn viết vần biến thể (ăn, ân từ an)",
+              "scriptPattern": {
+                "teacherDo": "Dẫn dắt: 'Để viết vần ăn, ta đã có vần an. Chỉ cần lia bút lên đầu chữ a viết thêm dấu phụ.' Tương tự cho vần ân.",
+                "studentDo": "Quan sát, mô phỏng trên không, viết bảng con từng vần.",
+                "exampleGV": "\"Để viết vần ăn, ta đã có vần an. Chỉ cần lia bút lên đầu chữ a của vần an và viết thêm nét cong dưới nhỏ nằm giữa đường kẻ 3 và 4. Ta được vần ăn.\"",
+                "exampleHS": "HS quan sát, mô phỏng nét viết trên không. Viết vần ăn vào bảng con."
+              }
+            }
+          ]
+        },
+        {
+          "phase": "Khám phá",
+          "title": "Hướng dẫn viết từ ngữ ứng dụng",
+          "durationMinutes": 10,
+          "scriptPattern": {
+            "teacherDo": "Cho HS nhận biết từ ứng dụng qua tranh/ảnh. Hỏi: Các chữ nào cao 5 ô li? 2 ô li? 3 ô li? Viết mẫu toàn bộ từ, mô tả điểm đặt bút + nối nét + khoảng cách giữa 2 tiếng. Cho HS viết bảng con.",
+            "studentDo": "Quan sát tranh, nhận biết từ. Trả lời độ cao từng chữ. Quan sát GV viết mẫu. Luyện theo. Viết bảng con. Giơ bảng nhận xét.",
+            "exampleGV": "\"GV chiếu tranh 2 bạn thân và hỏi: Các em thấy gì trong bức tranh? → Từ bức tranh thầy có từ 'bạn thân'. Trong từ 'bạn thân': Các chữ nào có độ cao 5 ô li? → GV NX: Các chữ cao 5 ô li: b và h. Các chữ cao 2 ô li: a, â, n. Chữ t cao 3 ô li.\"",
+            "exampleHS": "\"Em thấy bức tranh có 2 bạn nhỏ đang cầm tay nhau. Các chữ cao 5 ô li: b và h. Các chữ cao 2 ô li: a, â, n.\"",
+            "commonErrors": ["Viết sai độ cao chữ b, h, k (phải 5 ô li)", "Khoảng cách giữa 2 tiếng không đều"],
+            "teacherFix": "GV nhắc: khoảng cách giữa 2 tiếng bằng 1 thân chữ o. Chữ b, h, k cao 5 ô li, chữ t cao 3 ô li."
+          }
+        },
+        {
+          "phase": "Vận dụng",
+          "title": "Thực hành luyện viết vào vở",
+          "durationMinutes": 8,
+          "scriptPattern": {
+            "teacherDo": "Dẫn dắt chuyển sang viết vở. Nhắc tư thế ngồi, cách cầm bút. Yêu cầu viết theo mẫu. Quan sát, hỗ trợ HS khó khăn. Tổ chức đổi vở nhận xét theo 4 tiêu chí: độ cao, độ rộng, nối nét, trình bày. Nhận xét, tuyên dương.",
+            "studentDo": "Mở vở, viết bài theo yêu cầu. Sửa tư thế khi được nhắc. Đổi vở, nhận xét và góp ý cho bạn. Lắng nghe nhận xét và sửa lỗi.",
+            "exampleGV": "\"Vừa rồi các em đã quan sát và nhận biết cách viết các vần an, ăn, ân và từ ngữ bạn thân, khăn rằn. Bây giờ chúng ta cùng luyện viết vào vở nhé. Các em nhớ ngồi thẳng lưng, mắt cách vở 25-30cm.\"",
+            "exampleHS": "HS mở vở, viết bài theo yêu cầu. Đổi vở theo nhóm bàn, phát hiện lỗi và góp ý cho nhau.",
+            "assessmentCriteria": ["Viết đúng độ cao ô li", "Viết đúng độ rộng", "Nối nét chính xác", "Trình bày sạch đẹp"]
+          }
+        },
+        {
+          "phase": "Củng cố",
+          "title": "Hệ thống hóa và dặn dò",
+          "durationMinutes": 2,
+          "scriptPattern": {
+            "teacherDo": "Hỏi: Hôm nay chúng ta luyện viết những vần nào? Viết từ ứng dụng nào? Mời HS nhắc lại chữ cao 5 ô li và 2 ô li. Nhận xét giờ học, dặn dò luyện thêm ở nhà.",
+            "studentDo": "Trả lời câu hỏi ôn tập. Lắng nghe dặn dò. Vỗ tay.",
+            "exampleGV": "\"Hôm nay các em đã luyện viết những vần nào? → Còn viết từ ứng dụng nào? → Hôm nay các em đã học tập nghiêm túc. Các bạn còn viết chưa đúng cần luyện thêm ở nhà nhé!\"",
+            "exampleHS": "\"an, ăn, ân ạ. Bạn thân, khăn rằn ạ. b, h, k cao 5 ô li; a, ă, â, n, r, m cao 2 ô li.\""
+          }
+        }
+      ]
+    },
+    "grade1_phonics_read": {
+      "label": "Lớp 1 – Phần ĐỌC của bài Âm-Chữ-Vần (Tiết 1)",
+      "description": "Quy trình nhận biết vần mới, phân tích, đánh vần, ghép tiếng, đọc tiếng/từ ứng dụng",
+      "activityStructure": [
+        {
+          "phase": "Khởi động",
+          "title": "Ôn bài cũ và tạo tâm thế",
+          "durationMinutes": 4,
+          "scriptPattern": {
+            "teacherDo": "Tổ chức trò chơi ôn bài cũ (đọc âm/vần/tiếng đã học). Dẫn dắt vào bài mới qua tranh hoặc câu đố.",
+            "studentDo": "Tham gia trò chơi, đọc ôn. Quan sát tranh, hào hứng vào bài mới."
+          }
+        },
+        {
+          "phase": "Khám phá",
+          "title": "Nhận biết vần mới qua tranh và câu nhận biết",
+          "durationMinutes": 5,
+          "scriptPattern": {
+            "teacherDo": "Cho HS quan sát tranh SGK. Hỏi: Tranh vẽ gì? Đọc câu nhận biết nguyên văn SGK. Chỉ vào các tiếng chứa vần mới, tô màu/gạch chân. Rút ra vần mới.",
+            "studentDo": "Quan sát tranh, nêu nội dung. Lắng nghe câu nhận biết. Tìm tiếng chứa vần mới. Nhắc lại vần mới.",
+            "exampleGV": "\"Các em quan sát tranh xem có gì? → GV đọc: 'Cả đàn gà cứ tha thẩn gần chân mẹ.' Các em tìm xem tiếng nào chứa vần an? vần ăn? vần ân?\"",
+            "exampleHS": "\"Tranh vẽ đàn gà con bên gà mẹ. Tiếng 'đàn' chứa vần an, 'thẩn' chứa vần ân, 'gần' chứa vần ân, 'chân' chứa vần ân.\""
+          }
+        },
+        {
+          "phase": "Khám phá",
+          "title": "Phân tích cấu tạo vần + Đánh vần + Ghép tiếng mẫu",
+          "durationMinutes": 12,
+          "scriptPattern": {
+            "teacherDo": "HD cấu tạo vần: âm chính + âm cuối. So sánh các vần (giống: cùng âm cuối n; khác: âm chính a/ă/â). Đánh vần mẫu. HD ghép tiếng theo MÔ HÌNH 2 BƯỚC: Bước 1 (âm đầu + vần = tiếng cơ sở). Bước 2 (tiếng cơ sở + thanh = tiếng có thanh). TUYỆT ĐỐI CẤM nhảy cóc.",
+            "studentDo": "Ghép thẻ âm chính + âm cuối trên bảng cài. So sánh. Đánh vần cá nhân/nhóm/lớp. Ghép tiếng mẫu theo 2 bước trên bảng cài.",
+            "exampleGV": "\"Vần an gồm âm chính a và âm cuối n. Đánh vần: a-nờ-an. → Ghép tiếng 'bạn': Bước 1: b ghép với an thành ban (bờ-an-ban). Bước 2: ban thêm dấu nặng thành bạn (ban-nặng-bạn).\"",
+            "exampleHS": "\"a-nờ-an. ă-nờ-ăn. â-nờ-ân. Bước 1: bờ-an-ban. Bước 2: ban-nặng-bạn.\"",
+            "commonErrors": ["Nhảy cóc: b + an = bạn (thiếu bước 1)", "Nhầm âm chính ă và â"],
+            "teacherFix": "GV nhắc: phải ghép âm đầu với vần trước, được tiếng cơ sở, rồi mới thêm thanh."
+          }
+        },
+        {
+          "phase": "Luyện tập",
+          "title": "Đọc tiếng và từ ngữ ứng dụng",
+          "durationMinutes": 8,
+          "scriptPattern": {
+            "teacherDo": "Chỉ các tiếng trong SGK, yêu cầu HS phân tích (âm đầu, vần, thanh). Đọc mẫu từ ứng dụng. Giải nghĩa bằng tranh/vật thật.",
+            "studentDo": "Đọc nối tiếp cá nhân từng tiếng. Phân tích tiếng mẫu. Đọc trơn từ ứng dụng cá nhân + đồng thanh.",
+            "exampleGV": "\"Đọc các tiếng: bàn, nhãn, gắn, lặn, bận, gần. Em hãy phân tích tiếng 'bàn': âm đầu gì? vần gì? thanh gì? → Đọc từ ứng dụng: bạn thân, khăn rằn, quả mận.\"",
+            "exampleHS": "\"Tiếng 'bàn': âm đầu b, vần an, thanh huyền. Bạn thân. Khăn rằn. Quả mận.\""
+          }
+        },
+        {
+          "phase": "Luyện tập",
+          "title": "Viết bảng con",
+          "durationMinutes": 6,
+          "scriptPattern": {
+            "teacherDo": "Viết mẫu vần trên bảng lớp, mô tả điểm đặt bút, nét nối, cỡ chữ. Cho HS viết trên không → viết bảng con → giơ bảng.",
+            "studentDo": "Quan sát. Viết trên không. Viết bảng con. Giơ bảng theo hiệu lệnh.",
+            "exampleGV": "\"Cô viết mẫu vần an: đặt bút dưới đường kẻ 3, viết nét cong kín, lia bút viết nét móc ngược, nối sang chữ n. Các em viết trên không trước, rồi viết bảng con.\"",
+            "exampleHS": "HS viết trên không, sau đó viết vần an, ăn, ân, bạn thân vào bảng con."
+          }
+        }
+      ]
+    },
+    "grade1_phonics_read_p2": {
+      "label": "Lớp 1 – Phần ĐỌC câu/đoạn + NÓI NGHE (Tiết 2)",
+      "description": "Viết vở tập viết, đọc đoạn ứng dụng, nói theo tranh",
+      "activityStructure": [
+        {
+          "phase": "Khởi động",
+          "title": "Ôn vần và khởi động tiết 2",
+          "durationMinutes": 3,
+          "scriptPattern": {
+            "teacherDo": "Cho HS đọc lại các vần đã học ở tiết 1 trên bảng. Trò chơi nhanh: đọc tiếng mới có vần vừa học.",
+            "studentDo": "Đọc ôn vần. Tham gia trò chơi đọc tiếng."
+          }
+        },
+        {
+          "phase": "Khám phá",
+          "title": "Viết vở tập viết",
+          "durationMinutes": 10,
+          "scriptPattern": {
+            "teacherDo": "Nhắc tư thế ngồi, cách cầm bút. Yêu cầu HS viết vào vở: vần + từ ngữ ứng dụng. Quan sát, hỗ trợ. Chấm nhanh 5-7 bài.",
+            "studentDo": "Ngồi đúng tư thế, viết cẩn thận từng dòng. Đổi vở nhận xét.",
+            "commonErrors": ["Sai độ cao chữ k, b (phải 5 ô li)", "Chữ r cao hơn 2 ô li một chút (2,25 ô li)"],
+            "teacherFix": "GV nhắc riêng từng HS sai, cho viết lại ngay trên bảng con trước khi sửa vở."
+          }
+        },
+        {
+          "phase": "Luyện tập",
+          "title": "Đọc đoạn văn ứng dụng",
+          "durationMinutes": 12,
+          "scriptPattern": {
+            "teacherDo": "Đọc mẫu toàn đoạn. Nhấn giọng cụm từ quan trọng. HD HS tìm tiếng chứa vần vừa học. Luyện đọc ngắt nghỉ ở dấu chấm, dấu phẩy. Hỏi đọc hiểu.",
+            "studentDo": "Đọc thầm, gạch chân tiếng chứa vần. Luyện đọc nối tiếp theo cặp. Đọc trước lớp. Trả lời câu hỏi đọc hiểu.",
+            "exampleGV": "\"GV đọc: 'Đàn gà cứ tha thẩn gần chân mẹ. Đã có mẹ che chở, cả đàn chả sợ gì lũ quạ dữ.' Các em tìm tiếng có vần an, ăn, ân trong đoạn. → Nhờ đâu cả đàn gà không sợ lũ quạ dữ?\"",
+            "exampleHS": "\"Tiếng 'đàn', 'tha thẩn', 'gần', 'chân' có vần an/ân. Vì có mẹ che chở ạ.\""
+          }
+        },
+        {
+          "phase": "Vận dụng",
+          "title": "Nói theo tranh + Củng cố",
+          "durationMinutes": 8,
+          "scriptPattern": {
+            "teacherDo": "Cho HS quan sát tranh luyện nói SGK. Nêu chủ đề. Đặt câu hỏi gợi mở. Cho HS thảo luận nhóm đôi, đóng vai. Chốt bài học, dặn dò.",
+            "studentDo": "Quan sát tranh. Thảo luận nhóm đôi. Đóng vai thể hiện tình huống. Nhắc lại vần đã học.",
+            "exampleGV": "\"Quan sát tranh: Khi nào em cần nói lời xin lỗi? Em nói lời xin lỗi như thế nào cho lịch sự?\"",
+            "exampleHS": "\"Khi va phải bạn em nói: 'Xin lỗi bạn, mình vô ý quá.' Khi làm rơi đồ cô giáo: 'Em xin lỗi cô ạ.'\""
+          }
+        }
+      ]
+    },
+    "grade1_reading": {
+      "label": "Lớp 1 – Đọc hiểu văn bản (Tập 2, 4 tiết)",
+      "description": "Đọc mẫu → luyện đọc → đọc hiểu → viết câu → hoàn thiện câu/viết → nói/kể → nghe viết → mở rộng",
+      "activityStructure": [
+        {
+          "phase": "Tiết 1",
+          "steps": ["Ôn/khởi động: quan sát tranh, dẫn dắt", "Đọc: GV đọc mẫu → HS luyện đọc từ khó, câu dài → đọc nối tiếp → giải nghĩa → đọc toàn bài"]
+        },
+        {
+          "phase": "Tiết 2",
+          "steps": ["Trả lời câu hỏi đọc hiểu (nhóm/lớp)", "Viết vào vở câu trả lời (hướng dẫn viết hoa, dấu câu)"]
+        },
+        {
+          "phase": "Tiết 3",
+          "steps": ["Chọn từ ngữ hoàn thiện câu và viết", "Quan sát tranh và nói/kể chuyện"]
+        },
+        {
+          "phase": "Tiết 4",
+          "steps": ["Nghe viết chính tả đoạn ngắn, soát lỗi", "Bài tập/mở rộng", "Củng cố"]
+        }
+      ]
+    }
+  },
+  "fewShotExamples": {
+    "grade1_write_van": {
+      "description": "Mẫu cặp GV-HS chi tiết cho phần viết vần (trích TV Bài 32 an ăn ân)",
+      "pairs": [
+        {
+          "teacherAction": "GV chiếu mẫu vần an và hỏi: \"Để viết vần an, chúng ta sẽ viết chữ nào trước? Chữ a gồm mấy nét? Chữ a rộng bao nhiêu ô li?\"",
+          "studentAction": "HS quan sát và trả lời: \"Viết chữ a trước, viết chữ n sau. Chữ a gồm 2 nét (nét cong kín, nét móc ngược phải). Chữ a rộng 2,5 ô li.\""
+        },
+        {
+          "teacherAction": "GV nhận xét, kết luận: \"Chữ a cao 2 ô li, rộng 2,5 ô li. Chữ a gồm 2 nét: nét 1 là nét cong kín và nét 2 là nét móc ngược phải.\"",
+          "studentAction": "HS lắng nghe và ghi nhớ."
+        },
+        {
+          "teacherAction": "GV hướng dẫn cách viết vần an: \"Đặt bút dưới đường kẻ 3 một chút, viết nét cong kín từ phải sang trái. Từ điểm dừng bút của nét 1, lia bút lên đường kẻ 3, viết nét móc ngược phải sát nét cong kín. Ta được chữ a. Tiếp tục lia bút sang phải viết chữ n. Ta được vần an.\"",
+          "studentAction": "HS quan sát, lắng nghe và mô phỏng nét viết trên không."
+        },
+        {
+          "teacherAction": "GV cho HS viết vần an vào bảng con, quan sát hỗ trợ HS chậm, yếu. GV nhận xét.",
+          "studentAction": "HS viết vần an vào bảng con. HS lắng nghe nhận xét."
+        },
+        {
+          "teacherAction": "GV HD viết vần ăn: \"Để viết vần ăn, ta đã có vần an. Chỉ cần lia bút lên đầu chữ a của vần an và viết thêm nét cong dưới nhỏ nằm giữa đường kẻ 3 và 4. Ta được vần ăn.\"",
+          "studentAction": "HS quan sát, lắng nghe và mô phỏng nét viết trên không."
+        }
+      ]
+    },
+    "grade1_write_tu": {
+      "description": "Mẫu cặp GV-HS chi tiết cho phần viết từ ứng dụng (trích TV Bài 32 an ăn ân)",
+      "pairs": [
+        {
+          "teacherAction": "GV cho HS nhận biết từ \"bạn thân\": chiếu tranh 2 bạn thân lên TV và hỏi: \"Các em thấy gì trong bức tranh? 2 bạn trong tranh đang làm gì?\" → \"Từ bức tranh thầy có từ 'bạn thân' cũng là câu ứng dụng viết hôm nay.\"",
+          "studentAction": "HS quan sát và trả lời: \"Em thấy bức tranh có 2 bạn nhỏ, 1 bạn cầm kẹo mút, 2 bạn đang cầm tay nhau.\" HS đọc \"bạn thân\" 3 lần."
+        },
+        {
+          "teacherAction": "GV hỏi: \"Trong từ 'bạn thân': Các chữ nào có độ cao 5 ô li? Chữ nào cao 2 ô li? Chữ nào cao 3 ô li?\" GV NX: \"Các chữ cao 5 ô li: b và h. Các chữ cao 2 ô li: a, â, n. Chữ cao 3 ô li: chữ t.\"",
+          "studentAction": "HS trả lời: \"Các chữ cao 5 ô li: b và h. Các chữ cao 2 ô li: a, â, n. Chữ cao 3 ô li: chữ t.\" HS lắng nghe."
+        },
+        {
+          "teacherAction": "GV yêu cầu HS đổi vở theo nhóm bàn, phát hiện lỗi và góp ý cho nhau theo 4 tiêu chí: độ cao, độ rộng, nối nét, trình bày.",
+          "studentAction": "HS đổi vở, nhận xét và góp ý cho bạn."
+        }
+      ]
+    }
+  },
+  "qualityRules": {
+    "deepScriptMandatory": [
+      "Mỗi bước GV phải có LỜI NÓI NGUYÊN VĂN trong ngoặc kép khi hỏi/dẫn dắt/chốt kiến thức",
+      "Mỗi bước HS phải có PHẢN HỒI DỰ KIẾN CỤ THỂ — không chỉ 'HS lắng nghe'",
+      "Với phần viết: PHẢI mô tả điểm đặt bút, hướng viết nét, độ cao ô li, nối nét, dấu phụ",
+      "Với phần đọc: PHẢI có câu/đoạn nguyên văn SGK, đánh dấu ngắt nghỉ '/', tiếng khó",
+      "Với phần nói: PHẢI có câu mẫu, tình huống cụ thể, tiêu chí đánh giá",
+      "Mỗi bước PHẢI có lỗi thường gặp dự kiến (ít nhất 1) và cách GV sửa",
+      "Tiêu chuẩn: sinh viên năm 2 cầm giáo án dạy được ngay, không cần suy nghĩ thêm"
+    ],
+    "writingSpecific": [
+      "Mô tả nét chữ: tên nét (cong kín, móc xuôi, móc ngược, ...), điểm đặt bút (đường kẻ mấy), hướng viết, điểm dừng bút",
+      "Độ cao ô li: chữ thường 2 ô li; b, d, g, h, k, l, y, t 2.5-5 ô li; ghi cụ thể",
+      "Nối nét: mô tả cách lia bút từ chữ trước sang chữ sau",
+      "Dấu phụ: vị trí đặt (trên/dưới chữ nào, khoảng nào)",
+      "Dấu thanh: vị trí đặt (trên nguyên âm nào)",
+      "Khoảng cách giữa 2 tiếng trong 1 từ: bằng 1 thân chữ o"
+    ]
+  }
+}

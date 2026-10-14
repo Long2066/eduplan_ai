@@ -1171,3 +1171,103 @@ export function getVietnameseGradeWorkflow(
 
   return null;
 }
+
+// ─── TEACHING SCRIPT TEMPLATES ───
+
+import teachingScriptsData from "@/data/vietnamese-teaching-scripts.json";
+
+export type TeachingScriptTemplate = {
+  label: string;
+  description: string;
+  activityStructure: unknown[];
+};
+
+/**
+ * Phân loại phần bài (sub-type) cho bài Lớp 1 có nhiều phần.
+ * Ví dụ bài "an ăn ân" có phần ĐỌC (tiết 1), phần VIẾT, phần NÓI.
+ */
+export type LessonSubType =
+  | "grade1_phonics_read"    // Phần ĐỌC: nhận biết, phân tích, đánh vần, đọc tiếng/từ (tiết 1)
+  | "grade1_phonics_write"   // Phần VIẾT: HD viết vần + từ ứng dụng (tiết viết riêng hoặc phần viết)
+  | "grade1_phonics_read_p2" // Phần ĐỌC câu/đoạn + NÓI NGHE (tiết 2)
+  | "grade1_reading"         // Đọc hiểu văn bản Tập 2
+  | "default";               // Không có template riêng
+
+/**
+ * Nhận diện sub-type từ focus/lessonType của period.
+ */
+export function classifyLessonSubType(
+  grade: number,
+  lessonType: string,
+  periodFocus: string,
+  periodNumber: number,
+): LessonSubType {
+  if (grade !== 1) return "default";
+
+  const focus = (periodFocus || "").toLowerCase();
+  const type = (lessonType || "").toLowerCase();
+
+  // Bài phonics hoặc handwriting lớp 1
+  if (type === "phonics" || type === "handwriting" || /âm|vần|chữ/.test(focus)) {
+    // Phần VIẾT rõ ràng
+    if (/viết|tập viết|viết vần|viết từ|hướng dẫn viết|luyện viết/.test(focus)) {
+      return "grade1_phonics_write";
+    }
+    // Tiết 2 thường là: viết vở + đọc câu/đoạn + nói
+    if (periodNumber === 2) {
+      // Nếu focus nói rõ viết vở
+      if (/viết vở|vở tập viết/.test(focus)) return "grade1_phonics_read_p2";
+      // Default tiết 2 = đọc câu/đoạn + nói
+      return "grade1_phonics_read_p2";
+    }
+    // Tiết 1 = nhận biết, phân tích, đánh vần, đọc tiếng
+    return "grade1_phonics_read";
+  }
+
+  // Bài đọc hiểu lớp 1
+  if (type === "reading" || /đọc hiểu|tập 2|bài đọc/.test(focus)) {
+    return "grade1_reading";
+  }
+
+  return "default";
+}
+
+/**
+ * Lấy teaching script template cho sub-type.
+ */
+export function getTeachingScriptTemplate(subType: LessonSubType): TeachingScriptTemplate | null {
+  const templates = (teachingScriptsData as { templates: Record<string, TeachingScriptTemplate> }).templates;
+  return templates[subType] || null;
+}
+
+/**
+ * Lấy few-shot examples cho sub-type.
+ */
+export function getFewShotExamples(subType: LessonSubType): { teacherAction: string; studentAction: string }[] {
+  const data = teachingScriptsData as {
+    fewShotExamples: Record<string, { pairs: { teacherAction: string; studentAction: string }[] }>;
+  };
+  if (subType === "grade1_phonics_write") {
+    // Gộp cả 2 bộ mẫu viết vần + viết từ
+    const vanPairs = data.fewShotExamples["grade1_write_van"]?.pairs || [];
+    const tuPairs = data.fewShotExamples["grade1_write_tu"]?.pairs || [];
+    return [...vanPairs.slice(0, 3), ...tuPairs.slice(0, 2)];
+  }
+  return [];
+}
+
+/**
+ * Lấy quality rules bắt buộc cho deep script.
+ */
+export function getDeepScriptRules(): string[] {
+  const data = teachingScriptsData as { qualityRules: { deepScriptMandatory: string[]; writingSpecific: string[] } };
+  return data.qualityRules.deepScriptMandatory;
+}
+
+/**
+ * Lấy writing-specific rules.
+ */
+export function getWritingSpecificRules(): string[] {
+  const data = teachingScriptsData as { qualityRules: { writingSpecific: string[] } };
+  return data.qualityRules.writingSpecific;
+}

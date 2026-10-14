@@ -2,7 +2,7 @@ import { getPedagogyProfile, gradeBandFor } from "./pedagogy-profiles";
 import { buildPhaseQualityPromptBlock } from "./lesson-phase-quality";
 import { getNaturalSocialPedagogyProfile } from "./natural-social-pedagogy";
 import { formatNaturalSocialStartupPromptBlock, selectNaturalSocialStartup } from "./natural-social-startup";
-import { classifyVietnameseLesson, getVietnameseGradeWorkflow, vietnameseLessonTypeProfiles } from "./vietnamese-pedagogy";
+import { classifyVietnameseLesson, getVietnameseGradeWorkflow, vietnameseLessonTypeProfiles, classifyLessonSubType, getTeachingScriptTemplate, getFewShotExamples, getDeepScriptRules, getWritingSpecificRules } from "./vietnamese-pedagogy";
 import {
   extractTargetLettersFromWritingText,
   formatHandwritingInstruction,
@@ -1339,6 +1339,55 @@ export function getDigitalCompetencyPromptBlock(
 (Lưu ý: Không biến việc GV chiếu TV/slide thành năng lực số của HS. Bắt buộc HS phải có thao tác công nghệ số thật).\n`;
 }
 
+/**
+ * Sinh khối prompt "deep script" cho tiết Tiếng Việt.
+ * Inject: quality rules + few-shot examples + activity structure template.
+ */
+export function buildDeepScriptBlock(
+  input: LessonInput,
+  lessonType: string,
+  periodFocus: string,
+  periodNumber: number,
+): string {
+  const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10);
+  const subType = classifyLessonSubType(gradeNum, lessonType, periodFocus, periodNumber);
+
+  const parts: string[] = [];
+
+  // 1. Deep script quality rules (bắt buộc mọi bài TV)
+  const rules = getDeepScriptRules();
+  parts.push(`\nTIÊU CHUẨN KỊCH BẢN DẠY HỌC CHI TIẾT (BẮT BUỘC):
+${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`);
+
+  // 2. Writing-specific rules nếu là bài viết
+  if (subType === "grade1_phonics_write" || lessonType === "handwriting") {
+    const writingRules = getWritingSpecificRules();
+    parts.push(`\nQUY TẮC RIÊNG CHO PHẦN VIẾT:
+${writingRules.map(r => `- ${r}`).join("\n")}`);
+  }
+
+  // 3. Teaching script template nếu có
+  const template = getTeachingScriptTemplate(subType);
+  if (template) {
+    parts.push(`\nKỊCH BẢN DẠY MẪU THEO DẠNG BÀI "${template.label}":
+${template.description}
+CẤU TRÚC HOẠT ĐỘNG MẪU (tham khảo, có thể điều chỉnh phù hợp nội dung bài cụ thể):
+${JSON.stringify(template.activityStructure, null, 0).slice(0, 3000)}`);
+  }
+
+  // 4. Few-shot examples nếu có
+  const examples = getFewShotExamples(subType);
+  if (examples.length > 0) {
+    parts.push(`\nMẪU CẶP GV-HS CHI TIẾT (học theo cách viết này, KHÔNG sao chép nội dung):
+${examples.map((ex, i) => `Mẫu ${i + 1}:
+  GV: ${ex.teacherAction}
+  HS: ${ex.studentAction}`).join("\n")}`);
+  }
+
+  return parts.join("\n");
+}
+
+
 export function buildVietnameseBlueprintPrompt(
   input: LessonInput,
   ocrText: string,
@@ -1381,6 +1430,15 @@ ${wf.pedagogicalFocus.map((f) => `  * ${f}`).join("\n")}
 ${wf.stepsSummary.map((s) => `  * ${s}`).join("\n")}
 `;
 })()}
+
+TIÊU CHUẨN KỊCH BẢN DẠY HỌC CHI TIẾT (áp dụng khi sinh từng tiết):
+- Mỗi bước GV phải có LỜI NÓI NGUYÊN VĂN trong ngoặc kép khi hỏi/dẫn dắt/chốt kiến thức
+- Mỗi bước HS phải có PHẢN HỒI DỰ KIẾN CỤ THỂ — không chỉ "HS lắng nghe"
+- Với phần viết lớp 1: PHẢI mô tả điểm đặt bút, hướng viết nét, độ cao ô li, nối nét, dấu phụ
+- Với phần đọc: PHẢI có câu/đoạn nguyên văn SGK, đánh dấu ngắt nghỉ "/", tiếng khó
+- Mỗi bước PHẢI có lỗi thường gặp dự kiến và cách GV sửa
+- Tiêu chuẩn: sinh viên năm 2 cầm giáo án dạy được ngay, không cần suy nghĩ thêm
+
 Quy tắc bắt buộc:
 - Bám đúng văn bản, từ ngữ, câu hỏi, mẫu chữ hoặc nhiệm vụ trong ảnh SGK.
 - Khi ảnh SGK không đủ rõ, dùng mô tả trung tính và ghi phần chưa chắc vào sourceInventory.uncertain; không bịa chi tiết, không đưa cụm xác minh thô vào nội dung giáo án/Word.
@@ -1535,6 +1593,7 @@ ${periodSteps ? `- Các bước dạy trọng tâm cho TIẾT ${period.periodNum
 `;
 })()}
 ${getHandwritingGuidanceBlock(input, blueprint, period)}
+${buildDeepScriptBlock(input, period.lessonType || "mixed", period.focus || "", period.periodNumber || 1)}
 Quy tắc đặc thù kiểu bài:
 - Bắt buộc chép cụ thể ngữ liệu/nhiệm vụ vào giáo án; không chỉ ghi "theo SGK".
 - Bắt buộc bao phủ các nhiệm vụ trong sourceInventory.requiredTasks thuộc tiết này; không được bỏ sót nhiệm vụ có dấu sao/chữ nhỏ như học thuộc lòng, đặt câu, viết vào vở hoặc đọc mở rộng.
@@ -1692,6 +1751,7 @@ ${periodSteps ? `- Trọng tâm cần bám cho TIẾT ${period.periodNumber}:\n$
 ${typeProfile ? `- Kiểu bài: ${typeProfile.label}. Không thêm ${typeProfile.checkerNotRequired.join(", ")} nếu không phải trọng tâm.` : ""}
 ${digitalCompetencyInstruction(input)}
 - Cá nhân hóa: ${JSON.stringify({ grade: input.grade, environment: input.teachingEnvironment, facilities: input.facilities, locality: localityContext(input), style: input.style })}
+- KHI SỬA: giữ tiêu chuẩn kịch bản dạy chi tiết — mỗi bước GV có lời nói nguyên văn, HS có phản hồi dự kiến cụ thể, có lỗi dự kiến và cách sửa. Không được sửa thành sơ sài hơn bản gốc.
 
 PeriodPlan cần sửa:
 ${JSON.stringify(period)}
