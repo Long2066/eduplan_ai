@@ -78,6 +78,15 @@ function friendlyAuthError(error: unknown) {
   if (/auth\/popup-closed-by-user/i.test(message)) {
     return "Cửa sổ đăng nhập Google đã bị đóng trước khi hoàn tất.";
   }
+  if (/auth\/invalid-email/i.test(message)) {
+    return "Địa chỉ email không đúng định dạng hoặc chưa được nhập.";
+  }
+  if (/auth\/missing-email/i.test(message)) {
+    return "Vui lòng nhập địa chỉ email.";
+  }
+  if (/auth\/missing-password/i.test(message)) {
+    return "Vui lòng nhập mật khẩu.";
+  }
   if (/auth\/invalid-credential|auth\/wrong-password|auth\/user-not-found/i.test(message)) {
     return "Email hoặc mật khẩu chưa đúng.";
   }
@@ -408,9 +417,35 @@ export function AuthPanel({
       setError("Thiếu Firebase Web App config. Cần điền NEXT_PUBLIC_FIREBASE_* trong .env.local.");
       return;
     }
-    if (mode === "register" && !acceptedPolicy) {
-      setError("Bạn cần đồng ý Điều khoản sử dụng và Chính sách bảo mật.");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError("Vui lòng nhập địa chỉ email.");
       return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Địa chỉ email không đúng định dạng. Vui lòng kiểm tra lại.");
+      return;
+    }
+
+    if (mode === "register") {
+      if (!displayName.trim()) {
+        setError("Vui lòng nhập họ và tên.");
+        return;
+      }
+      if (!password || password.length < 6) {
+        setError("Mật khẩu cần tối thiểu 6 ký tự.");
+        return;
+      }
+      if (!acceptedPolicy) {
+        setError("Bạn cần đồng ý Điều khoản sử dụng và Chính sách bảo mật.");
+        return;
+      }
+    } else if (mode === "login") {
+      if (!password) {
+        setError("Vui lòng nhập mật khẩu.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -940,6 +975,7 @@ export function AuthPanel({
                 ) : null}
 
                 <button
+                  type="button"
                   className="btn-primary auth-submit-btn w-full py-4 text-lg font-black disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isSubmitting || (mode === "register" && !acceptedPolicy)}
                   onClick={handleEmailAuth}
@@ -948,14 +984,26 @@ export function AuthPanel({
                 </button>
 
                 {mode !== "reset" ? (
-                  <button
-                    className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
-                    disabled={isSubmitting}
-                    onClick={handleGoogleLogin}
-                  >
-                    <GoogleIcon />
-                    Tiếp tục với Google
-                  </button>
+                  <>
+                    <div className="relative my-1 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-200" />
+                      </div>
+                      <div className="relative bg-white px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                        hoặc
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
+                      disabled={isSubmitting}
+                      onClick={handleGoogleLogin}
+                    >
+                      <GoogleIcon />
+                      Tiếp tục với Google
+                    </button>
+                  </>
                 ) : null}
               </div>
             ) : mode === "login" ? (
@@ -1013,6 +1061,7 @@ export function AuthPanel({
                 ) : null}
 
                 <button
+                  type="button"
                   className="btn-primary auth-submit-btn w-full py-4 text-lg font-black"
                   disabled={isSubmitting}
                   onClick={handlePhoneLogin}
@@ -1020,7 +1069,17 @@ export function AuthPanel({
                   {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
                 </button>
 
+                <div className="relative my-1 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative bg-white px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    hoặc
+                  </div>
+                </div>
+
                 <button
+                  type="button"
                   className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
                   disabled={isSubmitting}
                   onClick={handleGoogleLogin}
@@ -1138,6 +1197,7 @@ export function AuthPanel({
                 ) : null}
 
                 <button
+                  type="button"
                   className="btn-primary auth-submit-btn w-full py-4 text-lg font-black disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isSubmitting || !acceptedPolicy}
                   onClick={handlePhoneRegister}
@@ -1145,7 +1205,17 @@ export function AuthPanel({
                   {isSubmitting ? "Đang đăng ký..." : "Đăng ký tài khoản"}
                 </button>
 
+                <div className="relative my-1 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative bg-white px-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    hoặc
+                  </div>
+                </div>
+
                 <button
+                  type="button"
                   className="btn-secondary auth-google-btn w-full py-3.5 text-lg font-black"
                   disabled={isSubmitting}
                   onClick={handleGoogleLogin}
