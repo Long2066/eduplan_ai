@@ -504,9 +504,9 @@ describe("staged-v2 validation and assembly", () => {
     expect(result.issues.some((i) => i.code === "SEC-OBJ-UNCOVERED")).toBe(true);
   });
 
-  it("assembles valid LessonPlan maintaining existing schema without mutating locked outcomes", () => {
+  it("assembles valid LessonPlan maintaining existing schema without mutating locked outcomes", async () => {
     const fixtures = createValidSectionFixtures();
-    const { assembly, blueprint, periods } = assembleStagedSections({
+    const { assembly, blueprint, periods } = await assembleStagedSections({
       ...fixtures,
       plan: "plus",
     });

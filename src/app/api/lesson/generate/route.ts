@@ -48,6 +48,7 @@ import {
   isNaturalSocialSubject,
   isVietnameseSubject,
 } from "@/lib/generation/subject-routing";
+import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
 import {
   GENERATION_SAVE_RESERVE_MS,
   GenerationTimeoutError,
@@ -1976,6 +1977,26 @@ async function generateVietnameseLessonChunkedWithModel(
   }
 
   const lesson = buildVietnameseLessonFromChunks(input, blueprint, chunks, strategy.detail.model);
+
+  const hasSgkImages = (input.uploadedAssets || []).some(
+    (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
+  );
+  if (hasSgkImages) {
+    const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
+    lesson.activities = await attachSgkCropsToActivities(lesson.activities, input.uploadedAssets, {
+      grade: gradeNum,
+      lessonType: classification.primaryType,
+    });
+    if (lesson.periodPlans) {
+      for (const p of lesson.periodPlans) {
+        p.activities = await attachSgkCropsToActivities(p.activities, input.uploadedAssets, {
+          grade: gradeNum,
+          lessonType: (p as { lessonType?: string }).lessonType || classification.primaryType,
+        });
+      }
+    }
+  }
+
   if (hasStructuralIssues(lesson, input) || isMissingPeriods(lesson, input.periods)) {
     throw new Error("Giáo án Tiếng Việt chunked chưa đủ cấu trúc sau khi ghép. Vui lòng bấm tạo lại hoặc giảm số tiết/ảnh.");
   }

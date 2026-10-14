@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import sharp from "sharp";
 import type { StagedBlueprintArtifact } from "./blueprint";
 import type { StagedPeriodArtifact } from "./period-generation";
 import type { LessonInput, PeriodPlan } from "@/types/lesson";
@@ -83,10 +84,10 @@ function period(
 }
 
 describe("staged lesson assembly", () => {
-  it("uses one source-truth title for every period even when the blueprint is generic", () => {
+  it("uses one source-truth title for every period even when the blueprint is generic", async () => {
     const input = { ...lessonInput("Khoa học"), lessonTitle: "" };
     const sourceTitle = "Bài 2. Ô nhiễm, xói mòn đất và bảo vệ môi trường đất";
-    const result = assembleStagedLesson(
+    const result = await assembleStagedLesson(
       input,
       blueprint("natural-social", {
         lessonTitle: "Bài học Khoa học",
@@ -143,9 +144,9 @@ describe("staged lesson assembly", () => {
     expect(result.fallbackUsed).toBe(true);
   });
 
-  it("preserves Vietnamese source inventory metadata", () => {
+  it("preserves Vietnamese source inventory metadata", async () => {
     const sourceInventory = { readingText: ["Bài đọc"] };
-    const result = assembleStagedLesson(
+    const result = await assembleStagedLesson(
       lessonInput("Tiếng Việt"),
       blueprint("vietnamese", { periods: [] }, { sourceInventory }),
       [period(1, "vietnamese"), period(2, "vietnamese")],
@@ -157,9 +158,48 @@ describe("staged lesson assembly", () => {
     expect(result.lesson.meta.naturalSocialSourceInventory).toBeUndefined();
   });
 
-  it("preserves Natural and Social Studies metadata and context guardrails", () => {
+  it("attaches SGK crop visuals when uploadedAssets are provided for Vietnamese lesson", async () => {
+    const testSvg = Buffer.from(
+      '<svg width="600" height="800"><rect width="600" height="800" fill="#f8fafc"/></svg>',
+    );
+    const testBuffer = await sharp(testSvg).png().toBuffer();
+    const dataUrl = `data:image/png;base64,${testBuffer.toString("base64")}`;
+    const input: LessonInput = {
+      ...lessonInput("Tiếng Việt"),
+      grade: "Lớp 1",
+      lessonTitle: "Bài 31. an ăn ân",
+      uploadedAssets: [
+        { id: "p1", name: "SGK_Trang_74.png", type: "image", dataUrl },
+      ],
+    };
+    const period1 = period(1, "vietnamese", {
+      activities: [
+        {
+          phase: "Khởi động",
+          title: "Khởi động: Nhận biết qua tranh",
+          objective: "Nhận biết vần",
+          teacherActions: ["GV chiếu tranh"],
+          studentActions: ["HS quan sát"],
+        },
+      ],
+    });
+    const period2 = period(2, "vietnamese");
+
+    const result = await assembleStagedLesson(
+      input,
+      blueprint("vietnamese", { periods: [] }),
+      [period1, period2],
+      "free",
+    );
+
+    const act1 = result.lesson.activities[0];
+    expect(act1.teacherVisuals).toBeDefined();
+    expect(act1.teacherVisuals?.[0].caption).toContain("SGK");
+  });
+
+  it("preserves Natural and Social Studies metadata and context guardrails", async () => {
     const sourceInventory = { safetyConstraints: ["Quan sát an toàn"] };
-    const result = assembleStagedLesson(
+    const result = await assembleStagedLesson(
       lessonInput("Tự nhiên và Xã hội"),
       blueprint("natural-social", {
         naturalSocialCore: {
@@ -179,9 +219,9 @@ describe("staged lesson assembly", () => {
     expect(result.lesson.contextFit.notes).toContain("Địa phương hóa: Chỉ dùng ví dụ đã xác minh");
   });
 
-  it("assembles default subjects with structural fallback materials", () => {
+  it("assembles default subjects with structural fallback materials", async () => {
     const input = lessonInput("Đạo đức");
-    const result = assembleStagedLesson(
+    const result = await assembleStagedLesson(
       input,
       blueprint("default", { subject: "Đạo đức", lessonTitle: "Bài 3. Quan tâm hàng xóm láng giềng", periods: 2, directGeneration: true }),
       [period(1, "default"), period(2, "default")],
@@ -197,28 +237,28 @@ describe("staged lesson assembly", () => {
     expect(result.lesson.periodPlans).toHaveLength(2);
   });
 
-  it("rejects missing, duplicate, mismatched, or empty period artifacts", () => {
+  it("rejects missing, duplicate, mismatched, or empty period artifacts", async () => {
     const input = lessonInput();
     const mathBlueprint = blueprint("math", { periods: [] });
 
-    expect(() => assembleStagedLesson(input, mathBlueprint, [period(1)], "free"))
-      .toThrow("cần đủ 2 tiết");
-    expect(() => assembleStagedLesson(input, mathBlueprint, [period(1), period(1)], "free"))
-      .toThrow("periodNumber 1 bị trùng");
-    expect(() => assembleStagedLesson(input, mathBlueprint, [period(1), period(2, "vietnamese")], "free"))
-      .toThrow("không khớp môn học");
-    expect(() => assembleStagedLesson(
+    await expect(assembleStagedLesson(input, mathBlueprint, [period(1)], "free"))
+      .rejects.toThrow("cần đủ 2 tiết");
+    await expect(assembleStagedLesson(input, mathBlueprint, [period(1), period(1)], "free"))
+      .rejects.toThrow("periodNumber 1 bị trùng");
+    await expect(assembleStagedLesson(input, mathBlueprint, [period(1), period(2, "vietnamese")], "free"))
+      .rejects.toThrow("không khớp môn học");
+    await expect(assembleStagedLesson(
       input,
       mathBlueprint,
       [period(1), period(2, "math", { activities: [] })],
       "free",
-    )).toThrow("tiết 2 chưa có hoạt động");
+    )).rejects.toThrow("tiết 2 chưa có hoạt động");
   });
 
-  it("rejects an assembly whose only title is a subject placeholder", () => {
+  it("rejects an assembly whose only title is a subject placeholder", async () => {
     const input = { ...lessonInput("Toán"), lessonTitle: "Bài học Toán" };
     const genericBlueprint = blueprint("math", { lessonTitle: "Bài học Toán", periods: [] });
-    expect(() => assembleStagedLesson(input, genericBlueprint, [period(1), period(2)], "free"))
-      .toThrow("Không xác định được tên bài");
+    await expect(assembleStagedLesson(input, genericBlueprint, [period(1), period(2)], "free"))
+      .rejects.toThrow("Không xác định được tên bài");
   });
 });

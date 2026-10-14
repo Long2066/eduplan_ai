@@ -9,6 +9,7 @@ import { sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
+import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
 import type { SubscriptionPlan } from "@/lib/model-strategy";
 import type {
   LessonActivity,
@@ -206,13 +207,13 @@ function contextNotes(
   return uniqueStrings(notes);
 }
 
-export function assembleStagedLesson(
+export async function assembleStagedLesson(
   input: LessonInput,
   blueprintArtifact: StagedBlueprintArtifact,
   periodArtifacts: StagedPeriodArtifact[],
   plan: SubscriptionPlan,
   repairApplied = false,
-): StagedAssemblyArtifact {
+): Promise<StagedAssemblyArtifact> {
   const blueprint = objectValue(blueprintArtifact.blueprint);
   const orderedArtifacts = periodArtifacts.slice().sort((left, right) => left.periodNumber - right.periodNumber);
   const periods = validateAndOrderPeriods(input, blueprintArtifact, orderedArtifacts);
@@ -230,8 +231,27 @@ export function assembleStagedLesson(
       { value: blueprint.lessonTitle, source: "blueprint", confidence: 0.8 },
     ],
   }));
-  const processedPeriods = blueprintArtifact.subjectKind === "vietnamese"
-    ? periods.map((period) => ({
+
+  const hasSgkImages = (input.uploadedAssets || []).some(
+    (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
+  );
+
+  let processedPeriods = periods;
+  if (blueprintArtifact.subjectKind === "vietnamese") {
+    if (hasSgkImages) {
+      const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
+      processedPeriods = await Promise.all(
+        periods.map(async (period) => ({
+          ...period,
+          activities: await attachSgkCropsToActivities(
+            period.activities,
+            input.uploadedAssets,
+            { grade: gradeNum, lessonType: (period as { lessonType?: string }).lessonType },
+          ),
+        })),
+      );
+    } else {
+      processedPeriods = periods.map((period) => ({
         ...period,
         activities: attachHandwritingVisualsToActivities(
           period.activities,
@@ -239,8 +259,9 @@ export function assembleStagedLesson(
           period.focus,
           { embedBase64: true },
         ),
-      }))
-    : periods;
+      }));
+    }
+  }
   const models = uniqueStrings([
     blueprintArtifact.model || "",
     ...orderedArtifacts.map((artifact) => artifact.model),

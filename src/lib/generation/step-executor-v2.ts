@@ -1142,7 +1142,7 @@ async function executeAssemblyStepV2(ctx: ExecutionContext): Promise<void> {
   };
 
   const hasRepairs = phases.some((p) => p.anchor.revision > 1);
-  const assemblyResult: StagedSectionsAssembly = assembleStagedSections({
+  const assemblyResult: StagedSectionsAssembly = await assembleStagedSections({
     ...stagedSections,
     input,
     plan: job.quotaReservation?.plan || "free",

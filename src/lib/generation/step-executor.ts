@@ -377,7 +377,7 @@ async function executeAssemblyStep(job: GenerationJob, owner: string) {
       if (!artifact) throw new Error(`Không tìm thấy artifact của tiết ${sequence}/${total}.`);
       periods.push(artifact.payload);
     }
-    const assembly = assembleStagedLesson(
+    const assembly = await assembleStagedLesson(
       input,
       blueprint,
       periods,
@@ -459,7 +459,7 @@ async function finalizeStagedRepairs(job: GenerationJob, validation: StagedValid
     repairs.push(artifact.payload);
   }
 
-  const reassembled = reassembleStagedRepairs(
+  const reassembled = await reassembleStagedRepairs(
     input,
     blueprint,
     originalPeriods,

@@ -392,11 +392,11 @@ function createFixtureArtifacts(input: LessonInput): AssembleStagedSectionsOptio
 }
 
 describe("assembleStagedSections", () => {
-  it("assembles valid staged-v2 sections into complete LessonPlan, Blueprint, and Period artifacts", () => {
+  it("assembles valid staged-v2 sections into complete LessonPlan, Blueprint, and Period artifacts", async () => {
     const input = createTestInput();
     const options = createFixtureArtifacts(input);
 
-    const result = assembleStagedSections(options);
+    const result = await assembleStagedSections(options);
 
     // Verify root result structure
     expect(result).toBeDefined();
@@ -465,17 +465,17 @@ describe("assembleStagedSections", () => {
     expect((bp.blueprint as any).periods[0].activities).toHaveLength(4);
   });
 
-  it("throws validation error if assertStagedSections detects invariant breach", () => {
+  it("throws validation error if assertStagedSections detects invariant breach", async () => {
     const input = createTestInput();
     const options = createFixtureArtifacts(input);
 
     // Tamper with an objectiveId in a phase to breach validation
     options.phases[0].activity.objectiveIds = ["non-existent-obj"];
 
-    expect(() => assembleStagedSections(options)).toThrowError(/Kiểm định staged-v2 thất bại/);
+    await expect(assembleStagedSections(options)).rejects.toThrowError(/Kiểm định staged-v2 thất bại/);
   });
 
-  it("maps Vietnamese subject-specific blueprint fields correctly without any casts", () => {
+  it("maps Vietnamese subject-specific blueprint fields correctly without any casts", async () => {
     const input = createTestInput({ subject: "Tiếng Việt" });
     const options = createFixtureArtifacts(input);
 
@@ -500,7 +500,7 @@ describe("assembleStagedSections", () => {
       ph.dependencies.periodBlueprint = options.periodBlueprints[0].anchor;
     }
 
-    const result = assembleStagedSections(options);
+    const result = await assembleStagedSections(options);
     expect(result.assembly.subjectKind).toBe("vietnamese");
     expect(result.blueprint.subjectKind).toBe("vietnamese");
     const vtBp = result.blueprint.blueprint as any;

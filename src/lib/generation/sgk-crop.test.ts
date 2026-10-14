@@ -77,6 +77,72 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
     expect(updated[1].teacherVisuals?.[0].caption).toContain("Mô hình vần");
   });
 
+  it("attaches SGK handwriting sample to writing activities in Grade 1", async () => {
+    const testSvg = Buffer.from(
+      '<svg width="600" height="800"><rect width="600" height="800" fill="#fef2f2"/></svg>',
+    );
+    const testBuffer = await sharp(testSvg).png().toBuffer();
+    const dataUrl = `data:image/png;base64,${testBuffer.toString("base64")}`;
+
+    const assets: UploadedAsset[] = [
+      { id: "asset_page1", name: "SGK_Trang_74.png", type: "image", dataUrl },
+    ];
+
+    const activities: LessonActivity[] = [
+      {
+        id: "act_write",
+        phase: "Khám phá",
+        title: "Khám phá: Hướng dẫn viết vần an, ăn, ân",
+        objective: "Viết đúng quy trình",
+        durationMinutes: 12,
+        teacherActions: ["GV viết mẫu vần an"],
+        studentActions: ["HS viết bảng con"],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, { grade: 1 });
+    expect(updated[0].teacherVisuals).toBeDefined();
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("Mẫu chữ viết chuẩn ô li SGK");
+  });
+
+  it("attaches Grade 2-5 regions for reading and exercise activities", async () => {
+    const testSvg = Buffer.from(
+      '<svg width="600" height="800"><rect width="600" height="800" fill="#eff6ff"/></svg>',
+    );
+    const testBuffer = await sharp(testSvg).png().toBuffer();
+    const dataUrl = `data:image/png;base64,${testBuffer.toString("base64")}`;
+
+    const assets: UploadedAsset[] = [
+      { id: "asset_p1", name: "SGK_L3_T1.png", type: "image", dataUrl },
+      { id: "asset_p2", name: "SGK_L3_T2.png", type: "image", dataUrl },
+    ];
+
+    const activities: LessonActivity[] = [
+      {
+        id: "act_read",
+        phase: "Khám phá",
+        title: "Đọc văn bản: Chiếc áo len",
+        objective: "Đọc đúng văn bản",
+        durationMinutes: 20,
+        teacherActions: ["GV đọc mẫu"],
+        studentActions: ["HS luyện đọc"],
+      },
+      {
+        id: "act_exercises",
+        phase: "Luyện tập",
+        title: "Tìm hiểu bài và trả lời câu hỏi",
+        objective: "Hiểu nội dung",
+        durationMinutes: 15,
+        teacherActions: ["GV nêu câu hỏi 1"],
+        studentActions: ["HS thảo luận"],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, { grade: 3 });
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("Văn bản SGK");
+    expect(updated[1].teacherVisuals?.[0].caption).toContain("câu hỏi / bài tập SGK");
+  });
+
   it("embeds cropped images into DOCX Teacher column within table without breaking layout", async () => {
     const testSvg = Buffer.from(
       '<svg width="200" height="150"><rect width="200" height="150" fill="#38bdf8"/></svg>',

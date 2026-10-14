@@ -252,7 +252,7 @@ describe("staged period repair", () => {
     )).rejects.toThrow("chưa trả đủ hoạt động sau khi sửa tiết 1");
   });
 
-  it("replaces repaired periods and marks the new assembly as repaired", () => {
+  it("replaces repaired periods and marks the new assembly as repaired", async () => {
     validationMocks.validateStagedLesson
       .mockReturnValueOnce({ summary: { errors: 1 } })
       .mockReturnValueOnce({ summary: { errors: 0 } });
@@ -265,7 +265,7 @@ describe("staged period repair", () => {
       model: "repair-model",
       period: { ...currentPeriod(2), activities: [{ ...currentPeriod(2).activities[0], title: "Tiết 2 đã sửa" }] },
     };
-    const result = reassembleStagedRepairs(
+    const result = await reassembleStagedRepairs(
       lessonInput(),
       blueprint("math", { periods: [] }),
       originals,
@@ -279,7 +279,7 @@ describe("staged period repair", () => {
     expect(result.lesson.meta.modelUsed).toBe("repair-model");
   });
 
-  it("keeps the original assembly when AI repair increases blocking errors", () => {
+  it("keeps the original assembly when AI repair increases blocking errors", async () => {
     validationMocks.validateStagedLesson
       .mockReturnValueOnce({ summary: { errors: 1 } })
       .mockReturnValueOnce({ summary: { errors: 2 } });
@@ -293,7 +293,7 @@ describe("staged period repair", () => {
       period: { ...currentPeriod(2), activities: [{ ...currentPeriod(2).activities[0], title: "Bản sửa tệ hơn" }] },
     };
 
-    const result = reassembleStagedRepairs(
+    const result = await reassembleStagedRepairs(
       lessonInput(),
       blueprint("math", { periods: [] }),
       originals,
@@ -305,7 +305,7 @@ describe("staged period repair", () => {
     expect(result.lesson.periodPlans?.[1].activities[0].title).toBe("Bản cũ");
   });
 
-  it("keeps the original assembly when AI repair does not reduce blocking errors", () => {
+  it("keeps the original assembly when AI repair does not reduce blocking errors", async () => {
     validationMocks.validateStagedLesson
       .mockReturnValueOnce({ summary: { errors: 1 } })
       .mockReturnValueOnce({ summary: { errors: 1 } });
@@ -319,7 +319,7 @@ describe("staged period repair", () => {
       period: { ...currentPeriod(2), activities: [{ ...currentPeriod(2).activities[0], title: "Bản sửa không cải thiện" }] },
     };
 
-    const result = reassembleStagedRepairs(
+    const result = await reassembleStagedRepairs(
       lessonInput(),
       blueprint("math", { periods: [] }),
       originals,

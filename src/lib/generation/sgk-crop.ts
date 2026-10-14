@@ -83,13 +83,13 @@ export async function cropImageWithPadding(
     const padX = Math.round(boxW * paddingPercent);
     const padY = Math.round(boxH * paddingPercent);
 
-    left = Math.max(0, left - padX);
-    top = Math.max(0, top - padY);
-    right = Math.min(origWidth, right + padX);
-    bottom = Math.min(origHeight, bottom + padY);
+    left = Math.max(0, Math.min(origWidth - 1, left - padX));
+    top = Math.max(0, Math.min(origHeight - 1, top - padY));
+    right = Math.min(origWidth, Math.max(left + 1, right + padX));
+    bottom = Math.min(origHeight, Math.max(top + 1, bottom + padY));
 
-    const cropWidth = Math.max(10, right - left);
-    const cropHeight = Math.max(10, bottom - top);
+    const cropWidth = Math.min(origWidth - left, Math.max(1, right - left));
+    const cropHeight = Math.min(origHeight - top, Math.max(1, bottom - top));
 
     let pipeline = sharp(inputBuffer).extract({
       left,
@@ -142,6 +142,20 @@ export const STANDARD_GRADE1_REGIONS: Record<string, NormalizedBoundingBox> = {
 };
 
 /**
+ * Bản đồ vùng chuẩn của SGK Lớp 2–5 KNTT
+ */
+export const STANDARD_GRADE2_5_REGIONS: Record<string, NormalizedBoundingBox> = {
+  // Tranh minh họa đầu bài đọc / khởi động
+  reading_header_illustration: { ymin: 40, xmin: 50, ymax: 380, xmax: 950 },
+  // Khung văn bản đọc / đoạn chính tả
+  reading_main_text: { ymin: 390, xmin: 50, ymax: 750, xmax: 950 },
+  // Hệ thống câu hỏi đọc hiểu / bài tập / luyện từ và câu
+  reading_questions_exercises: { ymin: 760, xmin: 50, ymax: 980, xmax: 950 },
+  // Tranh chủ đề luyện nói / viết sáng tạo
+  speaking_illustration: { ymin: 200, xmin: 50, ymax: 700, xmax: 950 },
+};
+
+/**
  * Phân tích và tự động gắn ảnh cắt SGK vào đúng hoạt động của cột GV
  */
 export async function attachSgkCropsToActivities(
@@ -160,6 +174,7 @@ export async function attachSgkCropsToActivities(
   // Sắp xếp assets theo thứ tự trang (trang 1 = trang trái, trang 2 = trang phải nếu có)
   const page1Asset = imageAssets[0];
   const page2Asset = imageAssets.length > 1 ? imageAssets[1] : imageAssets[0];
+  const grade = options.grade ?? 1;
 
   const updatedActivities: LessonActivity[] = [];
 
@@ -171,30 +186,51 @@ export async function attachSgkCropsToActivities(
     let targetAsset: UploadedAsset = page1Asset;
     let caption = "";
 
-    if (/khởi động|nhận diện|nhận biết/i.test(textDesc)) {
-      targetBox = STANDARD_GRADE1_REGIONS.warmup_recognition;
-      targetAsset = page1Asset;
-      caption = "Tranh nhận biết SGK";
-    } else if (/khám phá|cấu tạo vần|ghép âm|ghép tiếng|đánh vần/i.test(textDesc)) {
-      targetBox = STANDARD_GRADE1_REGIONS.phonics_model;
-      targetAsset = page1Asset;
-      caption = "Mô hình vần và ghép tiếng SGK";
-    } else if (/từ ngữ ứng dụng|luyện đọc tiếng/i.test(textDesc)) {
-      targetBox = STANDARD_GRADE1_REGIONS.vocabulary_words;
-      targetAsset = page1Asset;
-      caption = "Dãy tiếng và từ ngữ ứng dụng SGK";
-    } else if (/tập viết|viết bảng|viết vở|mẫu chữ/i.test(textDesc)) {
-      targetBox = STANDARD_GRADE1_REGIONS.handwriting_sample;
-      targetAsset = page1Asset;
-      caption = "Mẫu chữ viết chuẩn ô li SGK";
-    } else if (/đoạn đọc|câu ứng dụng|đọc hiểu/i.test(textDesc)) {
-      targetBox = STANDARD_GRADE1_REGIONS.reading_passage;
-      targetAsset = page2Asset;
-      caption = "Đoạn văn đọc ứng dụng SGK";
-    } else if (/nói và nghe|luyện nói|xin lỗi|chủ đề nói/i.test(textDesc)) {
-      targetBox = STANDARD_GRADE1_REGIONS.speaking_listening;
-      targetAsset = page2Asset;
-      caption = "Tranh chủ đề luyện nói SGK";
+    if (grade === 1) {
+      if (/khởi động|nhận diện|nhận biết|tranh khởi động/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE1_REGIONS.warmup_recognition;
+        targetAsset = page1Asset;
+        caption = "Tranh nhận biết SGK";
+      } else if (/cấu tạo vần|ghép âm|ghép tiếng|đánh vần|mô hình vần|khám phá vần/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE1_REGIONS.phonics_model;
+        targetAsset = page1Asset;
+        caption = "Mô hình vần và ghép tiếng SGK";
+      } else if (/từ ngữ ứng dụng|luyện đọc tiếng|từ ứng dụng|tiếng mới|đọc từ/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE1_REGIONS.vocabulary_words;
+        targetAsset = page1Asset;
+        caption = "Dãy tiếng và từ ngữ ứng dụng SGK";
+      } else if (/tập viết|viết bảng|viết vở|mẫu chữ|hướng dẫn viết|luyện viết|viết vần|viết từ/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE1_REGIONS.handwriting_sample;
+        targetAsset = page1Asset;
+        caption = "Mẫu chữ viết chuẩn ô li SGK";
+      } else if (/đoạn đọc|câu ứng dụng|đọc hiểu|đọc câu|đọc đoạn/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE1_REGIONS.reading_passage;
+        targetAsset = page2Asset;
+        caption = "Đoạn văn đọc ứng dụng SGK";
+      } else if (/nói và nghe|luyện nói|xin lỗi|chủ đề nói|kể chuyện/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE1_REGIONS.speaking_listening;
+        targetAsset = page2Asset;
+        caption = "Tranh chủ đề luyện nói SGK";
+      }
+    } else {
+      // Grade 2-5
+      if (/khởi động|tranh minh họa|nhận biết/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE2_5_REGIONS.reading_header_illustration;
+        targetAsset = page1Asset;
+        caption = "Tranh minh họa SGK";
+      } else if (/đọc văn bản|luyện đọc|chính tả|nghe viết|tập chép/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE2_5_REGIONS.reading_main_text;
+        targetAsset = page1Asset;
+        caption = "Văn bản SGK";
+      } else if (/tìm hiểu bài|câu hỏi|bài tập|luyện từ và câu/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE2_5_REGIONS.reading_questions_exercises;
+        targetAsset = page2Asset;
+        caption = "Hệ thống câu hỏi / bài tập SGK";
+      } else if (/nói và nghe|luyện nói|kể chuyện|trao đổi|trình bày/i.test(textDesc)) {
+        targetBox = STANDARD_GRADE2_5_REGIONS.speaking_illustration;
+        targetAsset = page2Asset;
+        caption = "Tranh chủ đề luyện nói SGK";
+      }
     }
 
     if (targetBox && targetAsset?.dataUrl) {

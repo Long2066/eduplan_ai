@@ -18,6 +18,7 @@ import { sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
+import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
 import type {
   LessonActivity,
   LessonInput,
@@ -320,9 +321,9 @@ function buildCompactBlueprint(
   } as MathLessonBlueprint;
 }
 
-export function assembleStagedSections(
+export async function assembleStagedSections(
   options: AssembleStagedSectionsOptions,
-): StagedSectionsAssembly {
+): Promise<StagedSectionsAssembly> {
   // 1. Enforce strict staged-v2 invariant assertion
   assertStagedSections(options);
 
@@ -399,14 +400,28 @@ export function assembleStagedSections(
       return cloned;
     });
 
-    const processedActivities = subjectKind === "vietnamese"
-      ? attachHandwritingVisualsToActivities(
+    const hasSgkImages = (input.uploadedAssets || []).some(
+      (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
+    );
+
+    let processedActivities = activities;
+    if (subjectKind === "vietnamese") {
+      if (hasSgkImages) {
+        const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
+        processedActivities = await attachSgkCropsToActivities(
+          activities,
+          input.uploadedAssets,
+          { grade: gradeNum, lessonType: pBpArt.periodBlueprint.lessonType },
+        );
+      } else {
+        processedActivities = attachHandwritingVisualsToActivities(
           activities,
           title,
           pBpArt.periodBlueprint.focus,
           { embedBase64: true },
-        )
-      : activities;
+        );
+      }
+    }
 
     const lastPhase = periodPhases[periodPhases.length - 1];
     const handoffLearned = lastPhase?.handoff?.knowledge?.length

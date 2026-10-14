@@ -253,13 +253,13 @@ export async function repairStagedPeriod(
   };
 }
 
-export function reassembleStagedRepairs(
+export async function reassembleStagedRepairs(
   input: LessonInput,
   blueprint: StagedBlueprintArtifact,
   originalPeriods: StagedPeriodArtifact[],
   repairs: StagedRepairArtifact[],
   plan: SubscriptionPlan,
-): StagedAssemblyArtifact {
+): Promise<StagedAssemblyArtifact> {
   const originalNumbers = new Set(originalPeriods.map((artifact) => artifact.periodNumber));
   const repairedByPeriod = new Map<number, StagedRepairArtifact>();
   repairs.forEach((repair) => {
@@ -272,8 +272,8 @@ export function reassembleStagedRepairs(
     repairedByPeriod.set(repair.periodNumber, repair);
   });
   const effectivePeriods = originalPeriods.map((artifact) => repairedByPeriod.get(artifact.periodNumber) || artifact);
-  const originalAssembly = assembleStagedLesson(input, blueprint, originalPeriods, plan, false);
-  const repairedAssembly = assembleStagedLesson(input, blueprint, effectivePeriods, plan, true);
+  const originalAssembly = await assembleStagedLesson(input, blueprint, originalPeriods, plan, false);
+  const repairedAssembly = await assembleStagedLesson(input, blueprint, effectivePeriods, plan, true);
   const originalErrors = validateStagedLesson(input, originalAssembly, blueprint).summary.errors;
   const repairedErrors = validateStagedLesson(input, repairedAssembly, blueprint).summary.errors;
   return repairedErrors >= originalErrors ? originalAssembly : repairedAssembly;
