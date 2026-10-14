@@ -1187,11 +1187,24 @@ export type TeachingScriptTemplate = {
  * Ví dụ bài "an ăn ân" có phần ĐỌC (tiết 1), phần VIẾT, phần NÓI.
  */
 export type LessonSubType =
-  | "grade1_phonics_read"    // Phần ĐỌC: nhận biết, phân tích, đánh vần, đọc tiếng/từ (tiết 1)
-  | "grade1_phonics_write"   // Phần VIẾT: HD viết vần + từ ứng dụng (tiết viết riêng hoặc phần viết)
-  | "grade1_phonics_read_p2" // Phần ĐỌC câu/đoạn + NÓI NGHE (tiết 2)
-  | "grade1_reading"         // Đọc hiểu văn bản Tập 2
-  | "default";               // Không có template riêng
+  | "grade1_phonics_read"
+  | "grade1_phonics_write"
+  | "grade1_phonics_read_p2"
+  | "grade1_reading"
+  | "grade2_reading"
+  | "grade2_writing"
+  | "grade2_spelling"
+  | "grade2_composition"
+  | "grade2_reading_extension"
+  | "grade3_reading"
+  | "grade3_spelling"
+  | "grade3_language_knowledge"
+  | "grade3_composition"
+  | "grade4_reading"
+  | "grade4_speaking_listening"
+  | "grade5_reading"
+  | "grade5_speaking_listening"
+  | "default";
 
 /**
  * Nhận diện sub-type từ focus/lessonType của period.
@@ -1202,31 +1215,55 @@ export function classifyLessonSubType(
   periodFocus: string,
   periodNumber: number,
 ): LessonSubType {
-  if (grade !== 1) return "default";
-
   const focus = (periodFocus || "").toLowerCase();
   const type = (lessonType || "").toLowerCase();
 
-  // Bài phonics hoặc handwriting lớp 1
-  if (type === "phonics" || type === "handwriting" || /âm|vần|chữ/.test(focus)) {
-    // Phần VIẾT rõ ràng
-    if (/viết|tập viết|viết vần|viết từ|hướng dẫn viết|luyện viết/.test(focus)) {
-      return "grade1_phonics_write";
+  // ── Grade 1 ──
+  if (grade === 1) {
+    if (type === "phonics" || type === "handwriting" || /âm|vần|chữ/.test(focus)) {
+      if (/viết|tập viết|viết vần|viết từ|hướng dẫn viết|luyện viết/.test(focus)) {
+        return "grade1_phonics_write";
+      }
+      if (periodNumber === 2) return "grade1_phonics_read_p2";
+      return "grade1_phonics_read";
     }
-    // Tiết 2 thường là: viết vở + đọc câu/đoạn + nói
-    if (periodNumber === 2) {
-      // Nếu focus nói rõ viết vở
-      if (/viết vở|vở tập viết/.test(focus)) return "grade1_phonics_read_p2";
-      // Default tiết 2 = đọc câu/đoạn + nói
-      return "grade1_phonics_read_p2";
+    if (type === "reading" || /đọc hiểu|tập 2|bài đọc/.test(focus)) {
+      return "grade1_reading";
     }
-    // Tiết 1 = nhận biết, phân tích, đánh vần, đọc tiếng
-    return "grade1_phonics_read";
+    return "default";
   }
 
-  // Bài đọc hiểu lớp 1
-  if (type === "reading" || /đọc hiểu|tập 2|bài đọc/.test(focus)) {
-    return "grade1_reading";
+  // ── Grade 2 ──
+  if (grade === 2) {
+    if (type === "handwriting" || /tập viết|viết chữ|chữ hoa/.test(focus)) return "grade2_writing";
+    if (type === "spelling" || /chính tả|nghe viết|tập chép/.test(focus)) return "grade2_spelling";
+    if (type === "composition" || /luyện viết|viết đoạn/.test(focus)) return "grade2_composition";
+    if (/đọc mở rộng|mở rộng đọc/.test(focus)) return "grade2_reading_extension";
+    if (type === "reading" || /đọc/.test(focus)) return "grade2_reading";
+    return "default";
+  }
+
+  // ── Grade 3 ──
+  if (grade === 3) {
+    if (type === "spelling" || /chính tả|nghe viết/.test(focus)) return "grade3_spelling";
+    if (type === "grammar" || /luyện từ|từ và câu/.test(focus)) return "grade3_language_knowledge";
+    if (type === "composition" || /viết đoạn|viết bài|tập làm văn/.test(focus)) return "grade3_composition";
+    if (type === "reading" || /đọc/.test(focus)) return "grade3_reading";
+    return "default";
+  }
+
+  // ── Grade 4 ──
+  if (grade === 4) {
+    if (type === "speaking_listening" || /nói và nghe|nói nghe|kể chuyện/.test(focus)) return "grade4_speaking_listening";
+    if (type === "reading" || /đọc/.test(focus)) return "grade4_reading";
+    return "default";
+  }
+
+  // ── Grade 5 ──
+  if (grade === 5) {
+    if (type === "speaking_listening" || /nói và nghe|nói nghe|trình bày|tranh biện/.test(focus)) return "grade5_speaking_listening";
+    if (type === "reading" || /đọc/.test(focus)) return "grade5_reading";
+    return "default";
   }
 
   return "default";
@@ -1236,8 +1273,11 @@ export function classifyLessonSubType(
  * Lấy teaching script template cho sub-type.
  */
 export function getTeachingScriptTemplate(subType: LessonSubType): TeachingScriptTemplate | null {
-  const templates = (teachingScriptsData as { templates: Record<string, TeachingScriptTemplate> }).templates;
-  return templates[subType] || null;
+  const data = teachingScriptsData as {
+    templates: Record<string, TeachingScriptTemplate>;
+    gradeTemplates?: Record<string, TeachingScriptTemplate>;
+  };
+  return data.templates[subType] || data.gradeTemplates?.[subType] || null;
 }
 
 /**

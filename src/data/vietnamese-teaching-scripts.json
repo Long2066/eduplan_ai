@@ -269,6 +269,146 @@
       ]
     }
   },
+  "gradeTemplates": {
+    "grade2_reading": {
+      "label": "Lớp 2 – Đọc (2 tiết)",
+      "description": "T1: Khởi động → Đọc mẫu → Luyện đọc từ khó/câu dài → Đọc nối tiếp đoạn → Giải nghĩa từ → Đọc toàn bài. T2: Trả lời câu hỏi → Luyện đọc lại/phân vai → Hoạt động mở rộng.",
+      "activityStructure": [
+        {"phase":"Tiết 1 – Khởi động","durationMinutes":5,"scriptPattern":{"teacherDo":"Tổ chức trò chơi/hát dẫn vào bài. Cho HS quan sát tranh SGK, dự đoán nội dung.","studentDo":"Tham gia trò chơi. Quan sát tranh, nêu dự đoán."}},
+        {"phase":"Tiết 1 – Đọc văn bản","durationMinutes":25,"scriptPattern":{"teacherDo":"Đọc mẫu toàn bài. Hướng dẫn đọc từ khó (ghi bảng, phân tích, đánh vần). Chia đoạn, cho HS đọc nối tiếp. Giải nghĩa từ mới bằng tranh/ngữ cảnh. Cho đọc toàn bài cá nhân + nhóm.","studentDo":"Nghe đọc mẫu. Đọc từ khó cá nhân + đồng thanh. Đọc nối tiếp theo đoạn. Nêu nghĩa từ. Đọc toàn bài.","commonErrors":["Đọc sai thanh điệu từ khó","Ngắt nghỉ sai dấu câu"],"teacherFix":"Đọc mẫu lại câu sai, cho HS đọc theo. Chỉ dấu câu, nhắc ngắt nghỉ."}},
+        {"phase":"Tiết 1 – Củng cố","durationMinutes":5,"scriptPattern":{"teacherDo":"Nhận xét tiết đọc. Hỏi nhanh: Bài đọc nói về ai/gì?","studentDo":"Trả lời nhanh nội dung chính."}},
+        {"phase":"Tiết 2 – Tìm hiểu bài","durationMinutes":20,"scriptPattern":{"teacherDo":"Nêu từng câu hỏi SGK. Cho HS thảo luận nhóm đôi → trả lời trước lớp. Chốt đáp án, giải thích sâu.","studentDo":"Đọc thầm đoạn liên quan. Thảo luận nhóm đôi. Trả lời, bổ sung ý kiến."}},
+        {"phase":"Tiết 2 – Luyện đọc lại","durationMinutes":10,"scriptPattern":{"teacherDo":"Cho HS đọc phân vai/đọc diễn cảm đoạn hay. HD ngữ điệu.","studentDo":"Đọc phân vai theo nhóm. Thi đọc diễn cảm trước lớp."}},
+        {"phase":"Tiết 2 – Củng cố","durationMinutes":5,"scriptPattern":{"teacherDo":"Hỏi bài học/thông điệp. Liên hệ thực tế. Dặn dò.","studentDo":"Nêu bài học. Liên hệ bản thân."}}
+      ]
+    },
+    "grade2_writing": {
+      "label": "Lớp 2 – Tập viết (1 tiết)",
+      "description": "Viết chữ hoa theo quy trình: quan sát mẫu → phân tích cấu tạo → viết mẫu → viết bảng con → viết vở.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Trò chơi ôn chữ hoa đã học. Giới thiệu chữ hoa mới.","studentDo":"Tham gia trò chơi. Đọc tên chữ hoa mới."}},
+        {"phase":"Khám phá","durationMinutes":12,"scriptPattern":{"teacherDo":"Chiếu mẫu chữ hoa. Hỏi: Chữ cao mấy ô li? Gồm mấy nét? Là những nét nào? Viết mẫu trên bảng, mô tả điểm đặt bút, hướng viết từng nét.","studentDo":"Quan sát, trả lời cấu tạo. Quan sát GV viết mẫu.","commonErrors":["HS nói sai số nét","Sai tên nét"],"teacherFix":"GV chỉ từng nét trên mẫu, đếm lại cùng HS."}},
+        {"phase":"Luyện tập","durationMinutes":7,"scriptPattern":{"teacherDo":"Cho HS viết trên không → viết bảng con → giơ bảng. Nhận xét mẫu đẹp và mẫu cần sửa.","studentDo":"Viết trên không. Viết bảng con. Giơ bảng. Lắng nghe nhận xét."}},
+        {"phase":"Thực hành viết vở","durationMinutes":13,"scriptPattern":{"teacherDo":"Nhắc tư thế ngồi, cách cầm bút. Cho HS viết chữ hoa + câu ứng dụng vào vở. Quan sát, hỗ trợ. Chấm 5-7 bài.","studentDo":"Viết vở theo mẫu. Đổi vở nhận xét theo tiêu chí.","assessmentCriteria":["Đúng mẫu chữ","Đúng cỡ chữ","Đều nét","Trình bày sạch"]}}
+      ]
+    },
+    "grade2_spelling": {
+      "label": "Lớp 2 – Chính tả (1 tiết)",
+      "description": "Nghe viết hoặc tập chép đoạn + bài tập phân biệt âm/vần dễ lẫn.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Ôn quy tắc chính tả liên quan. Trò chơi nhanh.","studentDo":"Tham gia trò chơi ôn."}},
+        {"phase":"Nghe viết","durationMinutes":18,"scriptPattern":{"teacherDo":"Đọc toàn đoạn. Hỏi từ khó viết, cho HS phân tích. Viết mẫu từ khó lên bảng. Đọc từng cụm từ/câu ngắn cho HS viết. Đọc lại toàn đoạn cho HS soát.","studentDo":"Nghe đọc. Nêu từ khó. Viết bảng con từ khó. Nghe đọc và viết vào vở. Soát lỗi, sửa bằng bút chì.","commonErrors":["Sai âm đầu dễ lẫn (s/x, ch/tr, r/d/gi)","Sai dấu thanh","Sai vần (an/ang, ăn/ăng)"],"teacherFix":"Cho HS đọc lại từ sai, phân tích âm đầu/vần. Viết lại 2-3 lần."}},
+        {"phase":"Bài tập","durationMinutes":12,"scriptPattern":{"teacherDo":"Cho HS làm bài tập chính tả SGK: điền âm/vần, tìm từ. Chữa bài, chốt quy tắc.","studentDo":"Làm bài tập cá nhân/nhóm. Trình bày kết quả. Sửa bài."}},
+        {"phase":"Củng cố","durationMinutes":2,"scriptPattern":{"teacherDo":"Chốt quy tắc chính tả. Nhận xét giờ viết.","studentDo":"Nhắc lại quy tắc. Lắng nghe nhận xét."}}
+      ]
+    },
+    "grade2_composition": {
+      "label": "Lớp 2 – Luyện viết đoạn (1 tiết)",
+      "description": "Viết 3-5 câu theo chủ đề với gợi ý câu hỏi.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Cho HS đọc đoạn mẫu SGK. Hỏi: Đoạn viết về ai/gì? Có mấy câu?","studentDo":"Đọc đoạn mẫu. Trả lời."}},
+        {"phase":"Hướng dẫn","durationMinutes":10,"scriptPattern":{"teacherDo":"Nêu đề bài. Đọc gợi ý SGK. HD trả lời từng câu hỏi gợi ý → nối thành đoạn. Viết mẫu 1-2 câu đầu.","studentDo":"Đọc đề. Trả lời miệng từng gợi ý. Quan sát GV viết mẫu."}},
+        {"phase":"Thực hành","durationMinutes":17,"scriptPattern":{"teacherDo":"Cho HS viết đoạn vào vở. Hỗ trợ HS yếu. Chọn 2-3 bài đọc trước lớp, nhận xét.","studentDo":"Viết đoạn 3-5 câu. Đọc lại, sửa lỗi. Lắng nghe nhận xét bạn.","assessmentCriteria":["Đủ ý theo gợi ý","Câu đúng ngữ pháp","Viết hoa đầu câu, dấu câu cuối","Nội dung phù hợp"]}},
+        {"phase":"Củng cố","durationMinutes":5,"scriptPattern":{"teacherDo":"Tuyên dương bài hay. Nhắc lỗi chung. Dặn dò.","studentDo":"Lắng nghe, rút kinh nghiệm."}}
+      ]
+    },
+    "grade2_reading_extension": {
+      "label": "Lớp 2 – Đọc mở rộng (1 tiết)",
+      "description": "Chia sẻ sách đã đọc trong tuần, rèn thói quen đọc.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Hỏi: Tuần này em đọc được cuốn sách/bài thơ nào?","studentDo":"Giơ tay, kể tên sách."}},
+        {"phase":"Chia sẻ","durationMinutes":25,"scriptPattern":{"teacherDo":"Cho 4-5 HS chia sẻ: Tên sách? Nội dung chính? Em thích nhất điều gì? HD nhận xét bạn.","studentDo":"Chia sẻ trước lớp. Lắng nghe bạn, đặt câu hỏi, nhận xét."}},
+        {"phase":"Củng cố","durationMinutes":7,"scriptPattern":{"teacherDo":"Giới thiệu sách hay. Khuyến khích đọc thêm. Ghi nhận HS tích cực.","studentDo":"Ghi tên sách hay vào sổ đọc sách."}}
+      ]
+    },
+    "grade3_reading": {
+      "label": "Lớp 3 – Đọc (2 tiết)",
+      "description": "T1: Khởi động → Đọc mẫu → Luyện đọc (từ khó, câu dài, đoạn) → Giải nghĩa từ. T2: Trả lời câu hỏi → Đọc diễn cảm → Luyện từ và câu / Viết.",
+      "activityStructure": [
+        {"phase":"Tiết 1 – Khởi động","durationMinutes":5,"scriptPattern":{"teacherDo":"Quan sát tranh minh họa. Hỏi liên hệ chủ đề. Dẫn vào bài.","studentDo":"Quan sát tranh, chia sẻ trải nghiệm liên quan."}},
+        {"phase":"Tiết 1 – Luyện đọc","durationMinutes":25,"scriptPattern":{"teacherDo":"Đọc mẫu diễn cảm. Ghi từ khó lên bảng, HD đọc. Chia đoạn, đọc nối tiếp. Giải nghĩa từ mới (SGK + mở rộng). Cho đọc nhóm + cá nhân.","studentDo":"Nghe đọc mẫu. Đọc từ khó. Đọc nối tiếp theo đoạn. Nêu nghĩa từ theo ngữ cảnh. Đọc trong nhóm.","commonErrors":["Đọc liến thoắng, không ngắt nghỉ","Sai thanh điệu vùng miền"],"teacherFix":"Đọc mẫu câu cần ngắt. Cho HS đánh dấu / ở chỗ ngắt."}},
+        {"phase":"Tiết 2 – Tìm hiểu bài","durationMinutes":18,"scriptPattern":{"teacherDo":"Câu hỏi SGK + câu hỏi suy luận: Vì sao? Theo em? Em có đồng ý không? Cho thảo luận nhóm 4.","studentDo":"Đọc thầm. Thảo luận nhóm. Trả lời trước lớp, nêu bằng chứng từ bài đọc."}},
+        {"phase":"Tiết 2 – Luyện đọc diễn cảm","durationMinutes":10,"scriptPattern":{"teacherDo":"Chọn đoạn hay, HD ngữ điệu (nhấn mạnh, trầm, vui). Tổ chức thi đọc.","studentDo":"Luyện đọc nhóm. Thi đọc diễn cảm. Bình chọn bạn đọc hay."}},
+        {"phase":"Tiết 2 – Củng cố","durationMinutes":7,"scriptPattern":{"teacherDo":"Hỏi ý nghĩa/bài học. Liên hệ giáo dục. Dặn dò đọc lại ở nhà.","studentDo":"Nêu ý nghĩa. Liên hệ bản thân."}}
+      ]
+    },
+    "grade3_spelling": {
+      "label": "Lớp 3 – Chính tả (1 tiết)",
+      "description": "Nghe viết đoạn dài hơn lớp 2 + bài tập chính tả theo vùng miền.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Ôn quy tắc chính tả. Đọc 2-3 từ khó cho HS viết bảng con.","studentDo":"Viết bảng con. Giơ bảng."}},
+        {"phase":"Nghe viết","durationMinutes":20,"scriptPattern":{"teacherDo":"Đọc toàn đoạn. Hỏi nội dung đoạn. Cho HS nêu từ khó, phân tích chính tả. Đọc từng câu cho HS viết. Đọc lại cho soát.","studentDo":"Nghe đọc, nắm nội dung. Nêu từ khó. Viết bảng con từ khó. Nghe và viết vào vở. Soát lỗi bằng bút chì.","commonErrors":["Sai phụ âm đầu vùng miền (l/n, s/x, ch/tr)","Thiếu dấu thanh","Viết hoa sai"],"teacherFix":"Phân tích cặp phụ âm dễ lẫn, cho HS đặt câu phân biệt."}},
+        {"phase":"Bài tập","durationMinutes":10,"scriptPattern":{"teacherDo":"Bài tập SGK: điền chữ/vần, tìm từ theo quy tắc. Chữa bài, chốt.","studentDo":"Làm bài tập. Trình bày. Sửa."}},
+        {"phase":"Củng cố","durationMinutes":2,"scriptPattern":{"teacherDo":"Chốt quy tắc. Nhận xét chữ viết.","studentDo":"Nhắc lại quy tắc."}}
+      ]
+    },
+    "grade3_language_knowledge": {
+      "label": "Lớp 3 – Luyện từ và câu (1 tiết)",
+      "description": "Mở rộng vốn từ theo chủ đề + luyện kiểu câu/dấu câu.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Trò chơi từ vựng (nối từ, đố từ). Dẫn vào chủ đề.","studentDo":"Tham gia trò chơi."}},
+        {"phase":"Bài tập từ vựng","durationMinutes":15,"scriptPattern":{"teacherDo":"HD bài tập mở rộng vốn từ SGK: tìm từ cùng nhóm, phân loại từ, giải nghĩa. Chốt từ mới.","studentDo":"Thảo luận nhóm. Trình bày kết quả. Ghi từ mới vào vở."}},
+        {"phase":"Bài tập câu","durationMinutes":14,"scriptPattern":{"teacherDo":"HD bài tập về kiểu câu/dấu câu: đặt câu theo mẫu, điền dấu câu, chuyển đổi câu. Chữa mẫu 1 câu.","studentDo":"Làm bài tập. Trình bày trước lớp. Nhận xét bạn.","commonErrors":["Đặt câu thiếu chủ ngữ/vị ngữ","Dùng sai dấu câu"],"teacherFix":"Hỏi: Ai? làm gì? để HS tự kiểm tra câu đủ thành phần."}},
+        {"phase":"Củng cố","durationMinutes":3,"scriptPattern":{"teacherDo":"Nhắc kiến thức mới. Dặn dò.","studentDo":"Nhắc lại. Lắng nghe."}}
+      ]
+    },
+    "grade3_composition": {
+      "label": "Lớp 3 – Viết đoạn/bài (1-2 tiết)",
+      "description": "Viết đoạn 5-7 câu hoặc bài ngắn theo dàn ý gợi ý.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Cho đọc bài mẫu SGK. Hỏi: Bài viết về gì? Có mấy phần?","studentDo":"Đọc bài mẫu. Trả lời."}},
+        {"phase":"Hướng dẫn","durationMinutes":12,"scriptPattern":{"teacherDo":"Nêu đề bài. HD lập dàn ý theo gợi ý SGK. Cho HS nói miệng từng ý → ghép thành đoạn. Nhận xét, bổ sung.","studentDo":"Đọc đề. Lập dàn ý ngắn. Nói miệng từng ý. Lắng nghe nhận xét."}},
+        {"phase":"Thực hành viết","durationMinutes":17,"scriptPattern":{"teacherDo":"Cho HS viết bài. Quan sát, hỗ trợ HS yếu. Chấm nhanh. Chọn 2-3 bài đọc trước lớp.","studentDo":"Viết bài vào vở. Đọc lại, sửa lỗi chính tả, dấu câu. Lắng nghe nhận xét bạn.","assessmentCriteria":["Đúng yêu cầu đề","Đủ ý theo dàn ý","Câu đúng ngữ pháp, có hình ảnh","Chính tả đúng","Trình bày sạch đẹp"]}},
+        {"phase":"Củng cố","durationMinutes":3,"scriptPattern":{"teacherDo":"Tuyên dương. Nhắc lỗi chung. Dặn viết lại ở nhà.","studentDo":"Lắng nghe, rút kinh nghiệm."}}
+      ]
+    },
+    "grade4_reading": {
+      "label": "Lớp 4 – Đọc (2 tiết)",
+      "description": "T1: Khởi động → Đọc → Tìm hiểu bài (câu hỏi suy luận). T2: Đọc diễn cảm → Luyện từ và câu → Viết ngắn / Vận dụng.",
+      "activityStructure": [
+        {"phase":"Tiết 1 – Khởi động","durationMinutes":5,"scriptPattern":{"teacherDo":"Kết nối trải nghiệm. Quan sát tranh, dự đoán. Giới thiệu bài.","studentDo":"Chia sẻ trải nghiệm. Quan sát tranh, dự đoán nội dung."}},
+        {"phase":"Tiết 1 – Đọc và tìm hiểu bài","durationMinutes":28,"scriptPattern":{"teacherDo":"Đọc mẫu. HD đọc từ khó, câu dài (đánh dấu ngắt nghỉ). Đọc nối tiếp đoạn. Giải nghĩa từ. Câu hỏi SGK gồm câu suy luận: Vì sao? Điều gì sẽ xảy ra nếu? Em hiểu câu/hình ảnh đó như thế nào? Cho thảo luận nhóm.","studentDo":"Nghe đọc mẫu. Đọc từ khó. Đọc nối tiếp. Thảo luận nhóm 4 trả lời câu hỏi. Nêu bằng chứng từ bài đọc.","commonErrors":["Trả lời suy luận hời hợt, không có bằng chứng","Đọc nhanh bỏ từ"],"teacherFix":"Hỏi: Em dựa vào đâu trong bài để nói như vậy? Cho HS chỉ ra câu/đoạn."}},
+        {"phase":"Tiết 1 – Củng cố","durationMinutes":2,"scriptPattern":{"teacherDo":"Tóm tắt nội dung chính. Nhận xét.","studentDo":"Nhắc lại nội dung chính."}},
+        {"phase":"Tiết 2 – Đọc diễn cảm","durationMinutes":10,"scriptPattern":{"teacherDo":"Chọn đoạn hay, HD ngữ điệu phù hợp thể loại (kể, tả, đối thoại). Thi đọc.","studentDo":"Luyện đọc diễn cảm nhóm. Thi đọc trước lớp."}},
+        {"phase":"Tiết 2 – Luyện từ và câu","durationMinutes":13,"scriptPattern":{"teacherDo":"Bài tập từ vựng/ngữ pháp gắn bài đọc: tìm từ, đặt câu, mở rộng vốn từ. Chữa bài.","studentDo":"Làm bài tập. Trình bày. Nhận xét bạn."}},
+        {"phase":"Tiết 2 – Vận dụng","durationMinutes":10,"scriptPattern":{"teacherDo":"Bài tập viết ngắn hoặc nói: viết 3-5 câu liên hệ bản thân / nêu cảm nghĩ. Chia sẻ.","studentDo":"Viết đoạn ngắn hoặc trình bày miệng. Lắng nghe, nhận xét bạn."}},
+        {"phase":"Tiết 2 – Củng cố","durationMinutes":2,"scriptPattern":{"teacherDo":"Chốt bài học, ý nghĩa. Dặn dò.","studentDo":"Nhắc lại. Lắng nghe."}}
+      ]
+    },
+    "grade4_speaking_listening": {
+      "label": "Lớp 4 – Nói và nghe (1 tiết)",
+      "description": "Kể chuyện / trình bày ý kiến / thảo luận nhóm theo chủ đề.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Dẫn vào chủ đề nói. Cho xem tranh/video ngắn.","studentDo":"Quan sát. Nêu suy nghĩ ban đầu."}},
+        {"phase":"Chuẩn bị","durationMinutes":7,"scriptPattern":{"teacherDo":"Nêu yêu cầu nói (kể/trình bày/thảo luận). HD dàn ý nói: mở đầu, nội dung chính, kết thúc. Cho HS chuẩn bị cá nhân.","studentDo":"Đọc yêu cầu SGK. Ghi dàn ý nói ra nháp."}},
+        {"phase":"Thực hành","durationMinutes":20,"scriptPattern":{"teacherDo":"Cho nói trong nhóm 4. Mỗi HS nói, nhóm nhận xét. Mời 3-4 HS nói trước lớp. HD nhận xét: nội dung, giọng nói, cử chỉ, ánh mắt.","studentDo":"Nói trong nhóm. Nhận xét bạn. Nói trước lớp. Lắng nghe, nhận xét.","assessmentCriteria":["Nội dung đủ ý, đúng chủ đề","Nói rõ ràng, mạch lạc","Tự tin, giao tiếp mắt","Nghe và phản hồi phù hợp"]}},
+        {"phase":"Củng cố","durationMinutes":5,"scriptPattern":{"teacherDo":"Tuyên dương HS nói hay. Góp ý chung. Dặn dò.","studentDo":"Lắng nghe, rút kinh nghiệm."}}
+      ]
+    },
+    "grade5_reading": {
+      "label": "Lớp 5 – Đọc (2 tiết)",
+      "description": "T1: Khởi động → Đọc → Tìm hiểu bài (suy luận + quan điểm có bằng chứng). T2: Đọc diễn cảm → Luyện từ và câu → Viết/Vận dụng.",
+      "activityStructure": [
+        {"phase":"Tiết 1 – Khởi động","durationMinutes":5,"scriptPattern":{"teacherDo":"Kết nối trải nghiệm/kiến thức đã biết. Giới thiệu bài qua câu hỏi kích thích tư duy.","studentDo":"Suy nghĩ, chia sẻ. Dự đoán nội dung."}},
+        {"phase":"Tiết 1 – Đọc và tìm hiểu bài","durationMinutes":28,"scriptPattern":{"teacherDo":"Đọc mẫu. HD đọc từ khó, câu dài, đoạn phức tạp. Đọc nối tiếp. Giải nghĩa từ. Câu hỏi SGK gồm: tìm thông tin, suy luận, đánh giá (Em đồng ý không? Vì sao? Tác giả muốn gửi thông điệp gì?). Thảo luận nhóm.","studentDo":"Đọc. Thảo luận nhóm 4. Trả lời có dẫn chứng từ bài. Nêu quan điểm cá nhân.","commonErrors":["Trả lời đánh giá thiếu lập luận","Nhầm ý chính với chi tiết phụ"],"teacherFix":"HD phân biệt ý chính/phụ bằng câu hỏi: Bỏ đi có thay đổi nội dung không? Yêu cầu HS nêu ít nhất 1 dẫn chứng."}},
+        {"phase":"Tiết 1 – Củng cố","durationMinutes":2,"scriptPattern":{"teacherDo":"Tóm tắt nội dung, ý nghĩa. Nhận xét.","studentDo":"Nêu ý nghĩa."}},
+        {"phase":"Tiết 2 – Đọc diễn cảm","durationMinutes":10,"scriptPattern":{"teacherDo":"HD đọc diễn cảm phù hợp thể loại. Thi đọc.","studentDo":"Luyện đọc. Thi đọc. Bình chọn."}},
+        {"phase":"Tiết 2 – Luyện từ và câu","durationMinutes":13,"scriptPattern":{"teacherDo":"Bài tập ngữ pháp SGK: từ đồng/trái nghĩa, biện pháp tu từ, kiểu câu. Chữa bài.","studentDo":"Làm bài tập. Trình bày. Nhận xét bạn."}},
+        {"phase":"Tiết 2 – Viết/Vận dụng","durationMinutes":10,"scriptPattern":{"teacherDo":"Viết đoạn ngắn: cảm nghĩ, liên hệ, hoặc viết tiếp/viết lại theo phong cách khác. Chia sẻ.","studentDo":"Viết đoạn. Đọc trước lớp. Nhận xét, góp ý bạn."}},
+        {"phase":"Tiết 2 – Củng cố","durationMinutes":2,"scriptPattern":{"teacherDo":"Chốt bài học. Dặn dò.","studentDo":"Nhắc lại."}}
+      ]
+    },
+    "grade5_speaking_listening": {
+      "label": "Lớp 5 – Nói và nghe (1 tiết)",
+      "description": "Trình bày ý kiến/nghị luận + phản hồi, tranh biện.",
+      "activityStructure": [
+        {"phase":"Khởi động","durationMinutes":3,"scriptPattern":{"teacherDo":"Nêu chủ đề. Cho xem tình huống/tranh/câu nói. Hỏi ý kiến ban đầu.","studentDo":"Suy nghĩ, chia sẻ nhanh."}},
+        {"phase":"Chuẩn bị","durationMinutes":7,"scriptPattern":{"teacherDo":"Nêu yêu cầu. HD dàn ý: mở bài (nêu vấn đề), thân bài (lý lẽ + dẫn chứng), kết bài. Cho HS chuẩn bị.","studentDo":"Lập dàn ý ra nháp. Chuẩn bị dẫn chứng."}},
+        {"phase":"Thực hành","durationMinutes":20,"scriptPattern":{"teacherDo":"Cho trình bày trong nhóm 4. Nhóm hỏi lại, phản biện. Mời 3-4 HS trình bày trước lớp. Tổ chức hỏi-đáp. HD nhận xét: nội dung, lập luận, dẫn chứng, tự tin.","studentDo":"Trình bày nhóm. Phản biện/hỏi lại. Trình bày trước lớp. Trả lời câu hỏi. Nhận xét bạn.","assessmentCriteria":["Lập luận rõ ràng, có dẫn chứng","Nói mạch lạc, đúng thời gian","Phản hồi/phản biện hợp lý","Tự tin, giao tiếp tốt"]}},
+        {"phase":"Củng cố","durationMinutes":5,"scriptPattern":{"teacherDo":"Tổng kết. Tuyên dương. Dặn dò.","studentDo":"Lắng nghe, rút kinh nghiệm."}}
+      ]
+    }
+  },
   "qualityRules": {
     "deepScriptMandatory": [
       "Mỗi bước GV phải có LỜI NÓI NGUYÊN VĂN trong ngoặc kép khi hỏi/dẫn dắt/chốt kiến thức",
