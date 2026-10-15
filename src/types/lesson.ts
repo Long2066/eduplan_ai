@@ -30,6 +30,8 @@ export type UploadedAsset = {
   previewUrl?: string;
   dataUrl?: string;
   mimeType?: string;
+  taphuanBookKey?: string;
+  taphuanPage?: number;
 };
 
 export type LessonActivityOrganization = "individual" | "pair" | "group" | "whole_class";

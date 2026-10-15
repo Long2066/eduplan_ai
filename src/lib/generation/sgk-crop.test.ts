@@ -5,6 +5,7 @@ import {
   cropImageWithPadding,
   attachSgkCropsToActivities,
   STANDARD_GRADE1_REGIONS,
+  ensureAssetDataUrl,
 } from "./sgk-crop";
 import { buildLessonDocxDocument } from "@/lib/export-docx";
 import type { LessonActivity, LessonPlan, UploadedAsset } from "@/types/lesson";
@@ -249,5 +250,29 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
     const buffer = await Packer.toBuffer(doc);
 
     expect(buffer.length).toBeGreaterThan(5000);
+  });
+
+  it("ensureAssetDataUrl preserves existing dataUrl without re-fetching", async () => {
+    const asset: UploadedAsset = {
+      id: "test_1",
+      name: "SGK_Trang_10.png",
+      type: "image",
+      dataUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    };
+    const resolved = await ensureAssetDataUrl(asset);
+    expect(resolved.dataUrl).toBe(asset.dataUrl);
+  });
+
+  it("ensureAssetDataUrl handles invalid or nonexistent book gracefully without throwing", async () => {
+    const asset: UploadedAsset = {
+      id: "test_2",
+      name: "Nonexistent_Page.png",
+      type: "image",
+      taphuanBookKey: "non_existent_book_key",
+      taphuanPage: 9999,
+    };
+    const resolved = await ensureAssetDataUrl(asset);
+    expect(resolved.id).toBe("test_2");
+    expect(resolved.dataUrl).toBeUndefined();
   });
 });

@@ -1,4 +1,6 @@
 import sharp from "sharp";
+import { getTaphuanBookByKey, taphuanCatalog } from "@/lib/taphuan-catalog";
+import { fetchTaphuanReaderPages, fetchTaphuanPageBuffer } from "@/lib/taphuan-reader";
 import type { LessonActivity, LessonActivityVisual, UploadedAsset } from "@/types/lesson";
 
 export type NormalizedBoundingBox = {
@@ -155,6 +157,48 @@ export const STANDARD_GRADE2_5_REGIONS: Record<string, NormalizedBoundingBox> = 
   speaking_illustration: { ymin: 200, xmin: 50, ymax: 700, xmax: 950 },
 };
 
+export async function ensureAssetDataUrl(asset: UploadedAsset, defaultGrade?: number): Promise<UploadedAsset> {
+  if (asset.dataUrl && asset.dataUrl.startsWith("data:image/")) {
+    return asset;
+  }
+
+  let bookKey = asset.taphuanBookKey;
+  let page = asset.taphuanPage;
+
+  if (!page && asset.name) {
+    const m = asset.name.match(/(?:trang|page)\s*(\d+)/i);
+    if (m) page = parseInt(m[1], 10);
+  }
+
+  if (!bookKey && asset.name) {
+    const matchedBook = taphuanCatalog.find((b) => asset.name.includes(b.title) || asset.name.includes(b.key));
+    if (matchedBook) bookKey = matchedBook.key;
+  }
+
+  if (!bookKey && defaultGrade) {
+    const fallbackBook = taphuanCatalog.find((b) => b.grade === `Lớp ${defaultGrade}` && b.subject === "Tiếng Việt");
+    if (fallbackBook) bookKey = fallbackBook.key;
+  }
+
+  if (bookKey && page && page > 0) {
+    try {
+      const book = getTaphuanBookByKey(bookKey);
+      if (book) {
+        const pages = await fetchTaphuanReaderPages(book.readerUrl);
+        if (page <= pages.length) {
+          const { buffer, contentType } = await fetchTaphuanPageBuffer(pages[page - 1]);
+          const dataUrl = bufferToDataUrl(buffer, contentType || "image/png");
+          return { ...asset, dataUrl };
+        }
+      }
+    } catch (err) {
+      console.warn("[sgk-crop] Không thể tải lại ảnh taphuan cho asset:", asset.name, err);
+    }
+  }
+
+  return asset;
+}
+
 /**
  * Phân tích và tự động gắn ảnh cắt SGK vào đúng hoạt động của cột GV
  */
@@ -163,7 +207,10 @@ export async function attachSgkCropsToActivities(
   assets: UploadedAsset[],
   options: { grade?: number; lessonType?: string; periodNumber?: number } = {},
 ): Promise<LessonActivity[]> {
-  const imageAssets = (assets || []).filter(
+  const resolvedAssets = await Promise.all(
+    (assets || []).map((a) => ensureAssetDataUrl(a, options.grade)),
+  );
+  const imageAssets = resolvedAssets.filter(
     (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
   );
 

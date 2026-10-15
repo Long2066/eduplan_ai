@@ -1285,21 +1285,23 @@ export function getHandwritingGuidanceBlock(
   blueprint: VietnameseLessonBlueprint,
   period: VietnamesePeriodBlueprint,
 ): string {
+  const textContext = `${period.lessonType || ""} ${period.focus || ""} ${input.lessonTitle || ""}`.toLowerCase();
   const isHandwritingOrPhonics =
-    period.lessonType === "handwriting" ||
-    period.lessonType === "phonics" ||
-    period.lessonType === "spelling";
+    /handwriting|phonics|spelling|writing|viết|tập viết|chữ|vần|âm/i.test(textContext);
 
   if (!isHandwritingOrPhonics) return "";
 
   const writingText = [
-    period.focus,
     input.lessonTitle,
+    period.focus,
     blueprint.sourceInventory?.writingPrompt?.prompts?.join(" ") || "",
     blueprint.sourceInventory?.spellingText || "",
   ].join(" ");
 
-  const letters = extractTargetLettersFromWritingText(writingText);
+  let letters = extractTargetLettersFromWritingText(writingText);
+  if (letters.length === 0) {
+    letters = extractTargetLettersFromWritingText(input.lessonTitle);
+  }
   if (letters.length === 0) return "";
 
   const instructions: string[] = [];
@@ -1314,7 +1316,36 @@ export function getHandwritingGuidanceBlock(
 
   return `\nQuy chuẩn mẫu chữ viết (Trích xuất từ Hồ sơ Chữ viết Tiếng Việt Tiểu học):
 ${instructions.join("\n\n")}
-- Yêu cầu bắt buộc: Khi viết phần Luyện viết (bảng con hoặc vở), GV hướng dẫn HS đúng độ cao (ô li), điểm đặt bút, thứ tự nét và điểm dừng bút như trên. Tuyệt đối không tự bịa quy cách viết khác với mẫu chuẩn.\n`;
+- Yêu cầu bắt buộc: Khi viết phần Luyện viết (bảng con hoặc vở), GV hướng dẫn HS đúng độ cao (ô li), điểm đặt bút, thứ tự nét và điểm dừng bút như trên. Tuyệt đối không tự bịa quy cách viết khác với mẫu chuẩn.
+
+- YÊU CẦU BẮT BUỘC KHI SOẠN HOẠT ĐỘNG TẬP VIẾT (MÔ PHỎNG MẪU CHUẨN AN ĂN ÂN):
+  Mọi hoạt động Hướng dẫn viết chữ/vần (bảng con hoặc vở) BẮT BUỘC phải viết thành kịch bản đối thoại chi tiết theo đủ 4 bước sau, TUYỆT ĐỐI KHÔNG VIẾT CHUNG CHUNG:
+  1. Hướng dẫn xác định nét chữ:
+     - Cột GV hỏi từng câu:
+       + Để viết chữ ..., ta viết nét nào trước?
+       + Chữ ... gồm mấy nét? Là những nét nào?
+       + Chữ ... cao mấy ô li? Rộng mấy ô li?
+     - Cột HS trả lời cụ thể:
+       + Nêu đúng thứ tự viết các nét.
+       + Chữ ... gồm ... nét (nêu đúng tên nét: nét cong kín, nét móc ngược phải, nét khuyết trên, nét khuyết dưới, nét móc hai đầu...).
+       + Chữ ... cao ... ô li, rộng ... ô li.
+     - GV nhận xét, chốt kiến thức: "GV nhận xét, kết luận: “Chữ ... cao ... ô li, rộng ... ô li. Chữ ... gồm ... nét: nét 1 là ..., nét 2 là ...”".
+  2. Hướng dẫn quy trình viết từng li từng tí:
+     - GV mô tả chi tiết: Đặt bút ở đường kẻ mấy (ĐK ...), viết nét gì theo hướng nào, dừng bút ở ĐK mấy, lia bút đến ĐK mấy, nối nét thế nào.
+     - HS quan sát, lắng nghe và mô phỏng nét viết trên không.
+     - GV cho HS viết vào bảng con -> GV quan sát quanh lớp, hỗ trợ HS chậm/viết chưa đúng -> Nhận xét mẫu bảng con đẹp và chưa đẹp.
+  3. Hướng dẫn viết từ ngữ ứng dụng:
+     - GV hỏi độ cao các con chữ trong từ:
+       + Các chữ nào có độ cao 5 ô li (b, h, k, l, y, g)?
+       + Chữ nào cao 3 ô li (t)? Chữ nào cao 2,5 ô li (r, s)?
+       + Các chữ nào cao 2 ô li (a, ă, â, e, ê, o, ô, ơ, u, ư, i, n, m, c, v, x)?
+     - HS trả lời cụ thể độ cao từng chữ.
+     - GV hướng dẫn điểm đặt bút, cách nối nét từ chữ trước sang chữ sau, vị trí đặt dấu thanh.
+     - HS luyện viết bảng con từ ứng dụng.
+  4. Thực hành viết vở (ở Vận dụng hoặc Tiết 2):
+     - GV cho HS mở vở tập viết, viết theo mẫu: chữ cái/vần và từ ứng dụng. Nhắc tư thế ngồi, cách cầm bút.
+     - GV tổ chức cho HS đổi vở theo nhóm bàn, phát hiện lỗi và góp ý cho nhau theo đúng 4 tiêu chí: 1. Độ cao; 2. Độ rộng; 3. Nối nét; 4. Trình bày sạch đẹp.
+     - GV nhận xét, tuyên dương.\n`;
 }
 
 export function getDigitalCompetencyPromptBlock(
@@ -1572,8 +1603,24 @@ Quy tắc quan trọng:
 - Không dùng từ "OCR".
 - Mỗi tiết có đúng 4 hoạt động: Khởi động, Khám phá, Luyện tập, Vận dụng.
 - teacherActions/studentActions đi theo từng cặp; mọi teacherActions bắt đầu "GV ...", studentActions bắt đầu "HS ...".
-- BẮT BUỘC LỜI THOẠI TRONG NGOẶC KÉP: Mọi lời hỏi, khẩu lệnh, dẫn dắt, giải thích của GV và câu trả lời, lời đọc, câu nói của HS PHẢI đặt trong ngoặc kép "..." (Ví dụ: GV hỏi: "Trong từ 'cá chuối', tiếng nào chứa vần uôi?"; HS trả lời: "Thưa cô, tiếng 'chuối' chứa vần uôi ạ."). Tuyệt đối KHÔNG viết chung chung kiểu "GV hỏi HS", "HS lắng nghe và trả lời".
-- BẮT BUỘC THAO TÁC VẬT LÝ CỤ THỂ: Ghi rõ thao tác với đồ dùng (bộ đồ dùng ghép chữ, bảng con, thẻ từ, vở ô li, bút chì, sách giáo khoa; VD: "HS cài vần uôi vào bảng gài", "HS viết bảng con chữ hoa A").
+- BẮT BUỘC ĐỐI THOẠI HỎI - ĐÁP 1:1 DÙNG DẤU "+", TUYỆT ĐỐI CẤM VIẾT ĐOẠN VĂN XUÔI TƯỜNG THUẬT RỖNG:
+  * Trong teacherActions:
+    - GV nêu lệnh / câu hỏi cụ thể, tách từng dòng bằng "+":
+      Ví dụ:
+      "GV chiếu mẫu và hỏi:
+      + Để viết vần ..., chúng ta viết chữ nào trước?
+      + Chữ ... gồm mấy nét? Cao mấy ô li? Rộng mấy ô li?"
+    - Với hoạt động viết: BẮT BUỘC nêu chi tiết đường kẻ (ĐK 1, 2, 3...), tên nét, điểm đặt bút, dừng bút, nối nét theo quy chuẩn Bộ GDĐT.
+    - Lời chốt kiến thức: "GV nhận xét, kết luận: “...”".
+  * Trong studentActions:
+    - HS trả lời đối ứng 1:1 cho từng câu hỏi của GV:
+      Ví dụ:
+      "HS quan sát và trả lời:
+      + Viết chữ ... trước, chữ ... sau.
+      + Chữ ... gồm 2 nét (nét cong kín, nét móc ngược).
+      + Chữ ... cao 2 ô li, rộng 2,5 ô li."
+    - Ghi rõ thao tác vật lý: "HS mô phỏng nét viết trên không.", "HS viết bảng con.", "HS đổi vở nhận xét theo 4 tiêu chí: độ cao, độ rộng, nối nét, trình bày."
+- BẮT BUỘC LỜI THOẠI TRONG NGOẶC KÉP: Mọi lời hỏi, khẩu lệnh, dẫn dắt, giải thích của GV và câu trả lời, lời đọc, câu nói của HS PHẢI đặt trong ngoặc kép "..." hoặc tách dấu "+". Tuyệt đối KHÔNG viết chung chung kiểu "GV hỏi HS", "HS lắng nghe và trả lời".
 - DỰ KIẾN LỖI SAI & CÁCH SỬA: Trong các hoạt động khám phá hoặc luyện tập, PHẢI nêu rõ lỗi thường gặp của HS (phát âm lệch âm/vần, nhầm dấu thanh, sai nét/độ cao, thiếu bộ phận câu) và câu lệnh/cách thức GV sửa trực tiếp.
 - Kiểm soát độ dài theo ${input.duration} phút: tổng durationMinutes của 4 hoạt động phải là 32 hoặc 33 phút để còn 2–3 phút dự phòng. Gợi ý: 4+15+10+4=33 hoặc 4+14+10+4=32.
 - Khởi động 2-3 cặp, Khám phá 4-6 cặp, Luyện tập 3-4 cặp, Vận dụng 2-3 cặp; không thêm hoạt động phụ ngoài 4 pha.
@@ -1722,8 +1769,10 @@ Yêu cầu sửa:
 - Giữ sourceTaskIds/sourceUnitIds/sourceClusterIds đúng continuityPlan; không chuyển cluster sang tiết khác và không tách cluster mustStayTogether.
 - Có đúng 4 hoạt động: Khởi động, Khám phá, Luyện tập, Vận dụng.
 - teacherActions/studentActions đi theo từng cặp, bắt đầu "GV ..." và "HS ...".
+- BẮT BUỘC ĐỐI THOẠI HỎI - ĐÁP 1:1 DÙNG DẤU "+", TUYỆT ĐỐI CẤM VIẾT ĐOẠN VĂN XUÔI TƯỜNG THUẬT:
+  * Trong teacherActions: GV nêu câu hỏi/lệnh cụ thể tách dòng bằng "+", mô tả chi tiết đường kẻ (ĐK), tên nét, điểm đặt bút, dừng bút, nối nét; lời chốt: "GV nhận xét, kết luận: “...”".
+  * Trong studentActions: HS trả lời đối ứng 1:1 bằng dấu "+", ghi rõ thao tác vật lý (viết trên không, viết bảng con, viết vở, đổi vở nhận xét 4 tiêu chí).
 - BẮT BUỘC LỜI THOẠI TRONG NGOẶC KÉP: Mọi lời hỏi, hướng dẫn, chốt của GV và lời đáp, đọc, trả lời của HS PHẢI đặt trong ngoặc kép "...".
-- BẮT BUỘC THAO TÁC CỤ THỂ: Nêu rõ thao tác với đồ dùng học tập (bộ đồ dùng, bảng con, thẻ từ, vở ô li, bút chì, sách).
 - BẮT BUỘC DỰ KIẾN LỖI SAI VÀ CÁCH SỬA: Khám phá/Luyện tập phải có ít nhất 1 lỗi thường gặp và cách GV sửa trực tiếp.
 - Không dùng từ "OCR".
 - Chỉ sửa đúng lỗi được liệt kê; không nhồi thêm kĩ năng không liên quan.

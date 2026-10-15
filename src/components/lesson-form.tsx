@@ -126,6 +126,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   async function createAsset(file: File, index: number, order: number): Promise<UploadedAsset> {
     const fallbackName = `Trang SGK ${order}`;
     const dataUrl = await optimizeLessonImage(file);
+    const custom = file as unknown as { taphuanBookKey?: string; taphuanPage?: number };
 
     return {
       id: `${Date.now()}-${index}-${file.name || fallbackName}`,
@@ -134,6 +135,8 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
       order,
       dataUrl,
       mimeType: "image/jpeg",
+      ...(custom.taphuanBookKey ? { taphuanBookKey: custom.taphuanBookKey } : {}),
+      ...(typeof custom.taphuanPage === "number" ? { taphuanPage: custom.taphuanPage } : {}),
     };
   }
 

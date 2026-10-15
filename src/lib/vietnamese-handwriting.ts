@@ -152,7 +152,8 @@ export function attachHandwritingVisualsToActivities(
 ): LessonActivity[] {
   return activities.map((act) => {
     const text = `${act.phase || ""} ${act.title || ""} ${act.objective || ""}`.toLowerCase();
-    const isWritingActivity = /viết bảng|viết vở|tập viết|luyện viết|mẫu chữ/i.test(text);
+    const isWritingActivity =
+      /viết bảng|viết vở|tập viết|luyện viết|mẫu chữ|luyện tô|tập tô|tô chữ|viết chữ|tô, viết|tô và viết|tô\s*viết/i.test(text);
     if (!isWritingActivity) return act as LessonActivity;
 
     if (act.teacherVisuals?.some((v: any) => v.id && String(v.id).startsWith("hw-"))) {

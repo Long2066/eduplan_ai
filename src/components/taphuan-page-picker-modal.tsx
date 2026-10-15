@@ -149,6 +149,7 @@ export function TaphuanPagePickerModal({
         const blob = await res.blob();
         const fileName = `${book.title} - Trang ${page}.png`;
         const file = new File([blob], fileName, { type: "image/png", lastModified: Date.now() });
+        Object.assign(file, { taphuanBookKey: book.key, taphuanPage: page });
         files.push(file);
       }
 
