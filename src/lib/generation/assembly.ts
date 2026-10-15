@@ -246,7 +246,11 @@ export async function assembleStagedLesson(
           activities: await attachSgkCropsToActivities(
             period.activities,
             input.uploadedAssets,
-            { grade: gradeNum, lessonType: (period as { lessonType?: string }).lessonType },
+            {
+              grade: gradeNum,
+              lessonType: (period as { lessonType?: string }).lessonType,
+              periodNumber: period.periodNumber,
+            },
           ),
         })),
       );

@@ -1992,6 +1992,7 @@ async function generateVietnameseLessonChunkedWithModel(
         p.activities = await attachSgkCropsToActivities(p.activities, input.uploadedAssets, {
           grade: gradeNum,
           lessonType: (p as { lessonType?: string }).lessonType || classification.primaryType,
+          periodNumber: p.periodNumber,
         });
       }
     }

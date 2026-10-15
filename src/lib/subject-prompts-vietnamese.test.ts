@@ -164,6 +164,44 @@ describe("buildVietnamesePeriodPrompt", () => {
     expect(prompt).toContain("Thao tác HS");
     expect(prompt).toContain("Không biến việc GV chiếu TV/slide thành năng lực số");
   });
+
+  it("phân loại đúng và cung cấp kịch bản sâu cho Lớp 1 Ôn tập-Kể chuyện và Lớp 4-5", async () => {
+    const { classifyLessonSubType, getTeachingScriptTemplate, getFewShotExamples } = await import("./vietnamese-pedagogy");
+    
+    // Grade 1 Review Story
+    expect(classifyLessonSubType(1, "review_story", "Ôn tập và kể chuyện", 2)).toBe("grade1_review_story");
+    const g1Review = getTeachingScriptTemplate("grade1_review_story");
+    expect(g1Review).not.toBeNull();
+    expect(g1Review?.label).toContain("Ôn tập và kể chuyện");
+
+    // Grade 4 Grammar, Composition, Extension
+    expect(classifyLessonSubType(4, "grammar", "Luyện từ và câu", 1)).toBe("grade4_grammar");
+    expect(classifyLessonSubType(4, "composition", "Viết bài văn", 1)).toBe("grade4_composition");
+    expect(classifyLessonSubType(4, "reading", "Đọc mở rộng", 1)).toBe("grade4_reading_extension");
+    expect(getTeachingScriptTemplate("grade4_grammar")).not.toBeNull();
+    expect(getTeachingScriptTemplate("grade4_composition")).not.toBeNull();
+    expect(getTeachingScriptTemplate("grade4_reading_extension")).not.toBeNull();
+
+    // Grade 5 Grammar, Composition, Spelling, Extension
+    expect(classifyLessonSubType(5, "grammar", "Luyện từ và câu", 1)).toBe("grade5_grammar");
+    expect(classifyLessonSubType(5, "composition", "Tả cảnh đẹp", 1)).toBe("grade5_composition");
+    expect(classifyLessonSubType(5, "spelling", "Rèn viết đúng", 1)).toBe("grade5_spelling");
+    expect(classifyLessonSubType(5, "reading", "Đọc mở rộng", 1)).toBe("grade5_reading_extension");
+    expect(getTeachingScriptTemplate("grade5_grammar")).not.toBeNull();
+    expect(getTeachingScriptTemplate("grade5_composition")).not.toBeNull();
+    expect(getTeachingScriptTemplate("grade5_spelling")).not.toBeNull();
+    expect(getTeachingScriptTemplate("grade5_reading_extension")).not.toBeNull();
+
+    // Few-shot dialogue examples for Reading
+    const g1ReadPairs = getFewShotExamples("grade1_phonics_read");
+    expect(g1ReadPairs.length).toBeGreaterThan(0);
+    expect(g1ReadPairs[0].teacherAction).toContain("chiếu tranh");
+    expect(g1ReadPairs[0].studentAction).toContain("Dạ thưa cô");
+
+    const g4CompPairs = getFewShotExamples("grade4_reading");
+    expect(g4CompPairs.length).toBeGreaterThan(0);
+    expect(g4CompPairs[0].teacherAction).toContain("suy luận");
+  });
 });
 
 describe("buildVietnamesePeriodRepairPrompt", () => {

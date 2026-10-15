@@ -1572,6 +1572,9 @@ Quy tắc quan trọng:
 - Không dùng từ "OCR".
 - Mỗi tiết có đúng 4 hoạt động: Khởi động, Khám phá, Luyện tập, Vận dụng.
 - teacherActions/studentActions đi theo từng cặp; mọi teacherActions bắt đầu "GV ...", studentActions bắt đầu "HS ...".
+- BẮT BUỘC LỜI THOẠI TRONG NGOẶC KÉP: Mọi lời hỏi, khẩu lệnh, dẫn dắt, giải thích của GV và câu trả lời, lời đọc, câu nói của HS PHẢI đặt trong ngoặc kép "..." (Ví dụ: GV hỏi: "Trong từ 'cá chuối', tiếng nào chứa vần uôi?"; HS trả lời: "Thưa cô, tiếng 'chuối' chứa vần uôi ạ."). Tuyệt đối KHÔNG viết chung chung kiểu "GV hỏi HS", "HS lắng nghe và trả lời".
+- BẮT BUỘC THAO TÁC VẬT LÝ CỤ THỂ: Ghi rõ thao tác với đồ dùng (bộ đồ dùng ghép chữ, bảng con, thẻ từ, vở ô li, bút chì, sách giáo khoa; VD: "HS cài vần uôi vào bảng gài", "HS viết bảng con chữ hoa A").
+- DỰ KIẾN LỖI SAI & CÁCH SỬA: Trong các hoạt động khám phá hoặc luyện tập, PHẢI nêu rõ lỗi thường gặp của HS (phát âm lệch âm/vần, nhầm dấu thanh, sai nét/độ cao, thiếu bộ phận câu) và câu lệnh/cách thức GV sửa trực tiếp.
 - Kiểm soát độ dài theo ${input.duration} phút: tổng durationMinutes của 4 hoạt động phải là 32 hoặc 33 phút để còn 2–3 phút dự phòng. Gợi ý: 4+15+10+4=33 hoặc 4+14+10+4=32.
 - Khởi động 2-3 cặp, Khám phá 4-6 cặp, Luyện tập 3-4 cặp, Vận dụng 2-3 cặp; không thêm hoạt động phụ ngoài 4 pha.
 
@@ -1719,7 +1722,9 @@ Yêu cầu sửa:
 - Giữ sourceTaskIds/sourceUnitIds/sourceClusterIds đúng continuityPlan; không chuyển cluster sang tiết khác và không tách cluster mustStayTogether.
 - Có đúng 4 hoạt động: Khởi động, Khám phá, Luyện tập, Vận dụng.
 - teacherActions/studentActions đi theo từng cặp, bắt đầu "GV ..." và "HS ...".
-- Rút số bước nếu quá dài.
+- BẮT BUỘC LỜI THOẠI TRONG NGOẶC KÉP: Mọi lời hỏi, hướng dẫn, chốt của GV và lời đáp, đọc, trả lời của HS PHẢI đặt trong ngoặc kép "...".
+- BẮT BUỘC THAO TÁC CỤ THỂ: Nêu rõ thao tác với đồ dùng học tập (bộ đồ dùng, bảng con, thẻ từ, vở ô li, bút chì, sách).
+- BẮT BUỘC DỰ KIẾN LỖI SAI VÀ CÁCH SỬA: Khám phá/Luyện tập phải có ít nhất 1 lỗi thường gặp và cách GV sửa trực tiếp.
 - Không dùng từ "OCR".
 - Chỉ sửa đúng lỗi được liệt kê; không nhồi thêm kĩ năng không liên quan.
 - YCCĐ knowledgeAndSkills nếu phải sửa thì dùng 4–6 câu ngắn, bắt đầu bằng động từ đo được: Đọc; Hiểu; Tìm; Xác định; Sắp xếp; Nêu; Lựa chọn; Đặt câu; Viết; Tự sửa.

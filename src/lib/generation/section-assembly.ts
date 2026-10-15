@@ -411,7 +411,11 @@ export async function assembleStagedSections(
         processedActivities = await attachSgkCropsToActivities(
           activities,
           input.uploadedAssets,
-          { grade: gradeNum, lessonType: pBpArt.periodBlueprint.lessonType },
+          {
+            grade: gradeNum,
+            lessonType: pBpArt.periodBlueprint.lessonType,
+            periodNumber: pBpArt.periodNumber,
+          },
         );
       } else {
         processedActivities = attachHandwritingVisualsToActivities(

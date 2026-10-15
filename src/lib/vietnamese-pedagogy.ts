@@ -1191,6 +1191,7 @@ export type LessonSubType =
   | "grade1_phonics_write"
   | "grade1_phonics_read_p2"
   | "grade1_reading"
+  | "grade1_review_story"
   | "grade2_reading"
   | "grade2_writing"
   | "grade2_spelling"
@@ -1202,8 +1203,15 @@ export type LessonSubType =
   | "grade3_composition"
   | "grade4_reading"
   | "grade4_speaking_listening"
+  | "grade4_grammar"
+  | "grade4_composition"
+  | "grade4_reading_extension"
   | "grade5_reading"
   | "grade5_speaking_listening"
+  | "grade5_spelling"
+  | "grade5_grammar"
+  | "grade5_composition"
+  | "grade5_reading_extension"
   | "default";
 
 /**
@@ -1220,6 +1228,9 @@ export function classifyLessonSubType(
 
   // ── Grade 1 ──
   if (grade === 1) {
+    if (type === "review_story" || /ôn tập|kể chuyện/.test(focus)) {
+      return "grade1_review_story";
+    }
     if (type === "phonics" || type === "handwriting" || /âm|vần|chữ/.test(focus)) {
       if (/viết|tập viết|viết vần|viết từ|hướng dẫn viết|luyện viết/.test(focus)) {
         return "grade1_phonics_write";
@@ -1255,6 +1266,9 @@ export function classifyLessonSubType(
   // ── Grade 4 ──
   if (grade === 4) {
     if (type === "speaking_listening" || /nói và nghe|nói nghe|kể chuyện/.test(focus)) return "grade4_speaking_listening";
+    if (type === "grammar" || /luyện từ|từ và câu/.test(focus)) return "grade4_grammar";
+    if (type === "composition" || /viết bài|làm văn|viết đoạn/.test(focus)) return "grade4_composition";
+    if (/đọc mở rộng/.test(focus)) return "grade4_reading_extension";
     if (type === "reading" || /đọc/.test(focus)) return "grade4_reading";
     return "default";
   }
@@ -1262,6 +1276,10 @@ export function classifyLessonSubType(
   // ── Grade 5 ──
   if (grade === 5) {
     if (type === "speaking_listening" || /nói và nghe|nói nghe|trình bày|tranh biện/.test(focus)) return "grade5_speaking_listening";
+    if (type === "spelling" || /chính tả|rèn viết đúng/.test(focus)) return "grade5_spelling";
+    if (type === "grammar" || /luyện từ|từ và câu/.test(focus)) return "grade5_grammar";
+    if (type === "composition" || /viết bài|làm văn|tả cảnh|tả người/.test(focus)) return "grade5_composition";
+    if (/đọc mở rộng/.test(focus)) return "grade5_reading_extension";
     if (type === "reading" || /đọc/.test(focus)) return "grade5_reading";
     return "default";
   }
@@ -1292,6 +1310,12 @@ export function getFewShotExamples(subType: LessonSubType): { teacherAction: str
     const vanPairs = data.fewShotExamples["grade1_write_van"]?.pairs || [];
     const tuPairs = data.fewShotExamples["grade1_write_tu"]?.pairs || [];
     return [...vanPairs.slice(0, 3), ...tuPairs.slice(0, 2)];
+  }
+  if (subType === "grade1_phonics_read" || subType === "grade1_phonics_read_p2") {
+    return data.fewShotExamples["grade1_read"]?.pairs || [];
+  }
+  if (subType === "grade4_reading" || subType === "grade5_reading") {
+    return data.fewShotExamples["grade4_reading_comprehension"]?.pairs || [];
   }
   return [];
 }

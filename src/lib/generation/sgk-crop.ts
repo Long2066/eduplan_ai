@@ -161,7 +161,7 @@ export const STANDARD_GRADE2_5_REGIONS: Record<string, NormalizedBoundingBox> = 
 export async function attachSgkCropsToActivities(
   activities: LessonActivity[],
   assets: UploadedAsset[],
-  options: { grade?: number; lessonType?: string } = {},
+  options: { grade?: number; lessonType?: string; periodNumber?: number } = {},
 ): Promise<LessonActivity[]> {
   const imageAssets = (assets || []).filter(
     (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
@@ -172,8 +172,12 @@ export async function attachSgkCropsToActivities(
   }
 
   // Sắp xếp assets theo thứ tự trang (trang 1 = trang trái, trang 2 = trang phải nếu có)
-  const page1Asset = imageAssets[0];
-  const page2Asset = imageAssets.length > 1 ? imageAssets[1] : imageAssets[0];
+  const periodNum = options.periodNumber ?? 1;
+  const pIndex = Math.min(Math.max(0, periodNum - 1), imageAssets.length - 1);
+  const page1Asset = imageAssets.length > 2 ? imageAssets[pIndex] : imageAssets[0];
+  const page2Asset = imageAssets.length > 2
+    ? (imageAssets[Math.min(pIndex + 1, imageAssets.length - 1)] || imageAssets[pIndex])
+    : (imageAssets.length > 1 ? imageAssets[1] : imageAssets[0]);
   const grade = options.grade ?? 1;
 
   const updatedActivities: LessonActivity[] = [];
@@ -218,6 +222,10 @@ export async function attachSgkCropsToActivities(
         targetBox = STANDARD_GRADE2_5_REGIONS.reading_header_illustration;
         targetAsset = page1Asset;
         caption = "Tranh minh họa SGK";
+      } else if (/tập viết|viết chữ hoa|chữ hoa|mẫu chữ/i.test(textDesc)) {
+        targetBox = { ymin: 40, xmin: 50, ymax: 500, xmax: 950 };
+        targetAsset = page1Asset;
+        caption = "Mẫu chữ viết hoa SGK";
       } else if (/đọc văn bản|luyện đọc|chính tả|nghe viết|tập chép/i.test(textDesc)) {
         targetBox = STANDARD_GRADE2_5_REGIONS.reading_main_text;
         targetAsset = page1Asset;

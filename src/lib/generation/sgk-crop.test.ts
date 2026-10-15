@@ -143,6 +143,42 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
     expect(updated[1].teacherVisuals?.[0].caption).toContain("câu hỏi / bài tập SGK");
   });
 
+  it("maps periodNumber to corresponding page asset in multi-page lessons", async () => {
+    const testSvg1 = Buffer.from('<svg width="600" height="800"><rect fill="#red"/></svg>');
+    const testSvg2 = Buffer.from('<svg width="600" height="800"><rect fill="#blue"/></svg>');
+    const testSvg3 = Buffer.from('<svg width="600" height="800"><rect fill="#green"/></svg>');
+
+    const buf1 = await sharp(testSvg1).png().toBuffer();
+    const buf2 = await sharp(testSvg2).png().toBuffer();
+    const buf3 = await sharp(testSvg3).png().toBuffer();
+
+    const assets: UploadedAsset[] = [
+      { id: "p1", name: "Trang_1.png", type: "image", dataUrl: `data:image/png;base64,${buf1.toString("base64")}` },
+      { id: "p2", name: "Trang_2.png", type: "image", dataUrl: `data:image/png;base64,${buf2.toString("base64")}` },
+      { id: "p3", name: "Trang_3.png", type: "image", dataUrl: `data:image/png;base64,${buf3.toString("base64")}` },
+    ];
+
+    const activities: LessonActivity[] = [
+      {
+        id: "act_p3",
+        phase: "Khám phá",
+        title: "Tập viết chữ hoa A",
+        objective: "Viết đúng chữ hoa A",
+        durationMinutes: 15,
+        teacherActions: ["GV viết mẫu chữ hoa A"],
+        studentActions: ["HS viết bảng con"],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, {
+      grade: 2,
+      periodNumber: 3,
+    });
+
+    expect(updated[0].teacherVisuals?.[0].sourcePage).toBe("Trang_3.png");
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("Mẫu chữ viết hoa SGK");
+  });
+
   it("embeds cropped images into DOCX Teacher column within table without breaking layout", async () => {
     const testSvg = Buffer.from(
       '<svg width="200" height="150"><rect width="200" height="150" fill="#38bdf8"/></svg>',
