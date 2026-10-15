@@ -10,6 +10,7 @@ import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-soc
 import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
 import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
+import { ensureLessonDigitalCompetencies } from "@/lib/digital-competency";
 import type { SubscriptionPlan } from "@/lib/model-strategy";
 import type {
   LessonActivity,
@@ -233,7 +234,10 @@ export async function assembleStagedLesson(
   }));
 
   const hasSgkImages = (input.uploadedAssets || []).some(
-    (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
+    (a) =>
+      a.type === "image" &&
+      ((a.dataUrl && a.dataUrl.startsWith("data:image/")) ||
+        Boolean(a.taphuanBookKey || a.taphuanPage || (a.name && /trang|page/i.test(a.name)))),
   );
 
   let processedPeriods = periods;
@@ -335,6 +339,8 @@ export async function assembleStagedLesson(
     },
   };
 
+  const finalLesson = ensureLessonDigitalCompetencies(input, lesson);
+
   return {
     subjectKind: blueprintArtifact.subjectKind,
     periodCount: periods.length,
@@ -342,6 +348,6 @@ export async function assembleStagedLesson(
     models,
     providers,
     fallbackUsed: blueprintArtifact.fallbackUsed || periodArtifacts.some((artifact) => artifact.fallbackUsed),
-    lesson,
+    lesson: finalLesson,
   };
 }

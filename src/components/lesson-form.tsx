@@ -435,6 +435,28 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
             </span>
           </label>
 
+          {/* Checkbox Năng lực số - Trực quan ngay tại Form chính */}
+          <label className="flex gap-3 rounded-2xl border border-blue-200/80 bg-blue-50/40 p-3.5 text-[12px] leading-5 text-slate-700 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50/60 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-brand-600 shrink-0"
+              checked={!!input.enableDigitalCompetency}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                patch({ enableDigitalCompetency: checked });
+                patchAdvanced({ enableDigitalCompetency: checked });
+              }}
+            />
+            <span>
+              <strong className="text-slate-900 font-bold flex items-center gap-1.5">
+                <span>⚡</span> Tích hợp Năng lực số (TT 02/2025/TT-BGDĐT)
+              </strong>
+              <span className="text-slate-600 block mt-0.5">
+                Tự động chèn Yêu cầu cần đạt về năng lực số Bậc 1 và thiết kế hoạt động số có học sinh trực tiếp thao tác (không gượng ép).
+              </span>
+            </span>
+          </label>
+
           {/* ── Advanced toggle ── */}
           <button
             type="button"
@@ -454,9 +476,18 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
                 Các mục này mặc định để Auto. Thay đổi trong phần này chỉ áp dụng sau khi bấm <strong>Lưu tùy chọn</strong>.
               </div>
 
-              {/* Checkbox Năng lực số */}
+              {/* Checkbox Năng lực số (đồng bộ trong panel nâng cao) */}
               <label className="flex gap-3 rounded-xl border border-brand-100 bg-brand-50/20 p-3 text-[12px] leading-5 text-slate-700 transition-all duration-200 hover:border-brand-200 cursor-pointer">
-                <input type="checkbox" className="mt-0.5 accent-brand-600 shrink-0" checked={!!advancedInput.enableDigitalCompetency} onChange={(event) => patchAdvanced({ enableDigitalCompetency: event.target.checked })} />
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-brand-600 shrink-0"
+                  checked={!!advancedInput.enableDigitalCompetency}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    patch({ enableDigitalCompetency: checked });
+                    patchAdvanced({ enableDigitalCompetency: checked });
+                  }}
+                />
                 <span>
                   <strong className="text-slate-800">Tích hợp Năng lực số (TT 02/2025/TT-BGDĐT)</strong>
                   <br />

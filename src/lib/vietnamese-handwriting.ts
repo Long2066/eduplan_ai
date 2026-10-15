@@ -108,7 +108,9 @@ const INSTRUCTION_STOPWORDS = new Set([
   "bài", "tiết", "luyện", "tập", "viết", "bảng", "con", "vở",
   "học", "vần", "đúng", "quy", "trình", "các", "chữ", "cho",
   "với", "trong", "thực", "hành", "mẫu", "theo", "hướng", "dẫn",
-  "giáo", "viên", "sinh", "hoạt", "động", "bước"
+  "giáo", "viên", "sinh", "hoạt", "động", "bước", "khởi", "động",
+  "khám", "phá", "vận", "dụng", "đọc", "đoạn", "câu", "từ",
+  "ngữ", "hoa", "thường", "tiếng", "nói", "nghe", "hiểu", "ôn"
 ]);
 
 export function extractTargetLettersFromWritingText(writingText: string): string[] {
@@ -133,16 +135,24 @@ export function extractTargetLettersFromWritingText(writingText: string): string
   return result;
 }
 
+export function isActivityReallyWriting(act: { phase?: string; title?: string }): boolean {
+  const phase = (act.phase || "").toLowerCase();
+  const title = (act.title || "").toLowerCase();
+
+  // Explicitly reject Warmup, Speaking/Listening, and Pure Reading activities
+  if (/khởi động|khơi gợi|vào bài/i.test(phase) || /khởi động/i.test(title)) return false;
+  if (/nói và nghe|nói nghe|kể chuyện/i.test(phase) || /nói và nghe|nói nghe|kể chuyện/i.test(title)) return false;
+  if (/luyện đọc|đọc đoạn|đọc câu|đọc bài|tìm hiểu bài|đọc thành tiếng/i.test(title) && !/viết|tô/i.test(title)) return false;
+
+  // Must match explicit writing phrases in title or dedicated writing phase
+  return (
+    /hướng dẫn viết|tập viết|luyện viết bảng|luyện viết vở|viết bảng con|viết vào vở|tập tô|luyện tô|viết chữ|viết vần/i.test(title) ||
+    (/luyện tập|khám phá|vận dụng/i.test(phase) && /viết bảng|viết vở|tập viết|tập tô/i.test(title))
+  );
+}
+
 /**
  * Auto-attach handwriting reference visuals to writing activities.
- * 
- * IMPORTANT: Phân biệt 2 loại ảnh trong giáo án:
- * 1. Ảnh mẫu chữ viết (handwriting): tự động chèn từ catalog PNG khi activity là luyện viết.
- *    Label: "Mẫu chữ viết chuẩn". Source: public/handwriting/*.png
- * 2. Ảnh SGK crop: cắt từ ảnh SGK user upload khi OCR. Được xử lý riêng trong
- *    upload pipeline (image-crop), KHÔNG phải ở đây. Label: "Ảnh SGK minh họa".
- * 
- * ponytail: Khi có pipeline crop ảnh SGK, thêm attachSgkCropVisualsToActivities() riêng.
  */
 export function attachHandwritingVisualsToActivities(
   activities: (LessonActivity & { [key: string]: any })[],
@@ -151,17 +161,20 @@ export function attachHandwritingVisualsToActivities(
   options?: { embedBase64?: boolean }
 ): LessonActivity[] {
   return activities.map((act) => {
-    const text = `${act.phase || ""} ${act.title || ""} ${act.objective || ""}`.toLowerCase();
-    const isWritingActivity =
-      /viết bảng|viết vở|tập viết|luyện viết|mẫu chữ|luyện tô|tập tô|tô chữ|viết chữ|tô, viết|tô và viết|tô\s*viết/i.test(text);
-    if (!isWritingActivity) return act as LessonActivity;
+    if (!isActivityReallyWriting(act)) return act as LessonActivity;
 
     if (act.teacherVisuals?.some((v: any) => v.id && String(v.id).startsWith("hw-"))) {
       return act as LessonActivity;
     }
 
-    const contextText = `${act.title || ""} ${act.objective || ""} ${focus || ""} ${lessonTitle || ""}`;
-    const letters = extractTargetLettersFromWritingText(contextText);
+    // Target letters MUST come strictly from lessonTitle or focus, never from generic activity text!
+    let letters = extractTargetLettersFromWritingText(lessonTitle || "");
+    if (letters.length === 0 && focus) {
+      letters = extractTargetLettersFromWritingText(focus);
+    }
+    if (letters.length === 0) {
+      letters = extractTargetLettersFromWritingText(act.title || "");
+    }
     if (letters.length === 0) return act as LessonActivity;
 
     const visuals = getHandwritingVisualsForLetters(letters.slice(0, 3), options);

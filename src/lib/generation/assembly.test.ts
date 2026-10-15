@@ -261,4 +261,37 @@ describe("staged lesson assembly", () => {
     await expect(assembleStagedLesson(input, genericBlueprint, [period(1), period(2)], "free"))
       .rejects.toThrow("Không xác định được tên bài");
   });
+
+  it("enriches digital competencies and digital activity when enableDigitalCompetency is true", async () => {
+    const input: LessonInput = {
+      ...lessonInput("Tiếng Việt"),
+      enableDigitalCompetency: true,
+      lessonTitle: "Bài 31. an ăn ân",
+    };
+    const bp = blueprint("vietnamese", { lessonTitle: "Bài 31. an ăn ân", periods: [] });
+    const p1 = period(1, "vietnamese", {
+      activities: [
+        {
+          phase: "Vận dụng",
+          title: "Vận dụng: Đọc và chia sẻ",
+          objective: "Vận dụng kiến thức",
+          teacherActions: ["GV giao nhiệm vụ"],
+          studentActions: ["HS thực hiện"],
+        },
+      ],
+    });
+    const p2 = period(2, "vietnamese");
+
+    const result = await assembleStagedLesson(input, bp, [p1, p2], "free");
+
+    expect(result.lesson.outcomes.digitalCompetencies).toBeDefined();
+    expect(result.lesson.outcomes.digitalCompetencies?.length).toBeGreaterThan(0);
+    expect(result.lesson.outcomes.digitalCompetencies?.[0]).toContain("Năng lực số");
+
+    const allActivities = result.lesson.activities;
+    const hasDigital = allActivities.some((act) =>
+      act.studentActions.some((sa) => /công cụ số|học liệu số|thao tác/i.test(sa))
+    );
+    expect(hasDigital).toBe(true);
+  });
 });
