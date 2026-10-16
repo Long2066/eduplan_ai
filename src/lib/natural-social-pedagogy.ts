@@ -6,6 +6,7 @@ import type {
   NaturalSocialSourceInventory,
   NaturalSocialTopicFocus,
 } from "@/types/lesson";
+export type { NaturalSocialClassification, NaturalSocialLessonType };
 
 export type NaturalSocialLessonTypeProfile = {
   label: string;

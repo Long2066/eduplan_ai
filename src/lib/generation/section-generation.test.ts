@@ -399,4 +399,162 @@ describe("staged-v2 generation & repair functions", () => {
     expect(validation.issues).toContainEqual(expect.objectContaining({ code: "SEC-OBJ-UNCOVERED", objectiveId: "obj-10" }));
     expect(validation.issues.some((issue) => issue.code === "SEC-HASH-MISMATCH" || issue.code.startsWith("SEC-DEP-"))).toBe(false);
   });
+
+  it("injects deep script, handwriting, grade workflow and 1:1 dialogic rules when generating a Vietnamese phase", async () => {
+    const vtInput: LessonInput = {
+      ...input,
+      subject: "Tiếng Việt",
+      grade: "1",
+      lessonTitle: "Bài 32. an ăn ân",
+      periods: 2,
+    };
+    const vtSourceFacts: StagedSourceFactsArtifact = {
+      version: 2,
+      kind: "source-facts",
+      subjectKind: "vietnamese",
+      identity: {
+        subject: "Tiếng Việt",
+        grade: "1",
+        lessonTitle: "Bài 32. an ăn ân",
+        periods: 2,
+        duration: 35,
+        sourceHashes: [],
+      },
+      anchor: { revision: 1, hash: "vt-hash" },
+      dependencies: {},
+      model: "mock-model",
+      provider: "openai",
+      fallbackUsed: false,
+      sourceTruth: { mode: "input-only", evidence: [], warnings: [] },
+      promptSource: "input-only",
+      facts: {
+        lessonTitle: "Bài 32. an ăn ân",
+        coreContent: ["an", "ăn", "ân", "bạn thân"],
+        objectivesFromSource: [],
+        sourceEvidence: [{ id: "src-1", kind: "task", label: "Tập viết", text: "Viết an, ăn, ân, bạn thân", page: "", required: true, allowReuse: true }],
+        uncertainties: [],
+        conflicts: [],
+        fatalIssues: [],
+      },
+    };
+    const vtPeriodBlueprint: StagedPeriodBlueprintArtifact = {
+      version: 2,
+      kind: "period-blueprint",
+      subjectKind: "vietnamese",
+      identity: vtSourceFacts.identity,
+      anchor: { revision: 1, hash: "vt-bp-hash" },
+      dependencies: {},
+      model: "mock-model",
+      provider: "openai",
+      fallbackUsed: false,
+      periodNumber: 1,
+      periodBlueprint: {
+        periodNumber: 1,
+        focus: "Nhận biết và viết vần an, ăn, ân",
+        lessonType: "phonics",
+        objectiveIds: ["obj-1"],
+        targetKnowledge: "Đọc và viết đúng an, ăn, ân",
+        continuityIn: "Mở đầu",
+        continuityOut: "Chuyển tiếp",
+        teachingNotes: [],
+        phases: [{
+          phase: "explore",
+          activityId: "p1-explore",
+          title: "Hướng dẫn viết vần an, ăn, ân",
+          objectiveIds: ["obj-1"],
+          sourceIds: ["src-1"],
+          sourceUnitIds: [],
+          sourceClusterIds: [],
+          durationMinutes: 15,
+          learningProducts: ["Bảng con viết vần an, ăn, ân"],
+          handoffToNext: "Luyện tập viết từ",
+          pedagogyFocus: "Tập viết vần an, ăn, ân",
+        }],
+      },
+    };
+    const vtOutcomes: StagedOutcomesArtifact = {
+      version: 2,
+      kind: "section-outcomes",
+      subjectKind: "vietnamese",
+      identity: vtSourceFacts.identity,
+      anchor: { revision: 1, hash: "vt-outcomes-hash" },
+      dependencies: {},
+      model: "mock-model",
+      provider: "openai",
+      fallbackUsed: false,
+      outcomes: {
+        general: "Biết đọc và viết vần",
+        specific: "Viết đúng quy trình nét",
+        qualities: "Chăm chỉ",
+        objectiveMetadata: [{ id: "obj-1", statement: "Viết đúng vần an, ăn, ân", category: "specific" }],
+      },
+    };
+    const vtMaterials: StagedMaterialsArtifact = {
+      version: 2,
+      kind: "section-materials",
+      subjectKind: "vietnamese",
+      identity: vtSourceFacts.identity,
+      anchor: { revision: 1, hash: "vt-mat-hash" },
+      dependencies: {},
+      model: "mock-model",
+      provider: "openai",
+      fallbackUsed: false,
+      materials: { teacher: ["Bảng phụ"], students: ["Bảng con, phấn"] },
+      items: [{ id: "mat-1", owner: "teacher", label: "Bảng phụ", sourceIds: ["src-1"], objectiveIds: ["obj-1"] }],
+    };
+
+    mockReply({
+      activity: {
+        id: "p1-explore",
+        phase: "Khám phá",
+        title: "Hướng dẫn viết vần an, ăn, ân",
+        objective: "Viết đúng vần an, ăn, ân",
+        durationMinutes: 15,
+        teacherActions: [
+          "GV chiếu mẫu vần an và hỏi:\n+ Để viết vần an, chúng ta sẽ viết chữ nào trước?\n+ Chữ a gồm mấy nét? Là những nét nào?",
+          "GV nhận xét, kết luận: “Chữ a cao 2 ô li, rộng 2,5 ô li. Chữ a gồm 2 nét: nét 1 là nét cong kín và nét 2 là nét móc ngược phải.”",
+        ],
+        studentActions: [
+          "HS quan sát và trả lời:\n+ Viết chữ a trước, viết chữ n sau.\n+ Chữ a gồm 2 nét (nét cong kín, nét móc ngược phải).",
+          "HS lắng nghe và ghi nhớ.",
+        ],
+        learningProducts: ["Bảng con viết vần an"],
+        successCriteria: ["Đúng độ cao 2 ô li", "Nối nét chuẩn"],
+        objectiveIds: ["obj-1"],
+        organization: "whole_class",
+      },
+      materialIds: ["mat-1"],
+      sourceIds: ["src-1"],
+      handoff: {
+        activityId: "p1-explore",
+        knowledge: ["Cấu tạo vần an"],
+        products: ["Bảng con"],
+        pending: [],
+        bridge: "Chuyển sang viết vần ăn",
+        objectiveIds: ["obj-1"],
+        sourceIds: ["src-1"],
+        materialIds: ["mat-1"],
+      },
+    });
+
+    const phase = await generateStagedPhase({
+      input: vtInput,
+      sourceFacts: vtSourceFacts,
+      outcomes: vtOutcomes,
+      materials: vtMaterials,
+      periodBlueprint: vtPeriodBlueprint,
+      phase: "explore",
+      previousPhase: null,
+      strategy: mockStrategy,
+    });
+
+    const phasePrompt = promptContaining("Soạn CHI TIẾT ĐƠN VỊ PHA: KHÁM PHÁ");
+    expect(phasePrompt).toContain("KỊCH BẢN ĐỐI THOẠI 1:1 CHI TIẾT");
+    expect(phasePrompt).toContain("QUY TRÌNH BẮT BUỘC KHỐI LỚP (Lớp 1: Dạng bài Âm - Chữ - Vần (2 tiết))");
+    expect(phasePrompt).toContain("Quy chuẩn mẫu chữ viết");
+    expect(phasePrompt).toContain("TIÊU CHUẨN KỊCH BẢN DẠY HỌC CHI TIẾT");
+    expect(phasePrompt).toContain("teacherActions");
+    expect(phasePrompt).toContain("studentActions");
+    expect(phase.activity.teacherActions).toHaveLength(2);
+  });
 });

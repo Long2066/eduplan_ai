@@ -37,7 +37,15 @@ import {
   naturalSocialStrictGuidance,
   naturalSocialLessonTypeGuidance,
 } from "@/lib/subject-prompts";
-import type { LessonInput, LessonOutcomes, LessonPlan } from "@/types/lesson";
+import { classifyVietnameseLesson } from "@/lib/vietnamese-pedagogy";
+import { classifyNaturalSocialLesson } from "@/lib/natural-social-pedagogy";
+import type {
+  LessonInput,
+  LessonOutcomes,
+  LessonPlan,
+  VietnameseLessonClassification,
+  NaturalSocialClassification,
+} from "@/types/lesson";
 
 function cleanIdentity(input: LessonInput, lockedTitle: string, sourceHashes: string[]): StagedSourceIdentity {
   return {
@@ -123,7 +131,12 @@ Trả về duy nhất JSON:
     fallbackUsed: res.fallbackUsed,
     sourceTruth,
     promptSource: ocrText ? "ocr" : "input-only",
-    classification: sourceContext.vietnamese ? undefined : undefined,
+    classification: subjectKind === "vietnamese"
+      ? classifyVietnameseLesson(input, ocrText || (parsed.coreContent || []).join(" "))
+      : subjectKind === "natural-social"
+        ? classifyNaturalSocialLesson(input, ocrText || (parsed.coreContent || []).join(" "))
+        : undefined,
+    sourceInventory: sourceContext.vietnamese?.inventory || (sourceContext.naturalSocial?.inventory as any),
     facts: parsed,
   };
   artifact.anchor = stagedArtifactAnchor(artifact);
@@ -297,6 +310,12 @@ export async function generateStagedPeriodBlueprint(
     ? `\nPHẢN HỒI CẦN SỬA ĐỔI TỪ LẦN TRƯỚC:\n${options.feedback}\nBẮT BUỘC: Sửa triệt để các lỗi trên, phân bổ đủ mọi mục tiêu của tiết vào các pha tương ứng. Tuyệt đối KHÔNG bỏ sót bất kỳ mục tiêu nào.`
     : "";
 
+  const defaultLessonType = sourceFacts.subjectKind === "vietnamese"
+    ? ((sourceFacts.classification as VietnameseLessonClassification)?.primaryType || "phonics")
+    : sourceFacts.subjectKind === "natural-social"
+      ? ((sourceFacts.classification as NaturalSocialClassification)?.primaryType || "mixed")
+      : "standard";
+
   const prompt = `Lập BLUEPRINT CHI TIẾT 4 PHA CHO TIẾT ${periodNumber}/${identity.periods} bài "${identity.lessonTitle}".
 Trọng tâm tiết: ${periodMap.focus}.
 YCCĐ phân bổ cho tiết này (kèm nội dung chi tiết):
@@ -313,7 +332,7 @@ Trả về duy nhất JSON:
 {
   "periodNumber": ${periodNumber},
   "focus": "${periodMap.focus}",
-  "lessonType": "standard",
+  "lessonType": "${defaultLessonType}",
   "objectiveIds": ${JSON.stringify(periodMap.objectiveIds)},
   "targetKnowledge": string,
   "continuityIn": string,

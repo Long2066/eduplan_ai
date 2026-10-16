@@ -14,6 +14,7 @@ import type {
   VietnameseLessonType,
   VietnameseLessonClassification,
 } from "@/types/lesson";
+export type { VietnameseLessonType, VietnameseLessonClassification };
 import { gradeBandFor } from "./pedagogy-profiles";
 
 // ─── LESSON-TYPE SIGNAL PATTERNS ───
