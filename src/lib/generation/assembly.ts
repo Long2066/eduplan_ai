@@ -5,7 +5,7 @@ import {
   requireResolvedLessonTitle,
   resolveLessonTitle,
 } from "@/lib/lesson-title";
-import { sanitizeMaterials } from "@/lib/lesson-format";
+import { ensureNonEmptyOutcomes, sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
@@ -184,6 +184,7 @@ function validateAndOrderPeriods(
       ...artifact.period,
       periodNumber: expectedNumber,
       focus: nonEmptyString(artifact.period.focus) || `Tiết ${expectedNumber}: ${input.lessonTitle || input.subject}`,
+      outcomes: ensureNonEmptyOutcomes(artifact.period.outcomes, artifact.period.focus || input.lessonTitle || input.subject),
       activities: artifact.period.activities as LessonActivity[],
       handoff: artifact.handoff || artifact.period.handoff || undefined,
     };
@@ -304,7 +305,7 @@ export async function assembleStagedLesson(
       periods: processedPeriods.length,
       duration: positiveInteger(input.duration, 35),
     },
-    outcomes: mergeOutcomes(blueprint.outcomes, processedPeriods),
+    outcomes: ensureNonEmptyOutcomes(mergeOutcomes(blueprint.outcomes, processedPeriods), title),
     materials: sanitizeMaterials({
       teacher: teacherMaterials.length ? teacherMaterials : fallbackMaterials.teacher,
       students: studentMaterials.length ? studentMaterials : fallbackMaterials.students,

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { lessonHeadingTitle, sanitizeMaterialList } from "@/lib/lesson-format";
+import { ensureNonEmptyOutcomes, lessonHeadingTitle, sanitizeMaterialList } from "@/lib/lesson-format";
 import { isSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
@@ -163,8 +163,8 @@ function LessonPeriodPage({
   isLast?: boolean;
   totalPeriods?: number;
 }) {
-  const outcomes = period.outcomes || lesson.outcomes;
   const heading = lessonDocumentHeading(lesson, period);
+  const outcomes = ensureNonEmptyOutcomes(period.outcomes || lesson.outcomes, heading.lessonTitle);
   const compact = lesson.meta?.plan === "free";
   const displayMode = {
     compact,

@@ -14,11 +14,12 @@ import {
   type StagedSectionsAssembly,
 } from "@/lib/generation/section-types";
 import { requireResolvedLessonTitle, resolveLessonTitle } from "@/lib/lesson-title";
-import { sanitizeMaterials } from "@/lib/lesson-format";
+import { ensureNonEmptyOutcomes, sanitizeMaterials } from "@/lib/lesson-format";
 import { sanitizeNaturalSocialSourceInventoryForLesson } from "@/lib/natural-social-source-inventory";
 import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
 import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
+import { ensureLessonDigitalCompetencies } from "@/lib/digital-competency";
 import type {
   LessonActivity,
   LessonInput,
@@ -117,15 +118,31 @@ function buildPeriodOutcomes(
     ? uniqueStrings(byCategory.knowledgeAndSkills)
     : periodBlueprint.periodBlueprint.targetKnowledge
       ? [periodBlueprint.periodBlueprint.targetKnowledge]
-      : [];
+      : lockedOutcomes.knowledgeAndSkills;
 
-  return {
-    generalCompetencies: uniqueStrings(byCategory.generalCompetencies),
-    specificCompetencies: uniqueStrings(byCategory.specificCompetencies),
-    qualities: uniqueStrings(byCategory.qualities),
-    knowledgeAndSkills,
-    ...(byCategory.digitalCompetencies.length
-      ? { digitalCompetencies: uniqueStrings(byCategory.digitalCompetencies) }
+  const generalCompetencies = byCategory.generalCompetencies.length
+    ? uniqueStrings(byCategory.generalCompetencies)
+    : lockedOutcomes.generalCompetencies;
+
+  const specificCompetencies = byCategory.specificCompetencies.length
+    ? uniqueStrings(byCategory.specificCompetencies)
+    : lockedOutcomes.specificCompetencies;
+
+  const qualities = byCategory.qualities.length
+    ? uniqueStrings(byCategory.qualities)
+    : lockedOutcomes.qualities;
+
+  const digitalCompetencies = byCategory.digitalCompetencies.length
+    ? uniqueStrings(byCategory.digitalCompetencies)
+    : (lockedOutcomes.digitalCompetencies || []);
+
+  const rawPeriodOutcomes: LessonOutcomes = {
+    generalCompetencies: uniqueStrings(generalCompetencies || []),
+    specificCompetencies: uniqueStrings(specificCompetencies || []),
+    qualities: uniqueStrings(qualities || []),
+    knowledgeAndSkills: uniqueStrings(knowledgeAndSkills || []),
+    ...(digitalCompetencies.length
+      ? { digitalCompetencies: uniqueStrings(digitalCompetencies) }
       : {}),
     ...(metadataList.length
       ? {
@@ -140,6 +157,8 @@ function buildPeriodOutcomes(
         }
       : {}),
   };
+
+  return ensureNonEmptyOutcomes(rawPeriodOutcomes, periodBlueprint.periodBlueprint.focus);
 }
 
 function buildMathActivityBlueprints(
@@ -401,7 +420,10 @@ export async function assembleStagedSections(
     });
 
     const hasSgkImages = (input.uploadedAssets || []).some(
-      (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
+      (a) =>
+        a.type === "image" &&
+        ((a.dataUrl && a.dataUrl.startsWith("data:image/")) ||
+          Boolean(a.taphuanBookKey || a.taphuanPage || (a.name && /trang|page/i.test(a.name)))),
     );
 
     let processedActivities = activities;
@@ -512,7 +534,7 @@ export async function assembleStagedSections(
       periods: expectedPeriods,
       duration: positiveInteger(input.duration, 35),
     },
-    outcomes: cloneOutcomes(outcomes.outcomes),
+    outcomes: ensureNonEmptyOutcomes(cloneOutcomes(outcomes.outcomes), title),
     materials: sanitizeMaterials(materials.materials),
     activities: periodPlans.flatMap((period) => period.activities),
     periodPlans,
@@ -553,7 +575,15 @@ export async function assembleStagedSections(
     },
   };
 
-  // 9. Build compact Blueprint artifact
+  // 9. Enrich with digital competencies if enabled
+  const finalLesson = ensureLessonDigitalCompetencies(input, lesson);
+
+  const syncedPeriodArtifacts = periodArtifacts.map((art, index) => ({
+    ...art,
+    period: finalLesson.periodPlans?.[index] || art.period,
+  }));
+
+  // 10. Build compact Blueprint artifact
   const compactBlueprint = buildCompactBlueprint(
     subjectKind,
     title,
@@ -576,7 +606,7 @@ export async function assembleStagedSections(
     blueprint: compactBlueprint,
   };
 
-  // 10. Build StagedAssemblyArtifact
+  // 11. Build StagedAssemblyArtifact
   const assemblyArtifact: StagedAssemblyArtifact = {
     subjectKind,
     periodCount: expectedPeriods,
@@ -584,12 +614,12 @@ export async function assembleStagedSections(
     models,
     providers,
     fallbackUsed,
-    lesson,
+    lesson: finalLesson,
   };
 
   return {
     assembly: assemblyArtifact,
     blueprint: blueprintArtifact,
-    periods: periodArtifacts,
+    periods: syncedPeriodArtifacts,
   };
 }

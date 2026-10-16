@@ -43,7 +43,10 @@ function anchorFromPayload<T extends { kind: string }>(artifact: T): ReturnType<
   return makeStagedAnchor(getStagedArtifactPayload(artifact as any));
 }
 
-function createFixtureArtifacts(input: LessonInput): AssembleStagedSectionsOptions {
+function createFixtureArtifacts(
+  input: LessonInput,
+  outcomesOverride?: Partial<StagedOutcomesArtifact["outcomes"]>,
+): AssembleStagedSectionsOptions {
   const identity = {
     subject: input.subject,
     grade: input.grade,
@@ -128,6 +131,7 @@ function createFixtureArtifacts(input: LessonInput): AssembleStagedSectionsOptio
           },
         },
       ],
+      ...outcomesOverride,
     },
   };
   outcomes.anchor = anchorFromPayload(outcomes);
@@ -507,4 +511,33 @@ describe("assembleStagedSections", () => {
     expect(vtBp.periods[0].lessonType).toBe("reading");
     expect(vtBp.periods[0].activities[0].focusSkills).toBeDefined();
   });
+
+  it("enriches digital competencies and digital activities in staged sections when enableDigitalCompetency is true", async () => {
+    const input = createTestInput({ subject: "Tiếng Việt", enableDigitalCompetency: true });
+    const options = createFixtureArtifacts(input);
+
+    const result = await assembleStagedSections(options);
+    expect(result.assembly.lesson.outcomes.digitalCompetencies).toBeDefined();
+    expect(result.assembly.lesson.outcomes.digitalCompetencies!.length).toBeGreaterThan(0);
+    expect(result.periods[0].period.outcomes.digitalCompetencies).toBeDefined();
+    expect(result.periods[0].period.outcomes.digitalCompetencies!.length).toBeGreaterThan(0);
+
+    const hasDigitalAction = JSON.stringify(result.assembly.lesson.activities).includes("công cụ số");
+    expect(hasDigitalAction).toBe(true);
+  });
+
+  it("guarantees non-empty generalCompetencies and qualities in staged sections even if incoming outcomes are empty", async () => {
+    const input = createTestInput({ subject: "Tiếng Việt" });
+    const options = createFixtureArtifacts(input, {
+      generalCompetencies: [],
+      qualities: [],
+    });
+
+    const result = await assembleStagedSections(options);
+    expect(result.assembly.lesson.outcomes.generalCompetencies.length).toBeGreaterThan(0);
+    expect(result.assembly.lesson.outcomes.qualities.length).toBeGreaterThan(0);
+    expect(result.periods[0].period.outcomes.generalCompetencies.length).toBeGreaterThan(0);
+    expect(result.periods[0].period.outcomes.qualities.length).toBeGreaterThan(0);
+  });
 });
+

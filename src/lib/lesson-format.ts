@@ -1,4 +1,4 @@
-import type { LessonActivity } from "@/types/lesson";
+import type { LessonActivity, LessonOutcomes } from "@/types/lesson";
 import { canonicalizeLessonTitle } from "@/lib/lesson-title";
 import { canonicalLessonPhase, lessonPhaseOrder } from "@/lib/lesson-phase-quality";
 
@@ -234,3 +234,40 @@ export function sanitizeMaterials(materials?: { teacher?: string[]; students?: s
     students: sanitizeMaterialList(materials?.students),
   };
 }
+
+export function ensureNonEmptyOutcomes(
+  outcomes: Partial<LessonOutcomes> | undefined,
+  lessonTitle: string = "bài học",
+): LessonOutcomes {
+  const general = safeStringArray(outcomes?.generalCompetencies);
+  const specific = safeStringArray(outcomes?.specificCompetencies);
+  const qualities = safeStringArray(outcomes?.qualities);
+  const knowledge = safeStringArray(outcomes?.knowledgeAndSkills);
+  const digital = safeStringArray(outcomes?.digitalCompetencies);
+
+  return {
+    generalCompetencies: general.length
+      ? general
+      : [
+          "Tự chủ và tự học: tích cực, chủ động thực hiện các nhiệm vụ học tập theo hướng dẫn của giáo viên.",
+          "Giao tiếp và hợp tác: biết trao đổi, chia sẻ và hợp tác với bạn trong các hoạt động học tập.",
+        ],
+    specificCompetencies: specific.length
+      ? specific
+      : [
+          `Năng lực ngôn ngữ: đọc đúng, viết đúng, hiểu nội dung bài học "${lessonTitle}" và vận dụng vào thực tế.`,
+        ],
+    qualities: qualities.length
+      ? qualities
+      : [
+          "Chăm chỉ: có ý thức luyện tập, hoàn thành đầy đủ nhiệm vụ học tập.",
+          "Trách nhiệm: giữ gìn sách vở, đồ dùng học tập cẩn thận, tích cực phối hợp cùng bạn.",
+        ],
+    knowledgeAndSkills: knowledge.length
+      ? knowledge
+      : [`Học sinh nắm vững các kiến thức, kĩ năng cơ bản của bài "${lessonTitle}".`],
+    ...(digital.length ? { digitalCompetencies: digital } : {}),
+    ...(outcomes?.objectiveMetadata?.length ? { objectiveMetadata: outcomes.objectiveMetadata } : {}),
+  };
+}
+

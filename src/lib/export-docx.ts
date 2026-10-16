@@ -15,7 +15,7 @@ import {
   WidthType,
 } from "docx";
 import { docxMathParts, injectMathIntoDocx } from "@/lib/docx-math";
-import { lessonHeadingTitle, safeStringArray, sanitizeMaterialList } from "@/lib/lesson-format";
+import { ensureNonEmptyOutcomes, lessonHeadingTitle, safeStringArray, sanitizeMaterialList } from "@/lib/lesson-format";
 import { assertSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
@@ -272,8 +272,8 @@ function pageBreak() {
 }
 
 function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
-  const outcomes = period.outcomes || lesson.outcomes;
   const heading = lessonDocumentHeading(lesson, period);
+  const outcomes = ensureNonEmptyOutcomes(period.outcomes || lesson.outcomes, heading.lessonTitle);
   const compact = lesson.meta?.plan === "free";
   const displayOptions: ActivityDocumentOptions = {
     compact,
@@ -447,7 +447,7 @@ export function buildLessonDocxDocument(lesson: LessonPlan) {
   const isMultiPeriod = periods.length > 1;
   const firstPeriod = periods[0];
   const heading = lessonDocumentHeading(documentLesson, firstPeriod);
-  const outcomes = documentLesson.outcomes;
+  const outcomes = ensureNonEmptyOutcomes(documentLesson.outcomes, lessonTitle);
   const displayOptions: ActivityDocumentOptions = {
     compact: documentLesson.meta?.plan === "free",
     concise: true,
