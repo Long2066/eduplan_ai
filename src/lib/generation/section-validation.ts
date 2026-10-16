@@ -988,6 +988,24 @@ export function validateStagedSectionPrefix(
         });
       }
 
+      // Grade 1 Vietnamese handwriting validation
+      if (
+        parseInt(String(input.grade || "").replace(/\D/g, ""), 10) === 1 &&
+        input.subject === "Tiếng Việt" &&
+        /viết|tập viết|luyện viết/i.test(`${act.title || ""} ${act.phase || ""}`)
+      ) {
+        const teacherText = (act.teacherActions || []).join(" ");
+        if (!/đường kẻ|đk\s*\d|ô li/i.test(teacherText)) {
+          issues.push({
+            code: "SEC-PHASE-WRITING-GRID-LINES",
+            message: `Tiết ${pNum} Pha ${phaseName} thiếu mô tả tọa độ đường kẻ (ĐK 1, 2, 3, 6) hoặc độ cao ô li trong hoạt động tập viết`,
+            path: `phases[${actId}].activity.teacherActions`,
+            periodNumber: pNum,
+            phase: phaseName,
+          });
+        }
+      }
+
       const actObjIds = checkObjectiveIds(act.objectiveIds, validObjectiveIds, {
         code: "SEC-PHASE-INVALID-OBJ",
         message: `Tiết ${pNum} Pha ${phaseName}`,

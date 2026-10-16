@@ -507,7 +507,7 @@ function hasTeacherStudentSequenceMismatch(activity: LessonActivity) {
   if (teachers.length !== students.length) return true;
   return teachers.some((teacher, index) => {
     const student = students[index] || "";
-    if (/đọc mẫu|làm mẫu|nêu mẫu|chốt|giới thiệu/i.test(teacher) && /nghe|quan sát|theo dõi/i.test(student)) return false;
+    if (/đọc mẫu|làm mẫu|nêu mẫu|viết mẫu|thị phạm|hướng dẫn viết|hướng dẫn cách viết|quy trình viết|chốt|giới thiệu/i.test(teacher) && /nghe|quan sát|theo dõi|mô phỏng/i.test(student)) return false;
     const teacherIntents = actionIntents(teacher);
     const studentIntents = actionIntents(student);
     if (!teacherIntents.size || !studentIntents.size) return false;

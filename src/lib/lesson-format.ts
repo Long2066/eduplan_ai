@@ -78,6 +78,9 @@ function studentFallbackForTeacherAction(teacherAction: string, stepNumber: numb
   if (/chốt|kết luận|chuyển\s+(sang|vào|ý)|liên hệ.*(bài|mục|hoạt động)|giới thiệu.*(phần|hoạt động|nội dung)/i.test(teacher)) {
     return "HS lắng nghe, ghi nhớ ý chính và sẵn sàng chuyển sang hoạt động tiếp theo.";
   }
+  if (/viết mẫu|thị phạm|hướng dẫn cách viết|hướng dẫn viết|quy trình viết/i.test(teacher)) {
+    return "HS chú ý quan sát GV viết mẫu, lắng nghe và mô phỏng nét viết trên không.";
+  }
   if (/nhận xét|khen|động viên|tuyên dương|góp ý|sửa lỗi|chỉnh sửa|bổ sung/i.test(teacher)) {
     return "HS lắng nghe nhận xét, tự điều chỉnh và bổ sung ý kiến khi cần.";
   }

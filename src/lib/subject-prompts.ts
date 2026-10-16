@@ -11,6 +11,14 @@ import {
 import {
   suggestTiengVietDigitalActivity,
 } from "./digital-competency-cv3456";
+import {
+  generateVowelWritingScript,
+  generateAppliedWordWritingScript,
+  generateGrade1WritingInteractionUnits,
+  extractTargetVowels,
+  extractAppliedWords,
+  analyzeWordLetterHeights,
+} from "./vietnamese-stroke-engine";
 import type {
   LessonInput,
   LessonPlan,
@@ -1312,40 +1320,65 @@ export function getHandwritingGuidanceBlock(
     }
   }
 
-  if (instructions.length === 0) return "";
+  // Nếu là Lớp 1: Bổ sung toàn bộ kịch bản chi tiết từng nét từ stroke engine
+  let grade1HandwritingScript = "";
+  if (parseInt(String(input.grade || "").replace(/\D/g, ""), 10) === 1) {
+    const targetVowels = extractTargetVowels(input.lessonTitle);
+    const evidenceTexts: string[] = [];
+    if (blueprint.sourceInventory?.spellingText) evidenceTexts.push(blueprint.sourceInventory.spellingText);
+    if (blueprint.sourceInventory?.writingPrompt?.prompts) evidenceTexts.push(...blueprint.sourceInventory.writingPrompt.prompts);
+    const appliedWords = extractAppliedWords(evidenceTexts, input.lessonTitle);
+
+    const vowelScripts = targetVowels.map((v) => generateVowelWritingScript(v)).join("\n\n");
+    const wordScripts = appliedWords.map((w) => generateAppliedWordWritingScript(w)).join("\n\n");
+    const heightClassification = analyzeWordLetterHeights(appliedWords[0] || "bạn thân");
+
+    grade1HandwritingScript = `
+════════════════════════════════════════════════════════════════════════════════
+QUY CHUẨN ĐẶC TẢ TẬP VIẾT TIẾNG VIỆT LỚP 1 (MÔ PHỎNG CHUẨN FILE MẪU BÀI 32 AN ĂN ÂN):
+BẮT BUỘC tổ chức hoạt động Hướng dẫn viết thành đúng 7 ĐƠN VỊ TƯƠNG TÁC KẾT HỢP (Hybrid Interaction Units).
+Tuyệt đối không viết tóm tắt ngắn. Giáo viên cầm giáo án phải đọc được từng nét uốn lượn, tọa độ ĐK 1, 2, 3, 4, 6 để HS viết theo!
+
+1. HÀNG 1: Khám phá cấu tạo & phân tích nét con chữ tạo vần:
+   - GV hỏi chi tiết: Để viết vần ..., viết chữ nào trước? Chữ nào sau? Chữ ... cao mấy ô li? Rộng mấy ô li? Gồm mấy nét? Là những nét nào?
+   - HS trả lời chi tiết tương ứng 1:1.
+
+2. HÀNG 2: Nhận xét, chốt kết luận sư phạm nguyên văn trong ngoặc kép:
+   - Lời GV: "GV nhận xét, kết luận: “Chữ ... cao ... ô li, rộng ... ô li. Chữ ... gồm ... nét: nét 1 là ..., nét 2 là ... Khi viết vần ..., ta nối nét từ điểm dừng chữ ... sang nét đầu chữ ...”".
+   - HS: Lắng nghe, ghi nhớ quy chuẩn.
+
+3. HÀNG 3: Thị phạm quy trình viết vần mẫu (Vần gốc & Vần biến đổi):
+   - Cột GV (mô tả từng nét đặt bút, chạm ĐK, uốn lượn, dừng bút):
+${vowelScripts}
+   - Cột HS: “HS chú ý quan sát GV viết mẫu trên bảng/TV, lắng nghe từng nét đặt bút và mô phỏng nét viết trên không.” (KHÔNG ép thoại đối đáp máy móc từng nét ở bước thị phạm).
+
+4. HÀNG 4: Thực hành viết bảng con vần & Chữa lỗi kỹ thuật:
+   - GV cho HS viết bảng con -> quan sát hỗ trợ HS chậm -> nhận xét theo 4 tiêu chí: 1. Độ cao; 2. Độ rộng; 3. Nối nét; 4. Trình bày sạch.
+   - HS viết bảng con, giơ bảng theo hiệu lệnh, lắng nghe sửa sai.
+
+5. HÀNG 5: Nhận biết từ ngữ ứng dụng qua tranh & Phân tích nhóm độ cao con chữ:
+   - GV chiếu tranh giới thiệu từ “${appliedWords[0] || "bạn thân"}”, cho đọc trơn 3 lần.
+   - GV hỏi phân nhóm độ cao:
+${heightClassification.teacherQuestion}
+   - HS trả lời chi tiết:
+${heightClassification.studentAnswer}
+   - ${heightClassification.teacherConclusion}
+
+6. HÀNG 6: Thị phạm quy trình viết từ ngữ ứng dụng (Cực kỳ chi tiết từng nét theo lời GV):
+   - Cột GV (từng con chữ tiếng 1 -> khoảng cách 1 thân con chữ o -> từng con chữ tiếng 2 -> lời dặn dò):
+${wordScripts}
+   - Cột HS: “HS quan sát GV viết mẫu từ ứng dụng trên bảng, lắng nghe kĩ điểm đặt bút, uốn lượn nét khuyết/thắt, khoảng cách 1 thân chữ o và luyện viết trên không.”
+
+7. HÀNG 7: Thực hành viết bảng con từ ứng dụng & Viết vở:
+   - GV cho viết bảng con từ -> Hướng dẫn tư thế ngồi viết thẳng lưng, cách cầm bút 3 ngón -> Viết vở Tập viết -> Chấm 5-7 bài.
+   - HS viết bảng con -> Viết vở Tập viết -> Đổi vở nhận xét chéo 4 tiêu chí.
+════════════════════════════════════════════════════════════════════════════════`;
+  }
 
   return `\nQuy chuẩn mẫu chữ viết (Trích xuất từ Hồ sơ Chữ viết Tiếng Việt Tiểu học):
 ${instructions.join("\n\n")}
 - Yêu cầu bắt buộc: Khi viết phần Luyện viết (bảng con hoặc vở), GV hướng dẫn HS đúng độ cao (ô li), điểm đặt bút, thứ tự nét và điểm dừng bút như trên. Tuyệt đối không tự bịa quy cách viết khác với mẫu chuẩn.
-
-- YÊU CẦU BẮT BUỘC KHI SOẠN HOẠT ĐỘNG TẬP VIẾT (MÔ PHỎNG MẪU CHUẨN AN ĂN ÂN):
-  Mọi hoạt động Hướng dẫn viết chữ/vần (bảng con hoặc vở) BẮT BUỘC phải viết thành kịch bản đối thoại chi tiết theo đủ 4 bước sau, TUYỆT ĐỐI KHÔNG VIẾT CHUNG CHUNG:
-  1. Hướng dẫn xác định nét chữ:
-     - Cột GV hỏi từng câu:
-       + Để viết chữ ..., ta viết nét nào trước?
-       + Chữ ... gồm mấy nét? Là những nét nào?
-       + Chữ ... cao mấy ô li? Rộng mấy ô li?
-     - Cột HS trả lời cụ thể:
-       + Nêu đúng thứ tự viết các nét.
-       + Chữ ... gồm ... nét (nêu đúng tên nét: nét cong kín, nét móc ngược phải, nét khuyết trên, nét khuyết dưới, nét móc hai đầu...).
-       + Chữ ... cao ... ô li, rộng ... ô li.
-     - GV nhận xét, chốt kiến thức: "GV nhận xét, kết luận: “Chữ ... cao ... ô li, rộng ... ô li. Chữ ... gồm ... nét: nét 1 là ..., nét 2 là ...”".
-  2. Hướng dẫn quy trình viết từng li từng tí:
-     - GV mô tả chi tiết: Đặt bút ở đường kẻ mấy (ĐK ...), viết nét gì theo hướng nào, dừng bút ở ĐK mấy, lia bút đến ĐK mấy, nối nét thế nào.
-     - HS quan sát, lắng nghe và mô phỏng nét viết trên không.
-     - GV cho HS viết vào bảng con -> GV quan sát quanh lớp, hỗ trợ HS chậm/viết chưa đúng -> Nhận xét mẫu bảng con đẹp và chưa đẹp.
-  3. Hướng dẫn viết từ ngữ ứng dụng:
-     - GV hỏi độ cao các con chữ trong từ:
-       + Các chữ nào có độ cao 5 ô li (b, h, k, l, y, g)?
-       + Chữ nào cao 3 ô li (t)? Chữ nào cao 2,5 ô li (r, s)?
-       + Các chữ nào cao 2 ô li (a, ă, â, e, ê, o, ô, ơ, u, ư, i, n, m, c, v, x)?
-     - HS trả lời cụ thể độ cao từng chữ.
-     - GV hướng dẫn điểm đặt bút, cách nối nét từ chữ trước sang chữ sau, vị trí đặt dấu thanh.
-     - HS luyện viết bảng con từ ứng dụng.
-  4. Thực hành viết vở (ở Vận dụng hoặc Tiết 2):
-     - GV cho HS mở vở tập viết, viết theo mẫu: chữ cái/vần và từ ứng dụng. Nhắc tư thế ngồi, cách cầm bút.
-     - GV tổ chức cho HS đổi vở theo nhóm bàn, phát hiện lỗi và góp ý cho nhau theo đúng 4 tiêu chí: 1. Độ cao; 2. Độ rộng; 3. Nối nét; 4. Trình bày sạch đẹp.
-     - GV nhận xét, tuyên dương.\n`;
+${grade1HandwritingScript}\n`;
 }
 
 export function getDigitalCompetencyPromptBlock(

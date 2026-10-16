@@ -27,6 +27,11 @@ import {
   classifyVietnameseLesson,
   getVietnameseGradeWorkflow,
 } from "@/lib/vietnamese-pedagogy";
+import {
+  generateGrade1WritingInteractionUnits,
+  extractTargetVowels,
+  extractAppliedWords,
+} from "@/lib/vietnamese-stroke-engine";
 import type { LessonActivity, VietnameseLessonClassification } from "@/types/lesson";
 
 export async function generateStagedPhase(
@@ -102,10 +107,14 @@ export async function generateStagedPhase(
        + Chữ a rộng 2,5 ô li, cao 2 ô li).
      - HS lắng nghe nhận xét, ghi nhớ và thực hành.
   3. Với phần Tập viết / Hướng dẫn viết (bảng con hoặc vở):
-     - Xác định nét chữ: GV hỏi từng nét, độ cao, độ rộng; HS trả lời; GV chốt lời trong ngoặc kép.
-     - Quy trình viết từng li từng tí: mô tả rõ điểm đặt bút (dưới đường kẻ mấy - ĐK ...), hướng viết từng nét, điểm dừng bút, điểm lia bút, cách nối nét.
-     - Viết từ ngữ ứng dụng: GV hỏi độ cao các con chữ trong từ (chữ 5 ô li: b, h, k, l, g, y; chữ 3 ô li: t; chữ 2,5 ô li: r, s; chữ 2 ô li: a, ă, â, n, m, o, ô, ơ, e, ê, u, ư, c, v, x); HS trả lời chi tiết; GV chốt.
-     - Nhận xét sản phẩm viết theo đúng 4 tiêu chí: 1. Độ cao; 2. Độ rộng; 3. Nối nét; 4. Trình bày sạch đẹp.
+     - BẮT BUỘC tổ chức theo đúng mô hình 7 Đơn vị Tương tác Kết hợp (Hybrid Interaction Units):
+       + Đơn vị 1: GV hỏi chi tiết cấu tạo, số nét, độ cao, độ rộng từng chữ cái; HS trả lời tương ứng 1:1.
+       + Đơn vị 2: GV nhận xét, chốt kiến thức nguyên văn trong ngoặc kép "GV nhận xét, kết luận: “...”"; HS lắng nghe, ghi nhớ.
+       + Đơn vị 3: GV thị phạm viết vần mẫu, mô tả chi tiết từng nét (đặt bút ở ĐK mấy, uốn lượn, lia bút, nối nét, dừng bút ở ĐK mấy); HS chú ý quan sát và mô phỏng nét viết trên không.
+       + Đơn vị 4: Luyện viết bảng con vần; GV quan sát uốn nắn, sửa lỗi theo 4 tiêu chí (độ cao, độ rộng, nối nét, trình bày sạch đẹp); HS viết, giơ bảng.
+       + Đơn vị 5: Chiếu tranh nhận biết từ ứng dụng -> Phân loại độ cao các con chữ trong từ (nhóm 5 ô li, 4 ô li, 3 ô li, 2,5 ô li, 2 ô li); HS trả lời; GV chốt.
+       + Đơn vị 6: GV thị phạm viết từ ứng dụng cực kỳ chi tiết theo lời GV: từng nét con chữ tiếng 1 (đặt bút ĐK, chạm ĐK 6/3/2/1, uốn nét khuyết/thắt, dừng bút, dấu thanh) -> quy định khoảng cách bằng 1 thân con chữ o (khoảng 1,5 ô li) -> từng nét con chữ tiếng 2 -> lời dặn dò chốt chuẩn toàn từ; HS quan sát, luyện viết trên không.
+       + Đơn vị 7: Viết bảng con từ -> Viết vở tập viết; GV nhắc tư thế ngồi viết, cách cầm bút; HS viết vở và đổi vở nhận xét chéo theo 4 tiêu chí.
   4. Với phần Đọc / Khám phá ngữ liệu / Nói và nghe:
      - Trích xuất nguyên văn câu nhận biết, từ ngữ, câu văn/đoạn đọc từ SGK; đánh dấu gạch chéo '/' chỗ ngắt nghỉ; ghi rõ tiếng dễ đọc sai.
      - Tổ chức đọc đa dạng: đọc mẫu, cá nhân, cặp đôi, nhóm, đồng thanh cả lớp.
@@ -221,6 +230,39 @@ Trả về duy nhất JSON:
       : (phaseBp.sourceClusterIds || []),
   };
 
+  // Grade 1 Vietnamese Handwriting Enhancement: Ensure extreme detail & 7 Hybrid Interaction Units
+  if (
+    parseInt(String(input.grade || "").replace(/\D/g, ""), 10) === 1 &&
+    input.subject === "Tiếng Việt" &&
+    /viết|tập viết|luyện viết|bảng con|vở/i.test(`${safeActivity.title || ""} ${safeActivity.phase || ""} ${phaseBp.title || ""}`)
+  ) {
+    const teacherText = (safeActivity.teacherActions || []).join(" ");
+    const hasGridLines = /đường kẻ|đk\s*\d|ô li/i.test(teacherText);
+    const hasLetterHeights = /cao \d ô li|độ cao/i.test(teacherText);
+    const isTooBrief = (safeActivity.teacherActions || []).length < 5;
+
+    if (!hasGridLines || !hasLetterHeights || isTooBrief) {
+      const targetVowels = extractTargetVowels(input.lessonTitle);
+      const evidenceTexts: string[] = sourceFacts.facts?.sourceEvidence?.map((e: any) => e.text || "") || [];
+      const appliedWords = extractAppliedWords(evidenceTexts, input.lessonTitle);
+      const canonicalUnits = generateGrade1WritingInteractionUnits(targetVowels, appliedWords);
+
+      safeActivity.teacherActions = canonicalUnits.teacherActions;
+      safeActivity.studentActions = canonicalUnits.studentActions;
+      if (!safeActivity.learningProducts || safeActivity.learningProducts.length === 0) {
+        safeActivity.learningProducts = ["Bảng con viết đúng vần và từ", "Vở Tập viết trình bày sạch đẹp đúng mẫu"];
+      }
+      if (!safeActivity.successCriteria || safeActivity.successCriteria.length === 0) {
+        safeActivity.successCriteria = [
+          "Viết đúng độ cao, độ rộng con chữ",
+          "Nối nét đúng quy chuẩn",
+          "Khoảng cách giữa hai tiếng bằng một thân con chữ o",
+          "Trình bày sạch đẹp",
+        ];
+      }
+    }
+  }
+
   const payload = {
     activity: safeActivity,
     materialIds: parsed.materialIds || [],
@@ -323,6 +365,38 @@ Yêu cầu:
       sourceUnitIds: (parsed.activity as any)?.sourceUnitIds || currentPhase.activity.sourceUnitIds,
       sourceClusterIds: (parsed.activity as any)?.sourceClusterIds || currentPhase.activity.sourceClusterIds,
     };
+
+    if (
+      parseInt(String(input.grade || "").replace(/\D/g, ""), 10) === 1 &&
+      input.subject === "Tiếng Việt" &&
+      /viết|tập viết|luyện viết|bảng con|vở/i.test(`${repairedActivity.title || ""} ${repairedActivity.phase || ""}`)
+    ) {
+      const teacherText = (repairedActivity.teacherActions || []).join(" ");
+      const hasGridLines = /đường kẻ|đk\s*\d|ô li/i.test(teacherText);
+      const hasLetterHeights = /cao \d ô li|độ cao/i.test(teacherText);
+      const isTooBrief = (repairedActivity.teacherActions || []).length < 5;
+
+      if (!hasGridLines || !hasLetterHeights || isTooBrief) {
+        const targetVowels = extractTargetVowels(input.lessonTitle);
+        const evidenceTexts: string[] = sourceFacts.facts?.sourceEvidence?.map((e: any) => e.text || "") || [];
+        const appliedWords = extractAppliedWords(evidenceTexts, input.lessonTitle);
+        const canonicalUnits = generateGrade1WritingInteractionUnits(targetVowels, appliedWords);
+
+        repairedActivity.teacherActions = canonicalUnits.teacherActions;
+        repairedActivity.studentActions = canonicalUnits.studentActions;
+        if (!repairedActivity.learningProducts || repairedActivity.learningProducts.length === 0) {
+          repairedActivity.learningProducts = ["Bảng con viết đúng vần và từ", "Vở Tập viết trình bày sạch đẹp đúng mẫu"];
+        }
+        if (!repairedActivity.successCriteria || repairedActivity.successCriteria.length === 0) {
+          repairedActivity.successCriteria = [
+            "Viết đúng độ cao, độ rộng con chữ",
+            "Nối nét đúng quy chuẩn",
+            "Khoảng cách giữa hai tiếng bằng một thân con chữ o",
+            "Trình bày sạch đẹp",
+          ];
+        }
+      }
+    }
 
     const payload = {
       activity: repairedActivity,
