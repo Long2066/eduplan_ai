@@ -427,26 +427,27 @@ export async function assembleStagedSections(
     );
 
     let processedActivities = activities;
-    if (subjectKind === "vietnamese") {
-      if (hasSgkImages) {
-        const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
-        processedActivities = await attachSgkCropsToActivities(
-          activities,
-          input.uploadedAssets,
-          {
-            grade: gradeNum,
-            lessonType: pBpArt.periodBlueprint.lessonType,
-            periodNumber: pBpArt.periodNumber,
-          },
-        );
-      } else {
-        processedActivities = attachHandwritingVisualsToActivities(
-          activities,
-          title,
-          pBpArt.periodBlueprint.focus,
-          { embedBase64: true },
-        );
-      }
+    const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
+    const resolvedSubject = input.subject || "";
+
+    if (hasSgkImages) {
+      processedActivities = await attachSgkCropsToActivities(
+        activities,
+        input.uploadedAssets,
+        {
+          subject: resolvedSubject,
+          grade: gradeNum,
+          lessonType: pBpArt.periodBlueprint.lessonType,
+          periodNumber: pBpArt.periodNumber,
+        },
+      );
+    } else if (subjectKind === "vietnamese") {
+      processedActivities = attachHandwritingVisualsToActivities(
+        activities,
+        title,
+        pBpArt.periodBlueprint.focus,
+        { embedBase64: true },
+      );
     }
 
     const lastPhase = periodPhases[periodPhases.length - 1];

@@ -80,9 +80,9 @@ function ActivityRow({ activity, index, displayMode }: { activity: LessonActivit
             <p className="learning-product"><strong>* Sản phẩm/đánh giá:</strong> <em><MathText>{block.products}</MathText></em></p>
           ) : null}
           <ActivityDetailLines details={block.details} />
-          {activity.teacherVisuals && activity.teacherVisuals.length > 0 ? (
+          {block.unplacedVisuals && block.unplacedVisuals.length > 0 ? (
             <div className="my-2 space-y-2">
-              {activity.teacherVisuals.map((vis, visIdx) => (
+              {block.unplacedVisuals.map((vis, visIdx) => (
                 <div key={vis.id || visIdx} className="p-1.5 bg-slate-50 border border-slate-200 rounded text-center">
                   <p className="text-xs font-semibold text-sky-800 mb-1">
                     {vis.caption?.includes("Mẫu chữ")
@@ -113,6 +113,20 @@ function ActivityRow({ activity, index, displayMode }: { activity: LessonActivit
         >
           <td>
             <p style={{ whiteSpace: "pre-wrap" }}>- <MathText>{pair.teacher}</MathText></p>
+            {pair.visual?.dataUrl ? (
+              <div className="my-2.5 p-2 bg-slate-50/80 rounded-lg border border-slate-200/70 text-center shadow-xs">
+                <img
+                  src={pair.visual.dataUrl}
+                  alt={pair.visual.caption || "Ảnh SGK"}
+                  className="max-w-[300px] w-auto h-auto max-h-[200px] mx-auto rounded object-contain border border-slate-200 shadow-sm"
+                />
+                {pair.visual.caption ? (
+                  <p className="mt-1 text-[11px] italic text-slate-500 font-sans">
+                    {pair.visual.caption}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </td>
           <td>
             <p style={{ whiteSpace: "pre-wrap" }}>- <MathText>{pair.student}</MathText></p>

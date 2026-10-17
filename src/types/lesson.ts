@@ -94,6 +94,8 @@ export type LessonActivityVisual = {
   widthPx?: number;
   heightPx?: number;
   alt?: string;
+  targetStepIndex?: number;
+  triggerKeyword?: string;
 };
 
 export type LessonSourceUnit = {

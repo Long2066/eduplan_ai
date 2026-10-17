@@ -20,7 +20,7 @@ import { assertSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
 import { lessonNeedsAdjustment, lessonValidationLabel } from "@/lib/lesson-validation-status";
 import type { ActivityDocumentOptions, LessonDocumentHeading } from "@/lib/lesson-document-model";
-import type { LessonActivity, LessonPlan, PeriodPlan } from "@/types/lesson";
+import type { LessonActivity, LessonActivityVisual, LessonPlan, PeriodPlan } from "@/types/lesson";
 
 const BLUE = "1F4E79";
 const BRIGHT_BLUE = "0070C0";
@@ -120,41 +120,69 @@ function cell(children: (Paragraph | Table)[], options: { header?: boolean; topB
   });
 }
 
-function teacherVisualParagraphs(activity: LessonActivity): Paragraph[] {
-  if (!activity.teacherVisuals?.length) return [];
-  const paragraphs: Paragraph[] = [];
-
-  for (const vis of activity.teacherVisuals) {
-    if (!vis.dataUrl) continue;
-    let buffer: Buffer | null = null;
-    const match = vis.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (match) {
-      try {
-        buffer = Buffer.from(match[2], "base64");
-      } catch {
-        buffer = null;
-      }
-    } else if (typeof window === "undefined" && (vis.dataUrl.startsWith("/") || vis.dataUrl.startsWith("public/"))) {
-      try {
-        const fs = eval("require")("fs");
-        const path = eval("require")("path");
-        const cleanPath = vis.dataUrl.replace(/^\/?(public\/)?/, "");
-        const fullPath = path.join(process.cwd(), "public", cleanPath);
-        if (fs.existsSync(fullPath)) {
-          buffer = fs.readFileSync(fullPath);
-        }
-      } catch {
-        buffer = null;
-      }
-    }
-
-    if (!buffer) continue;
-
+function singleVisualParagraphs(vis: LessonActivityVisual, isInline = false): Paragraph[] {
+  if (!vis.dataUrl) return [];
+  let buffer: Buffer | null = null;
+  const match = vis.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (match) {
     try {
-      const targetWidth = Math.min(vis.widthPx || 240, 240);
-      const aspect = (vis.heightPx && vis.widthPx) ? vis.heightPx / vis.widthPx : 0.65;
-      const targetHeight = Math.round(targetWidth * aspect);
+      buffer = Buffer.from(match[2], "base64");
+    } catch {
+      buffer = null;
+    }
+  } else if (typeof window === "undefined" && (vis.dataUrl.startsWith("/") || vis.dataUrl.startsWith("public/"))) {
+    try {
+      const fs = eval("require")("fs");
+      const path = eval("require")("path");
+      const cleanPath = vis.dataUrl.replace(/^\/?(public\/)?/, "");
+      const fullPath = path.join(process.cwd(), "public", cleanPath);
+      if (fs.existsSync(fullPath)) {
+        buffer = fs.readFileSync(fullPath);
+      }
+    } catch {
+      buffer = null;
+    }
+  }
 
+  if (!buffer) return [];
+
+  try {
+    const maxWidth = isInline ? 320 : 280;
+    const targetWidth = Math.min(vis.widthPx || maxWidth, maxWidth);
+    const aspect = (vis.heightPx && vis.widthPx) ? vis.heightPx / vis.widthPx : 0.65;
+    const targetHeight = Math.round(targetWidth * aspect);
+
+    const paragraphs: Paragraph[] = [];
+
+    if (isInline) {
+      paragraphs.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 50, after: 30 },
+          children: [
+            new ImageRun({
+              data: buffer,
+              type: "png",
+              transformation: {
+                width: targetWidth,
+                height: targetHeight,
+              },
+            }),
+          ],
+        }),
+      );
+      if (vis.caption) {
+        paragraphs.push(
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 40 },
+            children: [
+              text(`(Hình: ${vis.caption})`, { italic: true, size: 20, color: "555555" }),
+            ],
+          }),
+        );
+      }
+    } else {
       const label = vis.caption?.includes("Mẫu chữ")
         ? "* Mẫu chữ viết chuẩn"
         : "* Ảnh học liệu minh họa";
@@ -176,12 +204,17 @@ function teacherVisualParagraphs(activity: LessonActivity): Paragraph[] {
           ],
         }),
       );
-    } catch {
-      // Bỏ qua nếu buffer hỏng, giữ text nguyên vẹn
     }
-  }
 
-  return paragraphs;
+    return paragraphs;
+  } catch {
+    return [];
+  }
+}
+
+function teacherVisualParagraphs(visuals?: LessonActivityVisual[]): Paragraph[] {
+  if (!visuals?.length) return [];
+  return visuals.flatMap((vis) => singleVisualParagraphs(vis, false));
 }
 
 function activityCellTeacher(activity: LessonActivity, index: number, displayOptions: ActivityDocumentOptions = {}) {
@@ -193,7 +226,7 @@ function activityCellTeacher(activity: LessonActivity, index: number, displayOpt
       ? [metadataParagraph("* Sản phẩm/đánh giá", block.products, "1F4E79")]
       : []),
     ...activityDetailParagraphs(block),
-    ...teacherVisualParagraphs(activity),
+    ...teacherVisualParagraphs(block.unplacedVisuals),
     new Paragraph({
       children: [text("* Cách tiến hành:", { bold: true, italic: true, color: BRIGHT_BLUE })],
       spacing: { after: 50 },
@@ -233,10 +266,16 @@ function activitiesTable(activities: LessonActivity[], displayOptions: ActivityD
         children: [cell(activityCellTeacher(activity, index, displayOptions), { topBorder: false, bottomBorder: false }), cell([paragraph("")], { topBorder: false, bottomBorder: false })],
       }),
       ...block.actionPairs.map(
-        (pair, pairIndex) =>
-          new TableRow({
+        (pair, pairIndex) => {
+          const teacherParagraphs: Paragraph[] = [
+            paragraphWithBreaks(`- ${pair.teacher}`, { spacingAfter: pair.visual ? 30 : 25 }),
+          ];
+          if (pair.visual) {
+            teacherParagraphs.push(...singleVisualParagraphs(pair.visual, true));
+          }
+          return new TableRow({
             children: [
-              cell([paragraphWithBreaks(`- ${pair.teacher}`, { spacingAfter: 25 })], {
+              cell(teacherParagraphs, {
                 topBorder: false,
                 bottomBorder: pairIndex === block.actionPairs.length - 1,
               }),
@@ -245,7 +284,8 @@ function activitiesTable(activities: LessonActivity[], displayOptions: ActivityD
                 bottomBorder: pairIndex === block.actionPairs.length - 1,
               }),
             ],
-          }),
+          });
+        },
       ),
     ];
 

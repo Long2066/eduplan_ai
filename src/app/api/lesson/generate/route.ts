@@ -1984,12 +1984,14 @@ async function generateVietnameseLessonChunkedWithModel(
   if (hasSgkImages) {
     const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
     lesson.activities = await attachSgkCropsToActivities(lesson.activities, input.uploadedAssets, {
+      subject: input.subject,
       grade: gradeNum,
       lessonType: classification.primaryType,
     });
     if (lesson.periodPlans) {
       for (const p of lesson.periodPlans) {
         p.activities = await attachSgkCropsToActivities(p.activities, input.uploadedAssets, {
+          subject: input.subject,
           grade: gradeNum,
           lessonType: (p as { lessonType?: string }).lessonType || classification.primaryType,
           periodNumber: p.periodNumber,

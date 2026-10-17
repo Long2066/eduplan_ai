@@ -242,34 +242,35 @@ export async function assembleStagedLesson(
   );
 
   let processedPeriods = periods;
-  if (blueprintArtifact.subjectKind === "vietnamese") {
-    if (hasSgkImages) {
-      const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
-      processedPeriods = await Promise.all(
-        periods.map(async (period) => ({
-          ...period,
-          activities: await attachSgkCropsToActivities(
-            period.activities,
-            input.uploadedAssets,
-            {
-              grade: gradeNum,
-              lessonType: (period as { lessonType?: string }).lessonType,
-              periodNumber: period.periodNumber,
-            },
-          ),
-        })),
-      );
-    } else {
-      processedPeriods = periods.map((period) => ({
+  const gradeNum = parseInt(String(input.grade || "").replace(/\D/g, ""), 10) || 1;
+  const resolvedSubject = input.subject || "";
+
+  if (hasSgkImages) {
+    processedPeriods = await Promise.all(
+      periods.map(async (period) => ({
         ...period,
-        activities: attachHandwritingVisualsToActivities(
+        activities: await attachSgkCropsToActivities(
           period.activities,
-          title,
-          period.focus,
-          { embedBase64: true },
+          input.uploadedAssets,
+          {
+            subject: resolvedSubject,
+            grade: gradeNum,
+            lessonType: (period as { lessonType?: string }).lessonType,
+            periodNumber: period.periodNumber,
+          },
         ),
-      }));
-    }
+      })),
+    );
+  } else if (blueprintArtifact.subjectKind === "vietnamese") {
+    processedPeriods = periods.map((period) => ({
+      ...period,
+      activities: attachHandwritingVisualsToActivities(
+        period.activities,
+        title,
+        period.focus,
+        { embedBase64: true },
+      ),
+    }));
   }
   const models = uniqueStrings([
     blueprintArtifact.model || "",

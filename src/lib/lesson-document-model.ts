@@ -1,5 +1,5 @@
 import { activityMinutes, canonicalLessonTitle, pairedActivityActions, safeStringArray } from "@/lib/lesson-format";
-import type { LessonActivity, LessonActivityErrorFeedback, LessonPlan, PeriodPlan } from "@/types/lesson";
+import type { LessonActivity, LessonActivityErrorFeedback, LessonActivityVisual, LessonPlan, PeriodPlan } from "@/types/lesson";
 
 export type ActivityDocumentDetail = {
   label: string;
@@ -12,7 +12,8 @@ export type ActivityDocumentBlock = {
   objective: string;
   products: string;
   details: ActivityDocumentDetail[];
-  actionPairs: Array<{ teacher: string; student: string }>;
+  actionPairs: Array<{ teacher: string; student: string; visual?: LessonActivityVisual }>;
+  unplacedVisuals: LessonActivityVisual[];
 };
 
 export type ActivityDocumentOptions = {
@@ -135,6 +136,17 @@ function activityDetails(activity: LessonActivity, options: ActivityDocumentOpti
 
 export function activityDocumentBlock(activity: LessonActivity, index: number, options: ActivityDocumentOptions = {}): ActivityDocumentBlock {
   const minutes = activityMinutes(activity, index);
+  const pairs = pairedActivityActions(activity);
+  const visuals = Array.isArray(activity.teacherVisuals) ? activity.teacherVisuals : [];
+
+  const actionPairs = pairs.map((pair, pIdx) => {
+    const visual = visuals.find((v) => v.targetStepIndex === pIdx);
+    return visual ? { ...pair, visual } : pair;
+  });
+
+  const unplacedVisuals = visuals.filter(
+    (v) => v.targetStepIndex === undefined || v.targetStepIndex < 0 || v.targetStepIndex >= pairs.length,
+  );
 
   return {
     heading: `${index + 1}. ${activityName(activity)} (${minutes} phút)`,
@@ -145,6 +157,7 @@ export function activityDocumentBlock(activity: LessonActivity, index: number, o
         ? conciseProducts(activity)
       : safeStringArray(activity.learningProducts).map(clean).filter(Boolean).join("; ") || "",
     details: activityDetails(activity, options),
-    actionPairs: pairedActivityActions(activity),
+    actionPairs,
+    unplacedVisuals,
   };
 }

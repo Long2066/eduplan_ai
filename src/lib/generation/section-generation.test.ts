@@ -555,6 +555,6 @@ describe("staged-v2 generation & repair functions", () => {
     expect(phasePrompt).toContain("TIÊU CHUẨN KỊCH BẢN DẠY HỌC CHI TIẾT");
     expect(phasePrompt).toContain("teacherActions");
     expect(phasePrompt).toContain("studentActions");
-    expect(phase.activity.teacherActions).toHaveLength(2);
+    expect(phase.activity.teacherActions).toHaveLength(7);
   });
 });

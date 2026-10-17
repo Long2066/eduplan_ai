@@ -8,6 +8,7 @@ import {
   ensureAssetDataUrl,
 } from "./sgk-crop";
 import { buildLessonDocxDocument } from "@/lib/export-docx";
+import { activityDocumentBlock } from "@/lib/lesson-document-model";
 import type { LessonActivity, LessonPlan, UploadedAsset } from "@/types/lesson";
 
 describe("SGK image auto-crop and embed in Teacher column", () => {
@@ -274,5 +275,113 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
     const resolved = await ensureAssetDataUrl(asset);
     expect(resolved.id).toBe("test_2");
     expect(resolved.dataUrl).toBeUndefined();
+  });
+
+  it("attaches crops and binds targetStepIndex for Math (Toán)", async () => {
+    const testSvg = Buffer.from('<svg width="800" height="1000"><rect fill="#fff"/></svg>');
+    const buf = await sharp(testSvg).png().toBuffer();
+    const assets: UploadedAsset[] = [
+      { id: "m1", name: "Toan_T1.png", type: "image", dataUrl: `data:image/png;base64,${buf.toString("base64")}` },
+    ];
+    const activities: LessonActivity[] = [
+      {
+        id: "act_math_1",
+        phase: "Khởi động",
+        title: "Khởi động: Tình huống thực tế",
+        objective: "Làm quen phép cộng",
+        durationMinutes: 5,
+        teacherActions: [
+          "GV cho cả lớp hát bài hát khởi động.",
+          "GV chiếu tranh bài toán mở đầu lên tivi và yêu cầu HS quan sát.",
+          "GV đặt câu hỏi gợi mở.",
+        ],
+        studentActions: [
+          "HS hát theo nhịp.",
+          "HS quan sát tranh tình huống SGK.",
+          "HS trả lời câu hỏi.",
+        ],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, {
+      subject: "Toán",
+      grade: 1,
+    });
+
+    expect(updated[0].teacherVisuals).toBeDefined();
+    expect(updated[0].teacherVisuals?.length).toBe(1);
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("Tranh tình huống");
+    expect(updated[0].teacherVisuals?.[0].targetStepIndex).toBe(1);
+  });
+
+  it("attaches crops and binds targetStepIndex for Tự nhiên và Xã hội", async () => {
+    const testSvg = Buffer.from('<svg width="800" height="1000"><rect fill="#fff"/></svg>');
+    const buf = await sharp(testSvg).png().toBuffer();
+    const assets: UploadedAsset[] = [
+      { id: "s1", name: "TNXH_T1.png", type: "image", dataUrl: `data:image/png;base64,${buf.toString("base64")}` },
+    ];
+    const activities: LessonActivity[] = [
+      {
+        id: "act_sci_1",
+        phase: "Khám phá",
+        title: "Khám phá: Cơ quan hô hấp",
+        objective: "Nhận biết các bộ phận cơ quan hô hấp",
+        durationMinutes: 15,
+        teacherActions: [
+          "GV giới thiệu bài học hôm nay.",
+          "GV yêu cầu HS quan sát sơ đồ hình 1 trong SGK.",
+          "GV tổ chức thảo luận nhóm.",
+        ],
+        studentActions: [
+          "HS lắng nghe.",
+          "HS quan sát sơ đồ.",
+          "HS thảo luận theo nhóm 4.",
+        ],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, {
+      subject: "Tự nhiên và Xã hội",
+      grade: 3,
+    });
+
+    expect(updated[0].teacherVisuals).toBeDefined();
+    expect(updated[0].teacherVisuals?.length).toBe(1);
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("sơ đồ");
+    expect(updated[0].teacherVisuals?.[0].targetStepIndex).toBe(1);
+  });
+
+  it("places visual inline inside activityDocumentBlock.actionPairs", () => {
+    const activity: LessonActivity = {
+      id: "act_test",
+      phase: "Luyện tập",
+      title: "Luyện đọc câu ứng dụng",
+      objective: "Đọc trôi chảy câu",
+      durationMinutes: 10,
+      teacherActions: [
+        "GV mời 1 HS đọc to câu mẫu.",
+        "GV chiếu câu ứng dụng lên tivi và hướng dẫn ngắt nghỉ.",
+        "GV cho HS luyện đọc theo cặp.",
+      ],
+      studentActions: [
+        "HS đọc to.",
+        "HS theo dõi câu chiếu trên bảng.",
+        "HS luyện đọc theo cặp.",
+      ],
+      teacherVisuals: [
+        {
+          id: "vis_crop_app",
+          caption: "Câu ứng dụng SGK",
+          dataUrl: "data:image/png;base64,abc",
+          targetStepIndex: 1,
+        },
+      ],
+    };
+
+    const block = activityDocumentBlock(activity, 0);
+    expect(block.actionPairs[0].visual).toBeUndefined();
+    expect(block.actionPairs[1].visual).toBeDefined();
+    expect(block.actionPairs[1].visual?.caption).toBe("Câu ứng dụng SGK");
+    expect(block.unplacedVisuals.length).toBe(0);
   });
 });
