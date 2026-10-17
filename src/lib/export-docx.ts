@@ -339,7 +339,11 @@ function periodChildren(lesson: LessonPlan, period: PeriodPlan) {
         text("Sĩ số: ", { bold: true }),
         text("............................. "),
         text("Thời lượng: ", { bold: true }),
-        text(`${heading.durationMinutes} phút`),
+        text(
+          lesson.generalInfo.periods && lesson.generalInfo.periods > 1
+            ? `${heading.durationMinutes} phút (${lesson.generalInfo.periods} tiết)`
+            : `${heading.durationMinutes} phút`,
+        ),
       ],
       { alignment: AlignmentType.LEFT, spacingAfter: 60 },
     ),

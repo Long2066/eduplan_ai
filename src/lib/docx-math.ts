@@ -86,14 +86,17 @@ function replaceDisplayMarkerParagraph(xml: string, marker: string, omml: string
 function replaceMarkerRun(xml: string, marker: string, replacement: string) {
   let output = xml;
   let markerIndex = output.indexOf(marker);
-  while (markerIndex >= 0) {
+  let guard = 0;
+  while (markerIndex >= 0 && guard < 100) {
+    guard++;
     const run = containingRunRange(output, markerIndex);
     if (!run) {
       output = `${output.slice(0, markerIndex)}${escapeXml(markerExpressions.get(marker) || marker)}${output.slice(markerIndex + marker.length)}`;
+      markerIndex = output.indexOf(marker, markerIndex + 1);
     } else {
       output = `${output.slice(0, run.start)}${replacement}${output.slice(run.end)}`;
+      markerIndex = output.indexOf(marker, run.start + replacement.length);
     }
-    markerIndex = output.indexOf(marker);
   }
   return output;
 }

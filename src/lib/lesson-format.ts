@@ -39,14 +39,14 @@ export function activityMinutes(activity: LessonActivity, index: number) {
 }
 
 function cleanActionText(value: string) {
-  const trimmed = (value || "").trim();
+  const trimmed = (value || "").trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, "").trim();
   if (trimmed.includes("\n")) {
     return trimmed
-      .replace(/^[-–—•\s]+/, "")
+      .replace(/^[-–—•*+\s]+/, "")
       .replace(/\r\n/g, "\n");
   }
   return trimmed
-    .replace(/^[-–—•\s]+/, "")
+    .replace(/^[-–—•*+\s]+/, "")
     .replace(/\s+/g, " ");
 }
 
@@ -64,19 +64,29 @@ function renderableActionArray(value: unknown) {
     .filter((item) => item && !internalActivityMetadataPattern.test(item));
 }
 
+export function cleanActorPrefix(value: string | undefined): string {
+  let text = cleanActionText(value || "");
+  let changed = true;
+  while (changed) {
+    const prev = text;
+    text = text.replace(/^["'“”‘’]+/, "").trim();
+    text = text.replace(/^[-–—•*+~#\s]+/, "").trim();
+    text = text.replace(/^(gv|giáo viên|giao vien|hs|học sinh|hoc sinh)\b\s*[:：,.\-–—+*]*\s*/i, "").trim();
+    text = text.replace(/^["'“”‘’]+/, "").trim();
+    changed = text !== prev;
+  }
+  return text;
+}
+
 export function normalizeActionActor(value: string | undefined, actor: "GV" | "HS", fallback: string) {
-  const cleaned = cleanActionText(value || fallback);
-  const withoutActor = cleaned
-    .replace(/^(gv|giáo viên|giao vien|hs|học sinh|hoc sinh)\s*[:：,.\-–—]?\s*/i, "")
-    .trim();
-  const action = withoutActor || cleanActionText(fallback).replace(/^(gv|hs)\s*[:：,.\-–—]?\s*/i, "").trim();
+  const action = cleanActorPrefix(value) || cleanActorPrefix(fallback);
   return `${actor} ${action}`.trim();
 }
 
-function studentFallbackForTeacherAction(teacherAction: string, stepNumber: number) {
+function studentFallbackForTeacherAction(teacherAction: string, _stepNumber: number) {
   const teacher = teacherAction.toLowerCase();
   if (/chốt|kết luận|chuyển\s+(sang|vào|ý)|liên hệ.*(bài|mục|hoạt động)|giới thiệu.*(phần|hoạt động|nội dung)/i.test(teacher)) {
-    return "HS lắng nghe, ghi nhớ ý chính và sẵn sàng chuyển sang hoạt động tiếp theo.";
+    return "HS lắng nghe, ghi nhớ trọng tâm và sẵn sàng chuyển sang hoạt động tiếp theo.";
   }
   if (/viết mẫu|thị phạm|hướng dẫn cách viết|hướng dẫn viết|quy trình viết/i.test(teacher)) {
     return "HS chú ý quan sát GV viết mẫu, lắng nghe và mô phỏng nét viết trên không.";
@@ -90,13 +100,19 @@ function studentFallbackForTeacherAction(teacherAction: string, stepNumber: numb
   if (/thu phiếu|thu bài|kiểm tra nhanh|đối chiếu|chữa bài/i.test(teacher)) {
     return "HS nộp sản phẩm, đối chiếu kết quả và lắng nghe góp ý của GV.";
   }
+  if (/tính|phép tính|cộng|trừ|nhân|chia|bảng số|dãy số|điền số/i.test(teacher)) {
+    return "HS thực hiện phép tính vào bảng con hoặc vở nháp, nêu kết quả và giải thích cách làm.";
+  }
+  if (/quan sát|chiếu|xem tranh|mô hình|sơ đồ|hình vẽ/i.test(teacher)) {
+    return "HS quan sát hình ảnh trực quan, nhận diện dữ kiện bài toán và phát biểu câu trả lời.";
+  }
   if (/đặt câu hỏi|câu hỏi|hỏi hs|gợi mở/i.test(teacher)) {
-    return "HS suy nghĩ, trả lời câu hỏi và bổ sung ý kiến cho bạn.";
+    return "HS suy nghĩ, trao đổi và nêu câu trả lời rõ ràng trước lớp.";
   }
-  if (/yêu cầu|giao nhiệm vụ|hướng dẫn|tổ chức|phát phiếu|làm việc|thảo luận|trao đổi|tìm|xác định|viết|tính|vẽ|lập|hoàn thành|trình bày|đóng vai/i.test(teacher)) {
-    return "HS thực hiện nhiệm vụ, hoàn thành sản phẩm học tập và báo cáo kết quả.";
+  if (/yêu cầu|giao nhiệm vụ|hướng dẫn|tổ chức|phát phiếu|làm việc|thảo luận|trao đổi|tìm|xác định|viết|vẽ|lập|hoàn thành|trình bày|đóng vai/i.test(teacher)) {
+    return "HS tích cực thực hiện nhiệm vụ, hoàn thành sản phẩm học tập và báo cáo kết quả.";
   }
-  return `HS theo dõi hướng dẫn của GV và tham gia bước ${stepNumber} của hoạt động.`;
+  return "HS chú ý theo dõi hướng dẫn của GV, tích cực tham gia thảo luận và hoàn thành nhiệm vụ học tập.";
 }
 
 export function safeStringArray(value: unknown): string[] {

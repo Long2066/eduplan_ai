@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 import { extractAiJsonValue } from "@/lib/ai-json";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
 import { generationSubjectKind } from "@/lib/generation/subject-routing";
@@ -197,6 +197,9 @@ Quy tắc:
 - periods phải đủ đúng ${positiveInteger(input.periods, 1)} tiết.
 - Mỗi tiết phải có trọng tâm riêng, có prerequisite/continuityIn/continuityOut để nối mạch.
 - Phân bổ sourceEvidence/task/visual theo đúng tiết; không dùng cùng nhiệm vụ bắt buộc để lấp nhiều tiết nếu không ghi allowReuse.
+- ĐẶC BIỆT VỚI MÔN TOÁN 1-5:
+  + Nếu bài dạy nhiều tiết (như "Bảng nhân ..., Bảng chia ..." hoặc "Phép cộng ..., Phép trừ ..."): Tiết 1 DÀNH RIÊNG cho phần thứ nhất (Ví dụ: Bảng nhân), Tiết 2 DÀNH RIÊNG cho phần thứ hai (Ví dụ: Bảng chia). TUYỆT ĐỐI KHÔNG dạy trước hay gộp phần thứ hai vào Tiết 1!
+  + CẤM lặp lại cùng một bài toán thực tế (như con bạch tuộc, hộp bút chì màu) giữa các hoạt động hoặc giữa các tiết; mỗi hoạt động phải phân bổ bài tập, số liệu và tình huống khác nhau từ SGK.
 
 Thông tin khóa:
 ${JSON.stringify({

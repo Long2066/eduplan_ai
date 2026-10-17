@@ -67,7 +67,26 @@ export async function generateStagedPhase(
 
   let subjectGuidance = "";
   if (sourceFacts.subjectKind === "math") {
-    subjectGuidance = `${mathLatexPolicy}\n${mathGradeBandGuidance(input)}`;
+    const mathStrictDialogueRules = `QUY TẮC BẮT BUỘC: KỊCH BẢN ĐỐI THOẠI 1:1 CHI TIẾT MÔN TOÁN LỚP 1-5 (CHUẨN KNTT & CTGDPT 2018):
+- TUYỆT ĐỐI KHÔNG VIẾT CHUNG CHUNG (CẤM: "GV hướng dẫn HS tính", "HS lắng nghe và làm bài", "HS làm bài tập 1"). Giáo án phải cầm lên dạy được ngay.
+- SỐ LƯỢNG BƯỚC CỦA GV VÀ HS BẮT BUỘC BẰNG NHAU (1:1). Cứ mỗi bước GV hỏi/nêu lệnh thì có đúng 1 bước HS trả lời/thực hiện tương ứng.
+1. Cột Hoạt động của giáo viên (teacherActions):
+   - Dùng gạch đầu dòng '-' cho hành động dẫn dắt, chiếu tranh, ghi bảng, phát phiếu.
+   - Dùng dấu cộng '+' cho câu hỏi gợi mở tư duy toán học cụ thể (Ví dụ: + Bài toán cho biết gì? Bài toán hỏi gì? + Để tìm số xúc tu của 2 con bạch tuộc, ta làm phép tính gì? Vì sao?).
+   - Lời nhận xét, chốt kiến thức đặt trong ngoặc kép:
+     Ví dụ: "GV nhận xét, kết luận: Mỗi con bạch tuộc có 8 xúc tu, 2 con có \\(8 \\times 2 = 16\\) (xúc tu)."
+2. Cột Hoạt động của học sinh (studentActions):
+   - Trả lời ĐẦY ĐỦ câu, nêu rõ số liệu, phép tính, kết quả và đơn vị:
+     Ví dụ: "HS trả lời: 2 con bạch tuộc có tất cả \\(8 \\times 2 = 16\\) xúc tu."
+   - CẤM câu vô hồn như "HS lắng nghe", "HS thực hiện nhiệm vụ theo hướng dẫn".
+3. QUY TẮC NỘI DUNG VÀ CÔNG THỨC TOÁN HỌC:
+   - MỌI phép tính số học, công thức toán PHẢI bọc trong \\( ... \\), ví dụ: \\(8 \\times 2 = 16\\), \\(16 : 8 = 2\\), \\(8 + 8 = 16\\).
+   - Nếu bài 2 tiết (như Bài 11: Bảng nhân 8, bảng chia 8):
+     + TIẾT 1 CHỈ dạy BẢNG NHÂN, TUYỆT ĐỐI KHÔNG đưa bảng chia vào Tiết 1.
+     + TIẾT 2 MỚI dạy BẢNG CHIA dựa trên mối quan hệ với bảng nhân.
+   - CẤM lặp lại cùng một ngữ liệu bài toán (như bài 4 hộp bút chì màu hoặc bạch tuộc) qua các hoạt động hay qua các tiết. Mỗi hoạt động PHẢI có tình huống/bài toán khác nhau từ SGK KNTT (như bài rô-bốt xếp bánh chia đĩa, đếm chân cua, chia đội chơi, đếm cánh hoa...).`;
+
+    subjectGuidance = `${mathLatexPolicy}\n${mathGradeBandGuidance(input)}\n${mathStrictDialogueRules}`;
   } else if (sourceFacts.subjectKind === "vietnamese") {
     const vtClassification = (sourceFacts.classification as VietnameseLessonClassification)
       || classifyVietnameseLesson(input, sourceFacts.facts.coreContent?.join(" ") || "");
@@ -261,6 +280,36 @@ Trả về duy nhất JSON:
         ];
       }
     }
+  }
+
+  // Math All Grades Enhancement: Ensure 1:1 action pairing, meaningful student dialogue, and no robotic placeholders
+  if (sourceFacts.subjectKind === "math") {
+    const tActions = Array.isArray(safeActivity.teacherActions) ? [...safeActivity.teacherActions] : [];
+    const sActions = Array.isArray(safeActivity.studentActions) ? [...safeActivity.studentActions] : [];
+
+    if (tActions.length > sActions.length) {
+      for (let i = sActions.length; i < tActions.length; i++) {
+        const t = tActions[i].toLowerCase();
+        let s = "HS quan sát, ghi nhớ trọng tâm và đối chiếu kết quả.";
+        if (/hỏi|\?|câu hỏi|mấy|bao nhiêu|như thế nào|tại sao|vì sao/i.test(t)) {
+          s = "HS suy nghĩ, trao đổi theo cặp và nêu câu trả lời/phép tính trước lớp.";
+        } else if (/tính|cộng|trừ|nhân|chia|bảng|dãy số|điền/i.test(t)) {
+          s = "HS thực hiện phép tính vào bảng con hoặc vở nháp, giơ bảng báo cáo kết quả.";
+        } else if (/chiếu|quan sát|tranh|sơ đồ|mô hình/i.test(t)) {
+          s = "HS quan sát hình ảnh trực quan, nhận diện dữ kiện và nêu phép tính tương ứng.";
+        } else if (/nhận xét|chốt|kết luận|khen/i.test(t)) {
+          s = "HS lắng nghe nhận xét của GV, tự kiểm tra và sửa sai vào vở.";
+        }
+        sActions.push(s);
+      }
+    } else if (sActions.length > tActions.length) {
+      for (let i = tActions.length; i < sActions.length; i++) {
+        tActions.push("GV quan sát, lắng nghe câu trả lời của HS và hướng dẫn điều chỉnh nếu cần.");
+      }
+    }
+
+    safeActivity.teacherActions = tActions;
+    safeActivity.studentActions = sActions;
   }
 
   const payload = {

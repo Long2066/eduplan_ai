@@ -42,11 +42,15 @@ export type LessonDocumentHeading = {
 };
 
 export function lessonDocumentHeading(lesson: LessonPlan, period: PeriodPlan): LessonDocumentHeading {
+  const periodsCount = Math.max(1, lesson.generalInfo.periods || 1);
+  const rawDuration = lesson.generalInfo.duration || 35;
+  const durationMinutes = periodsCount > 1 && rawDuration <= 45 ? rawDuration * periodsCount : rawDuration;
+
   return {
     documentTitle: "KẾ HOẠCH BÀI DẠY",
     schoolLabel: "TRƯỜNG:",
     grade: gradeLabel(lesson.generalInfo.grade),
-    durationMinutes: lesson.generalInfo.duration,
+    durationMinutes,
     subject: lesson.generalInfo.subject,
     lessonTitle: canonicalLessonTitle(lesson.generalInfo.lessonTitle),
     periodLabel: `(TIẾT ${period.periodNumber})`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityPhaseKey, canonicalizeOrderedActivityPhases, requiredActivityPhases, sanitizeMaterials } from "./lesson-format";
+import { activityPhaseKey, canonicalizeOrderedActivityPhases, cleanActorPrefix, pairedActivityActions, requiredActivityPhases, sanitizeMaterials } from "./lesson-format";
 import type { LessonActivity } from "@/types/lesson";
 
 function activity(phase: string, title: string): LessonActivity {
@@ -74,5 +74,39 @@ describe("materials sanitization", () => {
     expect(cleaned.teacher.some((t: string) => t.includes("Máy tính, ti vi / màn chiếu"))).toBe(true);
     expect(cleaned.students.some((s: string) => s.includes("Bút chì, bút màu"))).toBe(true);
     expect(cleaned.students.some((s: string) => s.includes("Phiếu học tập"))).toBe(true);
+  });
+});
+
+describe("cleanActorPrefix & pairedActivityActions", () => {
+  it("cleans messy actor prefixes without duplicates", () => {
+    expect(cleanActorPrefix("- GV + GV hỏi:")).toBe("hỏi:");
+    expect(cleanActorPrefix("+ GV: Quan sát tranh")).toBe("Quan sát tranh");
+    expect(cleanActorPrefix('GV "GV nhận xét câu trả lời"')).toBe("nhận xét câu trả lời");
+    expect(cleanActorPrefix("- HS + HS trả lời: 8 x 3 = 24")).toBe("trả lời: 8 x 3 = 24");
+    expect(cleanActorPrefix("+ HS: Thưa cô bằng 24")).toBe("Thưa cô bằng 24");
+  });
+
+  it("generates pedagogically meaningful student actions on dialogue mismatch without generic placeholder", () => {
+    const act: LessonActivity = {
+      phase: "Khám phá",
+      title: "Hình thành bảng nhân 8",
+      objective: "Nhận biết bảng nhân 8",
+      teacherActions: [
+        "GV gắn 1 tấm bìa có 8 chấm tròn lên bảng, hỏi: Có mấy chấm tròn?",
+        "GV gắn thêm tấm bìa thứ 2, hỏi: 8 chấm tròn lấy 2 lần bằng mấy?",
+        "GV yêu cầu HS nêu phép nhân tương ứng.",
+      ],
+      studentActions: [
+        "HS quan sát và trả lời: Có 8 chấm tròn.",
+      ],
+    };
+
+    const paired = pairedActivityActions(act);
+    expect(paired.length).toBe(3);
+    for (const step of paired) {
+      expect(step.student).not.toMatch(/bước \d+ của hoạt động/i);
+      expect(step.teacher).toBeTruthy();
+      expect(step.student).toBeTruthy();
+    }
   });
 });
