@@ -27,7 +27,7 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
 
     expect(crop).not.toBeNull();
     expect(crop?.width).toBeLessThanOrEqual(320);
-    expect(crop?.dataUrl).toMatch(/^data:image\/png;base64,/);
+    expect(crop?.dataUrl).toMatch(/^data:image\/(png|jpeg);base64,/);
     expect(crop?.buffer.length).toBeGreaterThan(0);
   });
 

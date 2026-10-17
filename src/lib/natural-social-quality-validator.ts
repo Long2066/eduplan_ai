@@ -191,7 +191,7 @@ export function validateNaturalSocialLesson(
   if (requiredSourceTasks.length) {
     const metadata = outcomeMetadata(lesson);
     const activitiesById = new Map(lessonActivities(lesson).filter((activity) => activity.id).map((activity) => [activity.id as string, activity]));
-    const mappedTaskIds = new Set(metadata.flatMap((item) => item.evidence.activityIds)
+    const mappedTaskIds = new Set(metadata.flatMap((item) => item.evidence?.activityIds || [])
       .map((activityId) => activitiesById.get(activityId))
       .filter((activity): activity is LessonActivity => Boolean(activity))
       .flatMap((activity) => activity.sourceTaskIds || []));

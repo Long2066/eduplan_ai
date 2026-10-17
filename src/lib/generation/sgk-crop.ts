@@ -117,8 +117,11 @@ export async function cropImageWithPadding(
       pipeline = pipeline.resize(outWidth, outHeight, { fit: "inside" });
     }
 
-    const outBuffer = await pipeline.png({ quality: 90, compressionLevel: 8 }).toBuffer();
-    const dataUrl = bufferToDataUrl(outBuffer, "image/png");
+    const isPng = options.format === "png";
+    const outBuffer = isPng
+      ? await pipeline.png({ quality: 85, compressionLevel: 8 }).toBuffer()
+      : await pipeline.jpeg({ quality: 75, mozjpeg: true }).toBuffer();
+    const dataUrl = bufferToDataUrl(outBuffer, isPng ? "image/png" : "image/jpeg");
 
     return {
       buffer: outBuffer,
@@ -246,9 +249,10 @@ export async function attachSgkCropsToActivities(
   assets: UploadedAsset[],
   options: AttachSgkCropOptions = {},
 ): Promise<LessonActivity[]> {
-  const resolvedAssets = await Promise.all(
-    (assets || []).map((a) => ensureAssetDataUrl(a, options.grade)),
-  );
+  try {
+    const resolvedAssets = await Promise.all(
+      (assets || []).map((a) => ensureAssetDataUrl(a, options.grade)),
+    );
   const imageAssets = resolvedAssets.filter(
     (a) => a.type === "image" && a.dataUrl && a.dataUrl.startsWith("data:image/"),
   );
@@ -524,4 +528,8 @@ export async function attachSgkCropsToActivities(
   }
 
   return updatedActivities;
+  } catch (err) {
+    console.warn("[sgk-crop] Gắn ảnh SGK bị lỗi nhẹ, an toàn giữ nguyên hoạt động:", err);
+    return activities;
+  }
 }

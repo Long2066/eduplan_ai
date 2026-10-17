@@ -70,19 +70,19 @@ function uniqueValues<T>(values: T[]): T[] {
 
 function cloneOutcomes(outcomes: LessonOutcomes): LessonOutcomes {
   return {
-    generalCompetencies: [...outcomes.generalCompetencies],
-    specificCompetencies: [...outcomes.specificCompetencies],
-    qualities: [...outcomes.qualities],
-    knowledgeAndSkills: [...outcomes.knowledgeAndSkills],
+    generalCompetencies: [...(outcomes.generalCompetencies || [])],
+    specificCompetencies: [...(outcomes.specificCompetencies || [])],
+    qualities: [...(outcomes.qualities || [])],
+    knowledgeAndSkills: [...(outcomes.knowledgeAndSkills || [])],
     ...(outcomes.digitalCompetencies ? { digitalCompetencies: [...outcomes.digitalCompetencies] } : {}),
     ...(outcomes.objectiveMetadata
       ? {
           objectiveMetadata: outcomes.objectiveMetadata.map((meta) => ({
             ...meta,
             evidence: {
-              activityIds: [...meta.evidence.activityIds],
-              learningProducts: [...meta.evidence.learningProducts],
-              successCriteria: [...meta.evidence.successCriteria],
+              activityIds: [...(meta.evidence?.activityIds || [])],
+              learningProducts: [...(meta.evidence?.learningProducts || [])],
+              successCriteria: [...(meta.evidence?.successCriteria || [])],
             },
           })),
         }
@@ -149,9 +149,9 @@ function buildPeriodOutcomes(
           objectiveMetadata: metadataList.map((meta) => ({
             ...meta,
             evidence: {
-              activityIds: [...meta.evidence.activityIds],
-              learningProducts: [...meta.evidence.learningProducts],
-              successCriteria: [...meta.evidence.successCriteria],
+              activityIds: [...(meta.evidence?.activityIds || [])],
+              learningProducts: [...(meta.evidence?.learningProducts || [])],
+              successCriteria: [...(meta.evidence?.successCriteria || [])],
             },
           })),
         }

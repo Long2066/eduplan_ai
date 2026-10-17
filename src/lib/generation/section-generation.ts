@@ -198,6 +198,18 @@ Trả về duy nhất JSON:
     }];
   }
 
+  // Ensure every item has a normalized evidence structure
+  parsed.objectiveMetadata = parsed.objectiveMetadata.map((obj, idx) => ({
+    id: obj.id || `obj-${idx + 1}`,
+    category: obj.category || "specificCompetencies",
+    statement: obj.statement || `Yêu cầu cần đạt ${idx + 1}`,
+    evidence: {
+      activityIds: Array.isArray(obj.evidence?.activityIds) ? obj.evidence.activityIds : [],
+      learningProducts: Array.isArray(obj.evidence?.learningProducts) ? obj.evidence.learningProducts : [],
+      successCriteria: Array.isArray(obj.evidence?.successCriteria) ? obj.evidence.successCriteria : [],
+    },
+  }));
+
   const artifact: StagedOutcomesArtifact = {
     version: 2,
     kind: "section-outcomes",

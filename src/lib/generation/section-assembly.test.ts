@@ -539,5 +539,25 @@ describe("assembleStagedSections", () => {
     expect(result.periods[0].period.outcomes.generalCompetencies.length).toBeGreaterThan(0);
     expect(result.periods[0].period.outcomes.qualities.length).toBeGreaterThan(0);
   });
+
+  it("handles objectiveMetadata without evidence gracefully without throwing TypeError", async () => {
+    const input = createTestInput({ subject: "Toán", periods: 1 });
+    // Simulate AI response that omitted evidence in objectiveMetadata
+    const options = createFixtureArtifacts(input, {
+      objectiveMetadata: [
+        {
+          id: "obj-1",
+          category: "knowledgeAndSkills",
+          statement: "Hình thành bảng nhân 7 và giải bài toán liên quan.",
+        } as any,
+      ],
+    });
+
+    const result = await assembleStagedSections(options);
+    expect(result.assembly).toBeDefined();
+    expect(result.assembly.lesson.outcomes.objectiveMetadata?.[0].evidence).toBeDefined();
+    expect(result.assembly.lesson.outcomes.objectiveMetadata?.[0].evidence.activityIds).toEqual([]);
+  });
 });
+
 

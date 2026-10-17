@@ -58,9 +58,10 @@ function hasLegacyDifferentiation(activity: LessonActivity, kind: "support" | "e
 function validateOutcomeMetadata(metadata: LessonOutcomeMetadata[] | undefined, activityIds: Set<string>) {
   if (!metadata?.length) return [];
   return metadata.flatMap((item) => {
-    const hasActivity = item.evidence.activityIds.length > 0 && item.evidence.activityIds.some((id) => activityIds.has(id));
-    const hasProducts = hasAnyText(item.evidence.learningProducts);
-    const hasCriteria = hasAnyText(item.evidence.successCriteria);
+    const actIds = Array.isArray(item.evidence?.activityIds) ? item.evidence.activityIds : [];
+    const hasActivity = actIds.length > 0 && actIds.some((id) => activityIds.has(id));
+    const hasProducts = hasAnyText(item.evidence?.learningProducts);
+    const hasCriteria = hasAnyText(item.evidence?.successCriteria);
     if (hasActivity && hasProducts && hasCriteria) return [];
     return [finding(
       lessonQualityRules.missingOutcomeEvidence,
