@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SiteFooter } from "./site-footer";
@@ -16,6 +16,8 @@ describe("SiteFooter", () => {
     expect(markup).not.toContain("<svg");
     expect(markup).toContain("SOẠN GIÁO ÁN THÔNG MINH");
     expect(markup).toContain("Tạo kế hoạch bài dạy theo Công văn 2345 bằng AI, nhanh và dễ chỉnh sửa.");
+    expect(markup).toContain("Phiên bản v2.0");
+    expect(markup).toContain("v2.0");
     expect(markup).toContain(`© ${new Date().getFullYear()} EduPlan AI`);
     expect(markup).not.toContain("<a");
     expect(markup).not.toContain("<button");

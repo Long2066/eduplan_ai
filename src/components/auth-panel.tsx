@@ -699,7 +699,7 @@ export function AuthPanel({
       : "Tạo tài khoản mới để bắt đầu sử dụng EduPlan AI.";
 
   return (
-    <main className="auth-page flex min-h-screen flex-col items-center justify-start px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
+    <main className="auth-page flex flex-1 w-full min-h-0 flex-col items-center justify-start px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
       {policyTitle ? (
         <PolicyModal
           title={policyTitle}

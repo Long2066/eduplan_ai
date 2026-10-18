@@ -9,6 +9,9 @@ export {
   subjectSupportsBookVolume,
 } from "@/lib/subject-catalog";
 
+export const APP_VERSION = "v2.0";
+export const APP_VERSION_LABEL = "Phiên bản v2.0";
+
 export const defaultLessonInput: LessonInput = {
   subject: "",
   grade: "",

@@ -600,31 +600,35 @@ export default function Home() {
   /* ── Not logged in ── */
   if (!user) {
     return (
-      <>
+      <div className="flex min-h-screen flex-col justify-between">
         <AuthPanel
           onSessionReady={loadCurrentUser}
           onOpenGuide={openGuide}
           onOpenIntro={openIntro}
         />
+        <SiteFooter />
         <GuideModal isOpen={isGuideVisible} onClose={closeGuide} />
         <IntroductionModal isOpen={isIntroVisible} onClose={closeIntro} />
-      </>
+      </div>
     );
   }
 
   /* ── Account disabled ── */
   if (user.disabled) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <div className="animate-scale-in w-full max-w-xl rounded-3xl border border-red-100 bg-white p-8 text-center shadow-soft sm:p-10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-600">EduPlan AI</p>
-          <h1 className="mt-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">Tài khoản đã bị khóa</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
-            {accountBlockedMessage(user.blockedReason, user.blockedReasonDetail)}
-          </p>
-          <button className="btn-secondary mt-7" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }}>Đăng xuất</button>
-        </div>
-      </main>
+      <div className="flex min-h-screen flex-col justify-between">
+        <main className="flex flex-1 items-center justify-center px-4 py-8">
+          <div className="animate-scale-in w-full max-w-xl rounded-3xl border border-red-100 bg-white p-8 text-center shadow-soft sm:p-10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-600">EduPlan AI</p>
+            <h1 className="mt-3 text-2xl font-extrabold text-slate-900 sm:text-3xl">Tài khoản đã bị khóa</h1>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+              {accountBlockedMessage(user.blockedReason, user.blockedReasonDetail)}
+            </p>
+            <button className="btn-secondary mt-7" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.reload(); }}>Đăng xuất</button>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
     );
   }
 
