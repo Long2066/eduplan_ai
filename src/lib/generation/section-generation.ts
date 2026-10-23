@@ -5,6 +5,9 @@ import { generationSubjectKind } from "@/lib/generation/subject-routing";
 import { sourceTruthPromptContext } from "@/lib/generation/source-truth";
 import { stagedArtifactAnchor } from "@/lib/generation/section-validation";
 import {
+  STAGED_PHASES,
+  STAGED_PHASE_LABELS,
+  stagedActivityId,
   type GenerateStagedAssessmentOptions,
   type GenerateStagedLessonMapOptions,
   type GenerateStagedMaterialsOptions,
@@ -19,6 +22,7 @@ import {
   type StagedMaterialsArtifact,
   type StagedOutcomesArtifact,
   type StagedPeriodBlueprintArtifact,
+  type StagedPhaseName,
   type StagedSourceEvidence,
   type StagedSourceFacts,
   type StagedSourceFactsArtifact,
@@ -285,11 +289,65 @@ Trả về duy nhất JSON:
   ]);
   const parsed = extractAiJsonValue<StagedLessonMap>(res.content);
   parsed.lessonTitle = identity.lessonTitle;
+  const validObjIds = outcomes.outcomes.objectiveMetadata.map((o) => o.id);
+  const validObjSet = new Set(validObjIds);
+  const validSrcSet = new Set(sourceFacts.facts.sourceEvidence.map((s) => s.id));
+
+  if (!Array.isArray(parsed.periods) || parsed.periods.length !== identity.periods) {
+    parsed.periods = Array.from({ length: identity.periods }, (_, i) => ({
+      periodNumber: i + 1,
+      focus: parsed.periods?.[i]?.focus?.trim() || `Tiết ${i + 1}: ${identity.lessonTitle}`,
+      objectiveIds: parsed.periods?.[i]?.objectiveIds || [],
+      sourceIds: parsed.periods?.[i]?.sourceIds || [],
+      targetKnowledge: parsed.periods?.[i]?.targetKnowledge || "",
+      continuityIn: parsed.periods?.[i]?.continuityIn || "",
+      continuityOut: parsed.periods?.[i]?.continuityOut || "",
+      assessmentEvidence: parsed.periods?.[i]?.assessmentEvidence || [],
+    }));
+  }
+  const coveredInMap = new Set<string>();
+  parsed.periods.forEach((p, idx) => {
+    p.periodNumber = idx + 1;
+    if (!p.focus || !p.focus.trim()) p.focus = `Tiết ${idx + 1}: ${identity.lessonTitle}`;
+    p.objectiveIds = (Array.isArray(p.objectiveIds) ? p.objectiveIds : [])
+      .filter((id) => typeof id === "string" && validObjSet.has(id));
+    if (p.objectiveIds.length === 0 && validObjIds.length > 0) {
+      p.objectiveIds = [validObjIds[idx % validObjIds.length]];
+    }
+    p.objectiveIds.forEach((id) => coveredInMap.add(id));
+    p.sourceIds = (Array.isArray(p.sourceIds) ? p.sourceIds : [])
+      .filter((id) => typeof id === "string" && validSrcSet.has(id));
+  });
+  for (const objId of validObjIds) {
+    if (!coveredInMap.has(objId) && parsed.periods.length > 0) {
+      parsed.periods[parsed.periods.length - 1].objectiveIds.push(objId);
+    }
+  }
+  if (Array.isArray(parsed.sourceAllocation)) {
+    parsed.sourceAllocation = parsed.sourceAllocation
+      .filter((a) => a && typeof a === "object" && validSrcSet.has(a.sourceId))
+      .map((a) => ({
+        ...a,
+        periodNumber: Math.min(identity.periods, Math.max(1, Number(a.periodNumber) || 1)),
+      }));
+  }
+
   if (!parsed.continuityPlan || typeof parsed.continuityPlan !== "object") {
     parsed.continuityPlan = { sourceUnits: [], clusters: [] };
   }
   if (!Array.isArray(parsed.continuityPlan.sourceUnits)) parsed.continuityPlan.sourceUnits = [];
+  parsed.continuityPlan.sourceUnits = parsed.continuityPlan.sourceUnits
+    .filter((u) => u && typeof u === "object" && typeof u.unitId === "string" && validSrcSet.has(u.unitId));
+  const unitSet = new Set(parsed.continuityPlan.sourceUnits.map((u) => u.unitId));
   if (!Array.isArray(parsed.continuityPlan.clusters)) parsed.continuityPlan.clusters = [];
+  parsed.continuityPlan.clusters = parsed.continuityPlan.clusters
+    .filter((c) => c && typeof c === "object" && typeof c.clusterId === "string" && c.clusterId.trim())
+    .map((c) => ({
+      ...c,
+      sourceUnitIds: (Array.isArray(c.sourceUnitIds) ? c.sourceUnitIds : [])
+        .filter((uId) => typeof uId === "string" && (unitSet.size === 0 || unitSet.has(uId))),
+      periodNumber: Math.min(identity.periods, Math.max(1, Number(c.periodNumber) || 1)),
+    }));
 
   const artifact: StagedLessonMapArtifact = {
     version: 2,
@@ -373,10 +431,51 @@ Trả về duy nhất JSON:
   ]);
   const parsed = extractAiJsonValue<StagedCompactPeriodBlueprint>(res.content);
   parsed.periodNumber = periodNumber;
-  if (Array.isArray(parsed.phases)) {
-    for (const ph of parsed.phases) {
-      if (!Array.isArray(ph.sourceUnitIds)) ph.sourceUnitIds = [];
-      if (!Array.isArray(ph.sourceClusterIds)) ph.sourceClusterIds = [];
+  const expectedPeriodObjIds = (periodMap.objectiveIds || []).filter((id) =>
+    outcomes.outcomes.objectiveMetadata.some((o) => o.id === id),
+  );
+  const expectedObjSet = new Set(expectedPeriodObjIds);
+  parsed.objectiveIds = [...expectedPeriodObjIds];
+
+  const rawPhases = Array.isArray(parsed.phases) ? parsed.phases : [];
+  const defaultMinutes: Record<StagedPhaseName, number> = {
+    warmup: 5,
+    explore: 13,
+    practice: 12,
+    apply: 5,
+  };
+  const phaseCovered = new Set<string>();
+  parsed.phases = STAGED_PHASES.map((phaseName, idx) => {
+    const existing = rawPhases.find((p) => p?.phase === phaseName) || rawPhases[idx];
+    const validPhaseObjs = (Array.isArray(existing?.objectiveIds) ? existing.objectiveIds : [])
+      .filter((id) => typeof id === "string" && expectedObjSet.has(id));
+    const finalPhaseObjs = validPhaseObjs.length > 0
+      ? validPhaseObjs
+      : expectedPeriodObjIds.length > 0
+        ? [expectedPeriodObjIds[idx % expectedPeriodObjIds.length]]
+        : [];
+    finalPhaseObjs.forEach((id) => phaseCovered.add(id));
+    return {
+      phase: phaseName,
+      activityId: stagedActivityId(periodNumber, phaseName),
+      title: existing?.title?.trim() || STAGED_PHASE_LABELS[phaseName],
+      objectiveIds: finalPhaseObjs,
+      sourceIds: Array.isArray(existing?.sourceIds) ? existing.sourceIds : [],
+      sourceUnitIds: Array.isArray(existing?.sourceUnitIds) ? existing.sourceUnitIds : [],
+      sourceClusterIds: Array.isArray(existing?.sourceClusterIds) ? existing.sourceClusterIds : [],
+      durationMinutes: (existing?.durationMinutes && existing.durationMinutes > 0)
+        ? existing.durationMinutes
+        : defaultMinutes[phaseName],
+      learningProducts: Array.isArray(existing?.learningProducts) && existing.learningProducts.length > 0
+        ? existing.learningProducts
+        : ["Sản phẩm học tập của học sinh"],
+      handoffToNext: existing?.handoffToNext || "",
+      pedagogyFocus: existing?.pedagogyFocus || "",
+    };
+  });
+  for (const objId of expectedPeriodObjIds) {
+    if (!phaseCovered.has(objId) && parsed.phases.length >= 3) {
+      parsed.phases[2].objectiveIds.push(objId);
     }
   }
   const artifact: StagedPeriodBlueprintArtifact = {
@@ -436,6 +535,27 @@ Trả về duy nhất JSON:
     label: sanitizeMaterialItem(item.label) || item.label,
   })).filter((item) => sanitizeMaterialItem(item.label) !== null);
 
+  const validObjSet = new Set(outcomes.outcomes.objectiveMetadata.map((o) => o.id));
+  const validSrcSet = new Set(sourceFacts.facts.sourceEvidence.map((s) => s.id));
+  const rawItems = (cleanItems.length ? cleanItems : parsed.items || []);
+  const normalizedItems = rawItems.map((item, idx) => ({
+    ...item,
+    id: `mat-${idx + 1}`,
+    owner: item.owner === "students" ? ("students" as const) : ("teacher" as const),
+    label: item.label?.trim() || `Học liệu ${idx + 1}`,
+    sourceIds: (Array.isArray(item.sourceIds) ? item.sourceIds : []).filter((id) => validSrcSet.has(id)),
+    objectiveIds: (Array.isArray(item.objectiveIds) ? item.objectiveIds : []).filter((id) => validObjSet.has(id)),
+  }));
+  if (normalizedItems.length === 0) {
+    normalizedItems.push({
+      id: "mat-1",
+      owner: "teacher",
+      label: "SGK và học liệu minh họa",
+      sourceIds: [],
+      objectiveIds: [],
+    });
+  }
+
   const artifact: StagedMaterialsArtifact = {
     version: 2,
     kind: "section-materials",
@@ -452,7 +572,7 @@ Trả về duy nhất JSON:
     provider: res.provider,
     fallbackUsed: res.fallbackUsed,
     materials: cleanMat,
-    items: cleanItems.length ? cleanItems : parsed.items || [],
+    items: normalizedItems,
   };
   artifact.anchor = stagedArtifactAnchor(artifact);
   return artifact;
@@ -493,6 +613,15 @@ Trả về duy nhất JSON:
     { role: "user", content: prompt },
   ]);
   const parsed = extractAiJsonValue<{ assessment: LessonPlan["assessment"]; alignment: any[] }>(res.content);
+  const validObjSet = new Set(outcomes.outcomes.objectiveMetadata.map((o) => o.id));
+  const validActSet = new Set(phases.map((p) => p.activity.id));
+  const normalizedAlignment = (Array.isArray(parsed.alignment) ? parsed.alignment : [])
+    .filter((a) => a && typeof a === "object" && validObjSet.has(a.objectiveId))
+    .map((a) => ({
+      ...a,
+      activityIds: (Array.isArray(a.activityIds) ? a.activityIds : []).filter((id: string) => validActSet.has(id)),
+    }));
+
   const artifact: StagedAssessmentArtifact = {
     version: 2,
     kind: "section-assessment",
@@ -508,7 +637,7 @@ Trả về duy nhất JSON:
     provider: res.provider,
     fallbackUsed: res.fallbackUsed,
     assessment: parsed.assessment,
-    alignment: parsed.alignment || [],
+    alignment: normalizedAlignment,
   };
   artifact.anchor = stagedArtifactAnchor(artifact);
   return artifact;

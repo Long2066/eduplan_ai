@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeStagedDataHash,
   makeStagedAnchor,
+  stagedArtifactAnchor,
   validateStagedSections,
   assertStagedSections,
   getStagedSourceFactsPayload,
@@ -12,6 +13,7 @@ import {
   getStagedPhasePayload,
   getStagedAssessmentPayload,
 } from "@/lib/generation/section-validation";
+import { relinkPhaseChain, syncAssessmentWithEffectivePhases } from "@/lib/generation/step-executor-v2";
 import { assembleStagedSections } from "@/lib/generation/section-assembly";
 import type {
   StagedAssessmentArtifact,
@@ -582,5 +584,42 @@ describe("staged-v2 validation and assembly", () => {
     };
     const res3 = validateStagedSections({ ...fixtures, lessonMap: unknownUnitMap });
     expect(res3.issues.some((i) => i.code === "SEC-MAP-CONTINUITY-CLUSTER-UNIT-REF")).toBe(true);
+  });
+
+  it("relinks downstream phase hashes and assessment dependencies after a mid-chain phase repair", () => {
+    const fixtures = createValidSectionFixtures();
+    const repairedExplore: StagedPhaseArtifact = {
+      ...fixtures.phases[1],
+      activity: {
+        ...fixtures.phases[1].activity,
+        title: "Khám phá tam giác (đã sửa)",
+      },
+      anchor: { revision: 2, hash: "" },
+    };
+    repairedExplore.anchor = stagedArtifactAnchor(repairedExplore, 2);
+
+    const rawPhases = [
+      fixtures.phases[0],
+      repairedExplore,
+      fixtures.phases[2],
+      fixtures.phases[3],
+    ];
+    // Before relinking, validation fails with SEC-DEP-PREV-PHASE-MISMATCH, SEC-PHASE-INPUT-PREV-HASH, SEC-DEP-ASSESS-PHASES
+    const brokenResult = validateStagedSections({ ...fixtures, phases: rawPhases });
+    expect(brokenResult.passed).toBe(false);
+    expect(brokenResult.issues.some((i) => i.code === "SEC-DEP-PREV-PHASE-MISMATCH")).toBe(true);
+    expect(brokenResult.issues.some((i) => i.code === "SEC-PHASE-INPUT-PREV-HASH")).toBe(true);
+    expect(brokenResult.issues.some((i) => i.code === "SEC-DEP-ASSESS-PHASES")).toBe(true);
+
+    // After relinkPhaseChain + syncAssessmentWithEffectivePhases, validation passes cleanly
+    const relinkedPhases = relinkPhaseChain(rawPhases);
+    const syncedAssessment = syncAssessmentWithEffectivePhases(fixtures.assessment, relinkedPhases);
+    const fixedResult = validateStagedSections({
+      ...fixtures,
+      phases: relinkedPhases,
+      assessment: syncedAssessment,
+    });
+    expect(fixedResult.issues).toEqual([]);
+    expect(fixedResult.passed).toBe(true);
   });
 });

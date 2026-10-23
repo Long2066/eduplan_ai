@@ -64,6 +64,7 @@ import {
 } from "@/lib/generation/phase-generation";
 import {
   StagedSectionValidationError,
+  stagedArtifactAnchor,
   validateStagedSectionPrefix,
 } from "@/lib/generation/section-validation";
 import { validateStagedLesson } from "@/lib/generation/subject-validation";
@@ -263,12 +264,45 @@ async function loadAllPeriodBlueprints(jobId: string, totalPeriods: number): Pro
   return list;
 }
 
-export async function loadEffectivePhases(jobId: string, totalPhases: number): Promise<StagedPhaseArtifact[]> {
+export function relinkPhaseChain(inputPhases: StagedPhaseArtifact[]): StagedPhaseArtifact[] {
   const phases: StagedPhaseArtifact[] = [];
+  for (let i = 0; i < inputPhases.length; i += 1) {
+    let phaseArt = inputPhases[i];
+    if (i > 0) {
+      const prevArt = phases[i - 1];
+      const needsRelink =
+        phaseArt.dependencies?.previousPhase?.hash !== prevArt.anchor.hash ||
+        phaseArt.input?.previousActivityId !== prevArt.activity.id ||
+        phaseArt.input?.previousHandoffHash !== prevArt.anchor.hash;
+      if (needsRelink) {
+        const relinked: StagedPhaseArtifact = {
+          ...phaseArt,
+          dependencies: {
+            ...phaseArt.dependencies,
+            previousPhase: prevArt.anchor,
+          },
+          input: {
+            ...phaseArt.input,
+            previousActivityId: prevArt.activity.id,
+            previousHandoffHash: prevArt.anchor.hash,
+          },
+        };
+        relinked.anchor = stagedArtifactAnchor(relinked, phaseArt.anchor?.revision ?? 1);
+        phaseArt = relinked;
+      }
+    }
+    phases.push(phaseArt);
+  }
+  return phases;
+}
+
+export async function loadEffectivePhases(jobId: string, totalPhases: number): Promise<StagedPhaseArtifact[]> {
+  const rawPhases: StagedPhaseArtifact[] = [];
   for (let seq = 1; seq <= totalPhases; seq += 1) {
     const orig = await readGenerationJobArtifact<StagedPhaseArtifact>(jobId, { kind: "period-phase", sequence: seq });
     if (!orig) throw new Error(`Không tìm thấy artifact của pha thứ ${seq}/${totalPhases}.`);
     const repair = await readGenerationJobArtifact<{ artifact: StagedPhaseArtifact; baseAnchor?: { hash: string; revision?: number } }>(jobId, { kind: "phase-repair", sequence: seq });
+    let phaseArt: StagedPhaseArtifact = orig.payload;
     if (
       repair?.payload?.artifact &&
       (
@@ -277,12 +311,35 @@ export async function loadEffectivePhases(jobId: string, totalPhases: number): P
         (repair.payload.artifact.anchor?.revision || 0) > (orig.payload.anchor?.revision || 1)
       )
     ) {
-      phases.push(repair.payload.artifact);
-      continue;
+      phaseArt = repair.payload.artifact;
     }
-    phases.push(orig.payload);
+    rawPhases.push(phaseArt);
   }
-  return phases;
+  return relinkPhaseChain(rawPhases);
+}
+
+export function syncAssessmentWithEffectivePhases(
+  assessment: StagedAssessmentArtifact,
+  phases: StagedPhaseArtifact[],
+): StagedAssessmentArtifact {
+  const expectedHashes = phases.map((p) => p.anchor.hash);
+  const actualHashes = Array.isArray(assessment.dependencies?.phases)
+    ? assessment.dependencies.phases.map((p) => p?.hash)
+    : [];
+  const matches =
+    actualHashes.length === expectedHashes.length &&
+    actualHashes.every((h, idx) => h === expectedHashes[idx]);
+  if (matches) return assessment;
+
+  const synced: StagedAssessmentArtifact = {
+    ...assessment,
+    dependencies: {
+      ...assessment.dependencies,
+      phases: phases.map((p) => p.anchor),
+    },
+  };
+  synced.anchor = stagedArtifactAnchor(synced, assessment.anchor?.revision ?? 1);
+  return synced;
 }
 
 export async function advanceStagedGenerationJobV2(
@@ -1143,8 +1200,9 @@ async function executeAssemblyStepV2(ctx: ExecutionContext): Promise<void> {
   const periodBlueprints = await loadAllPeriodBlueprints(job.id, totalPeriods);
   const totalPhases = totalPeriods * 4;
   const phases = await loadEffectivePhases(job.id, totalPhases);
-  const assessment = await readGenerationJobArtifact<StagedAssessmentArtifact>(job.id, { kind: "section-assessment" });
-  if (!assessment) throw new Error("Không tìm thấy artifact đánh giá.");
+  const assessmentArt = await readGenerationJobArtifact<StagedAssessmentArtifact>(job.id, { kind: "section-assessment" });
+  if (!assessmentArt) throw new Error("Không tìm thấy artifact đánh giá.");
+  const syncedAssessment = syncAssessmentWithEffectivePhases(assessmentArt.payload, phases);
 
   const stagedSections: StagedSectionArtifacts = {
     sourceFacts,
@@ -1153,7 +1211,7 @@ async function executeAssemblyStepV2(ctx: ExecutionContext): Promise<void> {
     periodBlueprints,
     materials,
     phases,
-    assessment: assessment.payload,
+    assessment: syncedAssessment,
   };
 
   const hasRepairs = phases.some((p) => p.anchor.revision > 1);
@@ -1165,6 +1223,7 @@ async function executeAssemblyStepV2(ctx: ExecutionContext): Promise<void> {
   });
 
   const artifactsToCommit: Array<{ key: GenerationArtifactKey; payload: unknown }> = [
+    { key: { kind: "section-assessment" }, payload: syncedAssessment },
     { key: { kind: "assembly" }, payload: assemblyResult.assembly },
     { key: { kind: "blueprint" }, payload: assemblyResult.blueprint },
   ];
@@ -1199,8 +1258,9 @@ async function executeSubjectValidationStepV2(ctx: ExecutionContext): Promise<vo
   const periodBlueprints = await loadAllPeriodBlueprints(job.id, totalPeriods);
   const totalPhases = totalPeriods * 4;
   const phases = await loadEffectivePhases(job.id, totalPhases);
-  const assessment = await readGenerationJobArtifact<StagedAssessmentArtifact>(job.id, { kind: "section-assessment" });
-  if (!assessment) throw new Error("Không tìm thấy artifact đánh giá.");
+  const assessmentArt = await readGenerationJobArtifact<StagedAssessmentArtifact>(job.id, { kind: "section-assessment" });
+  if (!assessmentArt) throw new Error("Không tìm thấy artifact đánh giá.");
+  const syncedAssessment = syncAssessmentWithEffectivePhases(assessmentArt.payload, phases);
 
   const validation = validateStagedSectionPrefix({
     input,
@@ -1210,7 +1270,7 @@ async function executeSubjectValidationStepV2(ctx: ExecutionContext): Promise<vo
     periodBlueprints,
     materials,
     phases,
-    assessment: assessment.payload,
+    assessment: syncedAssessment,
   });
 
   const assembly = await readGenerationJobArtifact<StagedAssemblyArtifact>(job.id, { kind: "assembly" });
@@ -1399,7 +1459,10 @@ async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
   const periodBlueprints = await loadAllPeriodBlueprints(job.id, totalPeriods);
   const totalPhases = totalPeriods * 4;
   const phases = await loadEffectivePhases(job.id, totalPhases);
-  const assessment = await readGenerationJobArtifact<StagedAssessmentArtifact>(job.id, { kind: "section-assessment" });
+  const assessmentArt = await readGenerationJobArtifact<StagedAssessmentArtifact>(job.id, { kind: "section-assessment" });
+  const syncedAssessment = assessmentArt?.payload
+    ? syncAssessmentWithEffectivePhases(assessmentArt.payload, phases)
+    : undefined;
 
   const validation = validateStagedSectionPrefix({
     input,
@@ -1409,7 +1472,7 @@ async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
     periodBlueprints,
     materials,
     phases,
-    assessment: assessment?.payload,
+    assessment: syncedAssessment,
   });
 
   const assembly = await readGenerationJobArtifact<StagedAssemblyArtifact>(job.id, { kind: "assembly" });
@@ -1470,8 +1533,9 @@ async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
     strategy,
   });
 
-  const testPhases = [...phases];
-  testPhases[targetSeq - 1] = repairResult.artifact;
+  const rawTestPhases = [...phases];
+  rawTestPhases[targetSeq - 1] = repairResult.artifact;
+  const testPhases = relinkPhaseChain(rawTestPhases);
   const testValidation = validateStagedSectionPrefix({
     input,
     sourceFacts,

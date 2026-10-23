@@ -422,14 +422,18 @@ Yêu cầu:
       durationMinutes: (parsed.activity?.durationMinutes && parsed.activity.durationMinutes > 0)
         ? parsed.activity.durationMinutes
         : currentPhase.activity.durationMinutes,
-      objectiveIds: parsed.activity?.objectiveIds?.length
-        ? parsed.activity.objectiveIds
-        : currentPhase.activity.objectiveIds,
+      objectiveIds: Array.from(new Set([
+        ...(currentPhase.activity.objectiveIds || []),
+        ...(Array.isArray(parsed.activity?.objectiveIds) ? parsed.activity.objectiveIds : []),
+      ])).filter((id) => outcomes.outcomes.objectiveMetadata.some((o) => o.id === id)),
       learningProducts: parsed.activity?.learningProducts || currentPhase.activity.learningProducts,
       successCriteria: (parsed.activity as any)?.successCriteria || currentPhase.activity.successCriteria,
       sourceUnitIds: (parsed.activity as any)?.sourceUnitIds || currentPhase.activity.sourceUnitIds,
       sourceClusterIds: (parsed.activity as any)?.sourceClusterIds || currentPhase.activity.sourceClusterIds,
     };
+    if (!repairedActivity.objectiveIds.length) {
+      repairedActivity.objectiveIds = currentPhase.activity.objectiveIds;
+    }
 
     if (
       parseInt(String(input.grade || "").replace(/\D/g, ""), 10) === 1 &&
@@ -463,17 +467,39 @@ Yêu cầu:
       }
     }
 
+    const validMatIdSet = new Set(materials.items.map((m) => m.id));
+    const validSrcIdSet = new Set(sourceFacts.facts.sourceEvidence.map((s) => s.id));
+    const safeMaterialIds = (Array.isArray(parsed.materialIds) ? parsed.materialIds : currentPhase.materialIds)
+      .filter((id) => validMatIdSet.has(id));
+    const safeSourceIds = (Array.isArray(parsed.sourceIds) ? parsed.sourceIds : currentPhase.sourceIds)
+      .filter((id) => validSrcIdSet.has(id));
+
     const payload = {
       activity: repairedActivity,
-      materialIds: parsed.materialIds || currentPhase.materialIds,
-      sourceIds: parsed.sourceIds || currentPhase.sourceIds,
-      handoff: parsed.handoff || currentPhase.handoff,
+      materialIds: safeMaterialIds.length ? safeMaterialIds : currentPhase.materialIds.filter((id) => validMatIdSet.has(id)),
+      sourceIds: safeSourceIds.length ? safeSourceIds : currentPhase.sourceIds.filter((id) => validSrcIdSet.has(id)),
+      handoff: {
+        ...(currentPhase.handoff || {}),
+        ...(parsed.handoff || {}),
+        bridge: parsed.handoff?.bridge?.trim() || currentPhase.handoff?.bridge || `Chuyển tiếp sau pha ${currentPhase.phase}.`,
+      },
     };
 
     const nextRevision = currentPhase.anchor.revision + 1;
     const artifact: StagedPhaseArtifact = {
       ...currentPhase,
       anchor: { revision: nextRevision, hash: "" },
+      dependencies: {
+        ...currentPhase.dependencies,
+        ...(options.previousPhase ? { previousPhase: options.previousPhase.anchor } : {}),
+      },
+      input: options.previousPhase
+        ? {
+            ...currentPhase.input,
+            previousActivityId: options.previousPhase.activity.id,
+            previousHandoffHash: options.previousPhase.anchor.hash,
+          }
+        : currentPhase.input,
       model: res.model,
       provider: res.provider,
       fallbackUsed: res.fallbackUsed,
