@@ -75,6 +75,20 @@ describe("extractOcrLessonTitleEvidence", () => {
     const candidates = extractOcrLessonTitleEvidence("Chủ đề 5\nPHÉP CỘNG VÀ PHÉP TRỪ\nBài 22\nPHÉP CỘNG CÁC SỐ\nCÓ NHIỀU CHỮ SỐ\nKhám phá");
     expect(candidates[0]?.title).toBe("Bài 22. PHÉP CỘNG CÁC SỐ CÓ NHIỀU CHỮ SỐ");
   });
+
+  it("extracts lesson headings starting with 'TÍNH CHẤT', 'GIẢI', 'KỂ', 'CHIA' without mistaking them for exercise prompts", () => {
+    const mathCandidates = extractOcrLessonTitleEvidence(
+      "Bài 24\n\nTÍNH CHẤT GIAO HOÁN\nVÀ KẾT HỢP CỦA PHÉP CỘNG\n\nKhám phá\na)\nb) Tính giá trị của hai biểu thức a + b và b + a",
+    );
+    expect(mathCandidates[0]?.title).toBe("Bài 24. TÍNH CHẤT GIAO HOÁN VÀ KẾT HỢP CỦA PHÉP CỘNG");
+
+    const lsdlCandidates = extractOcrLessonTitleEvidence(
+      "Chủ đề 1\nĐẤT NƯỚC\nVÀ CON NGƯỜI VIỆT NAM\nBÀI 1\nVỊ TRÍ ĐỊA LÍ, LÃNH THỔ, ĐƠN VỊ HÀNH CHÍNH,\nQUỐC KÌ, QUỐC HUY, QUỐC CA\nSau bài học này, em sẽ:",
+    );
+    expect(lsdlCandidates[0]?.title).toBe(
+      "Bài 1. VỊ TRÍ ĐỊA LÍ, LÃNH THỔ, ĐƠN VỊ HÀNH CHÍNH, QUỐC KÌ, QUỐC HUY, QUỐC CA",
+    );
+  });
 });
 
 describe("resolveLessonTitle", () => {

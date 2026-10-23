@@ -42,9 +42,10 @@ const GENERIC_SUBJECT_NAMES = new Set([
   "mi thuat", "mon hoc", "my thuat", "ngoai ngu", "the duc", "tieng anh", "tieng viet",
   "tin hoc", "toan", "toan hoc", "tu nhien va xa hoi",
 ]);
-const TASK_LEAD_PATTERN = /^(?:bài\s*tập|câu\s*\d+|hãy|nêu|kể|tính|giải|quan\s*sát|thảo\s*luận|chia\s*sẻ|chọn|nối|điền|đánh\s*dấu|trả\s*lời|luyện\s*tập|vận\s*dụng|khởi\s*động|khám\s*phá|(?:đọc|viết)\s+(?:đoạn|câu|bài|vào|lại|các?|một|những|tên|số|phần)\b)\b/iu;
-const SECTION_PATTERN = /^(?:yêu\s*cầu\s*cần\s*đạt|mục\s*tiêu|nội\s*dung|hoạt\s*động|câu\s*hỏi|bài\s*tập|trang\s*\d+)\b/iu;
+const TASK_LEAD_PATTERN = /^(?:bài\s*tập|câu\s*\d+|hãy\s|nêu\s|kể\s|tính(?:\s+(?:giá\s*trị|nhẩm|bằng|tổng|hiệu|tích|thương|độ\s*dài|chu\s*vi|diện\s*tích|thể\s*tích|rồi|theo|số|kết\s*quả)|[:?])|giải\s+(?:bài\s*toán|toán|thích)|quan\s*sát|thảo\s*luận|chia\s*sẻ|chọn\s|nối\s|điền\s|đánh\s*dấu|trả\s*lời|luyện\s*tập|vận\s*dụng|khởi\s*động|khám\s*phá|(?:đọc|viết)\s+(?:đoạn|câu|bài|vào|lại|các?|một|những|tên|số|phần)\b)/iu;
+const SECTION_PATTERN = /^(?:yêu\s*cầu\s*cần\s*đạt|mục\s*tiêu|nội\s*dung|hoạt\s*động|câu\s*hỏi|bài\s*tập|trang\s*\d+|tuần\s*\d+|tập\s*(?:một|hai|\d+)|học\s*xong\s*bài\s*này|sau\s*bài\s*học\s*này)\b/iu;
 const OCR_PAGE_MARKER_PATTERN = /^---\s*hết ảnh\s*---$/iu;
+const HEADING_STOP_PATTERN = /^(?:chủ\s*đề|bài|ôn\s*tập|khởi\s*động|khám\s*phá|hoạt\s*động|luyện\s*tập|vận\s*dụng|thực\s*hành|mục\s*tiêu|yêu\s*cầu|học\s*xong\s*bài\s*này|sau\s*bài\s*học\s*này|đọc\b|viết\b|nói\s*và\s*nghe|luyện\s*từ\s*và\s*câu|\d+[.)\s]|[a-d][.)])\b/iu;
 
 function cleanText(value: unknown) {
   return String(value ?? "").normalize("NFC").replace(/[\u00a0\u2007\u202f]/g, " ").replace(/[\t ]+/g, " ").trim();
@@ -55,13 +56,17 @@ export function foldLessonTitle(value: unknown) {
     .toLocaleLowerCase("vi").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function cleanHeadingText(value: string) {
+  return cleanText(value).replace(/^[.:;\-–—)\s]+/, "").replace(/[,;:]+$/, "").trim();
+}
+
 export function canonicalizeLessonTitle(value: unknown) {
   const cleaned = cleanText(value).replace(/\s*\r?\n\s*/g, " ")
     .replace(/^(?:tên\s*bài|tên\s*bài\s*học|lesson\s*title)\s*[:：-]\s*/iu, "").trim();
   if (!cleaned) return "";
   const numbered = cleaned.match(/^bài\s*(?:số\s*)?(\d+[a-z]?)(?:\s*[.:;\-–—)]\s*|\s+)(.+)$/iu);
-  if (!numbered) return cleaned;
-  const name = cleanText(numbered[2]).replace(/^[.:;\-–—)\s]+/, "").trim();
+  if (!numbered) return cleanHeadingText(cleaned);
+  const name = cleanHeadingText(numbered[2]);
   return name ? `Bài ${numbered[1].toLocaleUpperCase("vi")}. ${name}` : `Bài ${numbered[1].toLocaleUpperCase("vi")}`;
 }
 
@@ -110,19 +115,28 @@ export function extractOcrLessonTitleEvidence(ocrText: string): LessonTitleEvide
   const collectContinuation = (startIdx: number, firstLine: string) => {
     const collected = [firstLine];
     let endIdx = startIdx;
-    const next = lines[startIdx + 1];
-    if (
-      next
-      && !next.marker
-      && viableHeadingName(next.raw)
-      && !/^(?:chủ\s*đề|bài|ôn\s*tập|khởi\s*động|khám\s*phá|hoạt\s*động|luyện\s*tập|vận\s*dụng|mục\s*tiêu|yêu\s*cầu)\b/iu.test(next.raw)
-      && (
-        (isAllCapsHeading(firstLine) && isAllCapsHeading(next.raw))
-        || (/^[a-zà-ỹđ]/u.test(next.raw.trim()) && !/[.!?]$/.test(firstLine.trim()) && next.raw.trim().split(/\s+/).length <= 8)
-      )
-    ) {
+    for (let step = 1; step <= 2; step += 1) {
+      const prevLine = collected[collected.length - 1];
+      const next = lines[startIdx + step];
+      if (
+        !next
+        || next.marker
+        || !viableHeadingName(next.raw)
+        || HEADING_STOP_PATTERN.test(next.raw)
+      ) {
+        break;
+      }
+      const isCapsContinuation = isAllCapsHeading(firstLine) && isAllCapsHeading(next.raw);
+      const isLowerContinuation = /^[a-zà-ỹđ]/u.test(next.raw.trim())
+        && !/[.!?]$/.test(prevLine.trim())
+        && next.raw.trim().split(/\s+/).length <= 10;
+      const isCommaDashContinuation = /[,–—-]$/.test(prevLine.trim())
+        && next.raw.trim().split(/\s+/).length <= 10;
+      if (!isCapsContinuation && !isLowerContinuation && !isCommaDashContinuation) {
+        break;
+      }
       collected.push(next.raw);
-      endIdx = startIdx + 1;
+      endIdx = startIdx + step;
     }
     return { text: collected.join(" "), lines: collected, endIdx };
   };
@@ -163,8 +177,30 @@ export function extractOcrLessonTitleEvidence(ocrText: string): LessonTitleEvide
       const ev = cont.lines.length > 1 ? [current.raw, ...cont.lines.slice(1)] : [current.raw];
       candidates.push({ raw: ev.join("\n"), title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(current.raw), false), evidence: ev, lineStart: current.rawIndex + 1, lineEnd: lines[cont.endIdx].rawIndex + 1 });
       index = cont.endIdx;
-    } else if (index <= 12 && /^(?:chủ\s*đề|ôn\s*tập)\b/iu.test(current.raw) && viableHeadingName(current.raw)) {
-      candidates.push({ raw: current.raw, title: canonicalizeLessonTitle(current.raw), source: "ocr-heading", confidence: Math.min(0.95, 0.82 + (isAllCapsHeading(current.raw) ? 0.08 : 0)), evidence: [current.raw], lineStart: current.rawIndex + 1, lineEnd: current.rawIndex + 1 });
+    } else if (index <= 12 && /^(?:chủ\s*đề|ôn\s*tập)\b/iu.test(current.raw)) {
+      const isTopicBanner = /^chủ\s*đề\b/iu.test(current.raw);
+      const prefixOnly = current.raw.match(/^(?:chủ\s*đề|ôn\s*tập)(?:\s*(?:số\s*)?\d+[a-z]?)?\s*[.:;\-–—)]?$/iu);
+      if (prefixOnly) {
+        const next = lines[index + 1];
+        if (next && !next.marker && viableHeadingName(next.raw) && !HEADING_STOP_PATTERN.test(next.raw)) {
+          const cont = collectContinuation(index + 1, next.raw);
+          const prefix = cleanHeadingText(current.raw);
+          const title = canonicalizeLessonTitle(`${prefix}. ${cont.text}`);
+          const ev = [current.raw, ...cont.lines];
+          const conf = isTopicBanner
+            ? Math.min(0.86, 0.8 + (isAllCapsHeading(next.raw) ? 0.04 : 0))
+            : candidateConfidence(index, isAllCapsHeading(next.raw), true);
+          candidates.push({ raw: ev.join("\n"), title, source: "ocr-heading", confidence: conf, evidence: ev, lineStart: current.rawIndex + 1, lineEnd: lines[cont.endIdx].rawIndex + 1 });
+          index = cont.endIdx;
+        }
+      } else if (viableHeadingName(current.raw)) {
+        const cont = collectContinuation(index, current.raw);
+        const conf = isTopicBanner
+          ? Math.min(0.86, 0.8 + (isAllCapsHeading(current.raw) ? 0.04 : 0))
+          : Math.min(0.95, 0.82 + (isAllCapsHeading(current.raw) ? 0.08 : 0));
+        candidates.push({ raw: cont.lines.join("\n"), title: canonicalizeLessonTitle(cont.text), source: "ocr-heading", confidence: conf, evidence: cont.lines, lineStart: current.rawIndex + 1, lineEnd: lines[cont.endIdx].rawIndex + 1 });
+        index = cont.endIdx;
+      }
     }
   }
   const deduped = new Map<string, LessonTitleEvidence>();

@@ -70,7 +70,7 @@ export async function generateStagedSourceFacts(
   const { input, ocrText, sourceContext, strategy } = options;
   const subjectKind = generationSubjectKind(input);
   const sourceTruth = sourceContext.sourceTruth;
-  const titleResolution = resolveLessonTitle({
+  const initialResolution = resolveLessonTitle({
     subject: input.subject,
     ocrText,
     candidates: [
@@ -78,14 +78,16 @@ export async function generateStagedSourceFacts(
       { value: input.lessonTitle, source: "user-input", confidence: 0.95 },
     ],
   });
-  const lockedTitle = requireResolvedLessonTitle(titleResolution);
-  const identity = cleanIdentity(input, lockedTitle, sourceContext.ocrSourceHashes);
+  const promptTitleHint = initialResolution.status === "resolved"
+    ? `cho bài học "${initialResolution.title}"`
+    : `(xác định chính xác tên bài học từ dữ liệu nguồn SGK/OCR bên dưới và điền vào "lessonTitle")`;
   const promptContext = sourceTruthPromptContext(sourceTruth, ocrText);
 
   const prompt = `Bạn là chuyên gia sư phạm tiểu học.
-Nhiệm vụ: Trích xuất và khóa dữ kiện nguồn SGK/OCR cho bài học "${lockedTitle}".
+Nhiệm vụ: Trích xuất và khóa dữ kiện nguồn SGK/OCR ${promptTitleHint}.
 Lưu ý:
 - KHÔNG soạn giáo án hay hoạt động chi tiết ở bước này.
+- Nếu tên bài chưa được khóa sẵn, hãy trích xuất đúng tiêu đề bài học từ trang SGK/OCR (ví dụ: "Bài 24. Tính chất giao hoán và kết hợp của phép cộng") vào trường "lessonTitle"; tuyệt đối không đặt tên chung chung như "Bài học Toán".
 - Trích xuất danh sách nguồn: các bài tập, nhiệm vụ đọc/viết/tính/quan sát (sourceEvidence) và gán ID dạng "src-1", "src-2",...
 - Ghi nhận đầy đủ số trang nếu có trong OCR.
 - Nếu không có OCR, dựa trên form người dùng và kiến thức chuẩn CTGDPT 2018 để suy luận dữ kiện cốt lõi, đánh dấu kind="inference".
@@ -96,7 +98,7 @@ ${promptContext}
 
 Trả về duy nhất JSON:
 {
-  "lessonTitle": "${lockedTitle}",
+  "lessonTitle": ${initialResolution.status === "resolved" ? JSON.stringify(initialResolution.title) : "string"},
   "coreContent": string[],
   "objectivesFromSource": string[],
   "sourceEvidence": [
@@ -112,6 +114,19 @@ Trả về duy nhất JSON:
     { role: "user", content: prompt },
   ]);
   const parsed = extractAiJsonValue<StagedSourceFacts>(res.content);
+  const finalResolution = resolveLessonTitle({
+    subject: input.subject,
+    ocrText,
+    candidates: [
+      { value: sourceTruth?.lessonTitle, source: "source-truth", confidence: sourceTruth?.lessonIdentity?.confidence || 0.95 },
+      { value: input.lessonTitle, source: "user-input", confidence: 0.95 },
+      ...(ocrText.trim().length > 0 && parsed?.lessonTitle
+        ? [{ value: parsed.lessonTitle, source: "source-facts" as const, confidence: 0.9 }]
+        : []),
+    ],
+  });
+  const lockedTitle = requireResolvedLessonTitle(finalResolution);
+  const identity = cleanIdentity(input, lockedTitle, sourceContext.ocrSourceHashes);
   parsed.lessonTitle = lockedTitle;
   if (!parsed.sourceEvidence?.length) {
     parsed.sourceEvidence = [{
