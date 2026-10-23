@@ -30,9 +30,11 @@ import {
 } from "@/lib/generation/section-types";
 import { resolveLessonTitle, requireResolvedLessonTitle } from "@/lib/lesson-title";
 import { sanitizeMaterials, sanitizeMaterialItem } from "@/lib/lesson-format";
+import { ensureDigitalCompetencyOutcomes } from "@/lib/digital-competency";
 import {
   buildSubjectSystemRole,
   bookContext,
+  digitalCompetencyInstruction,
   learningContextGuidance,
   mathGradeBandGuidance,
   pedagogyProfileGuidance,
@@ -152,14 +154,16 @@ export async function generateStagedOutcomes(
 ): Promise<StagedOutcomesArtifact> {
   const { input, sourceFacts, strategy } = options;
   const identity = sourceFacts.identity;
+  const digitalBlock = digitalCompetencyInstruction(input);
   const prompt = `Soạn MỤC I. YÊU CẦU CẦN ĐẠT cho bài học: "${identity.lessonTitle}".
 Môn: ${input.subject}, Khối lớp: ${input.grade}, Số tiết: ${identity.periods}, Bộ sách: ${bookContext(input)}.
 Bám sát Chương trình GDPT 2018 và dữ kiện nguồn đã khóa:
 ${JSON.stringify(sourceFacts.facts.sourceEvidence)}
+${digitalBlock}
 
 Yêu cầu:
-1. Đầy đủ: Năng lực đặc thù, Năng lực chung, Phẩm chất, Kiến thức và kĩ năng.
-2. BẮT BUỘC: Mỗi YCCĐ cụ thể phải có một mục trong objectiveMetadata với id duy nhất cố định: "obj-1", "obj-2",...
+1. Đầy đủ: Năng lực đặc thù, Năng lực chung, Phẩm chất, Kiến thức và kĩ năng${input.enableDigitalCompetency ? ", Năng lực số (digitalCompetencies)" : ""}.
+2. BẮT BUỘC: Mỗi YCCĐ cụ thể phải có một mục trong objectiveMetadata với id duy nhất cố định: "obj-1", "obj-2",...${input.enableDigitalCompetency ? ' (bao gồm cả mục tiêu thuộc category "digitalCompetencies")' : ""}
 3. Các ID này sẽ được khóa chặt và làm gốc neo cho toàn bộ các pha dạy học sau.
 
 Trả về duy nhất JSON:
@@ -172,7 +176,7 @@ Trả về duy nhất JSON:
   "objectiveMetadata": [
     {
       "id": "obj-1",
-      "category": "specificCompetencies"|"generalCompetencies"|"qualities"|"knowledgeAndSkills",
+      "category": "specificCompetencies"|"generalCompetencies"|"qualities"|"knowledgeAndSkills"|"digitalCompetencies",
       "statement": string,
       "evidence": { "activityIds": [], "learningProducts": [], "successCriteria": [] }
     }
@@ -183,7 +187,13 @@ Trả về duy nhất JSON:
     { role: "system", content: "Bạn chỉ trả về JSON Yêu cầu cần đạt chuẩn CV 2345 và CTGDPT 2018." },
     { role: "user", content: prompt },
   ]);
-  const parsed = extractAiJsonValue<LessonOutcomes & { objectiveMetadata: NonNullable<LessonOutcomes["objectiveMetadata"]> }>(res.content);
+  const rawParsed = extractAiJsonValue<LessonOutcomes & { objectiveMetadata: NonNullable<LessonOutcomes["objectiveMetadata"]> }>(res.content);
+  const parsed = ensureDigitalCompetencyOutcomes(
+    input,
+    rawParsed,
+    identity.lessonTitle,
+  ) as LessonOutcomes & { objectiveMetadata: NonNullable<LessonOutcomes["objectiveMetadata"]> };
+
   if (!parsed.objectiveMetadata?.length) {
     const defaultObjs = (parsed.specificCompetencies || []).concat(parsed.knowledgeAndSkills || []);
     parsed.objectiveMetadata = defaultObjs.map((stmt, idx) => ({
@@ -200,6 +210,22 @@ Trả về duy nhất JSON:
       statement: `Học sinh nắm vững kiến thức bài ${identity.lessonTitle}`,
       evidence: { activityIds: [], learningProducts: [], successCriteria: [] },
     }];
+  }
+
+  if (input.enableDigitalCompetency && parsed.digitalCompetencies?.length) {
+    const hasDigitalMeta = parsed.objectiveMetadata.some((obj) => obj.category === "digitalCompetencies");
+    if (!hasDigitalMeta) {
+      for (const digitalStmt of parsed.digitalCompetencies) {
+        parsed.objectiveMetadata.push({
+          id: `obj-${parsed.objectiveMetadata.length + 1}`,
+          category: "digitalCompetencies",
+          statement: digitalStmt,
+          evidence: { activityIds: [], learningProducts: [], successCriteria: [] },
+        });
+      }
+    }
+  } else if (!input.enableDigitalCompetency) {
+    parsed.objectiveMetadata = parsed.objectiveMetadata.filter((obj) => obj.category !== "digitalCompetencies");
   }
 
   // Ensure every item has a normalized evidence structure

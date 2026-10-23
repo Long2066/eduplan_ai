@@ -557,4 +557,21 @@ describe("staged-v2 generation & repair functions", () => {
     expect(phasePrompt).toContain("studentActions");
     expect(phase.activity.teacherActions).toHaveLength(7);
   });
+
+  it("injects digital competency into generateStagedOutcomes and objectiveMetadata when enableDigitalCompetency is true", async () => {
+    const digitalInput = { ...input, enableDigitalCompetency: true };
+    const sourceFacts = await generateSourceFacts();
+    mockReply(outcomesPayload);
+    const outcomes = await generateStagedOutcomes({
+      input: digitalInput,
+      sourceFacts,
+      strategy: mockStrategy,
+    });
+
+    const outcomePrompt = promptContaining("Soạn MỤC I. YÊU CẦU CẦN ĐẠT");
+    expect(outcomePrompt).toContain("TÍCH HỢP NĂNG LỰC SỐ");
+    expect(outcomes.outcomes.digitalCompetencies?.length).toBeGreaterThan(0);
+    expect(outcomes.outcomes.digitalCompetencies?.[0]).toContain("Năng lực số");
+    expect(outcomes.outcomes.objectiveMetadata.some((o) => o.category === "digitalCompetencies")).toBe(true);
+  });
 });

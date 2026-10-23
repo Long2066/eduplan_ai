@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { activityDocumentBlock } from "@/lib/lesson-document-model";
 import type { LessonActivity } from "@/types/lesson";
 
@@ -81,5 +81,19 @@ describe("activityDocumentBlock", () => {
     expect(renderedText).not.toContain("Phản hồi của GV");
     expect(block.actionPairs).toHaveLength(1);
     expect(block.actionPairs[0].teacher).toBe("GV cho HS quan sát tranh nghề nghiệp và chọn thẻ phù hợp.");
+  });
+
+  it("hiển thị cả sản phẩm chính và sản phẩm số ở mục Sản phẩm/đánh giá khi bật Năng lực số", () => {
+    const activity = {
+      ...verboseActivity(),
+      learningProducts: [
+        "Bài làm vở của học sinh",
+        "Kết quả thao tác hoặc kiểm tra nhiệm vụ trên công cụ số của học sinh",
+      ],
+    };
+    const block = activityDocumentBlock(activity, 0, { concise: true });
+
+    expect(block.products).toContain("Bài làm vở của học sinh");
+    expect(block.products).toContain("công cụ số");
   });
 });

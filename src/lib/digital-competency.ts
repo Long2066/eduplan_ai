@@ -5,13 +5,28 @@ export const DIGITAL_COMPETENCY_CIRCULAR = "Thông tư 02/2025/TT-BGDĐT";
 const validDigitalCompetencyCode = /^[1-6]\.[1-6]$/;
 
 function competencyCode(statement: string) {
-  return statement.match(/(?:năng lực số\s*)?\(?([1-6]\.[1-6])\)?/i)?.[1] || "";
+  return (
+    statement.match(/(?:năng lực số\s*)?\(?([1-6]\.[1-6])(?:\.CB[12][a-d])?\)?/i)?.[1]
+    || statement.match(/\b([1-6]\.[1-6])(?:\.CB[12][a-d])?\b/i)?.[1]
+    || ""
+  );
+}
+
+function normalizeCompetencyStatement(raw: string) {
+  const cleaned = String(raw || "").replace(/\s+/g, " ").trim();
+  const code = competencyCode(cleaned);
+  if (!cleaned || !validDigitalCompetencyCode.test(code)) return "";
+  if (/^năng lực số\s*\(/i.test(cleaned)) return cleaned;
+  const body = cleaned
+    .replace(/^(?:năng lực số\s*)?\(?[1-6]\.[1-6](?:\.CB[12][a-d])?\)?\s*[:.\-–—]?\s*/i, "")
+    .trim();
+  return body ? `Năng lực số (${code}): ${body}` : "";
 }
 
 function uniqueValidCompetencies(values: string[] | undefined) {
   const seen = new Set<string>();
   return (values || [])
-    .map((item) => String(item || "").replace(/\s+/g, " ").trim())
+    .map(normalizeCompetencyStatement)
     .filter((item) => {
       const code = competencyCode(item);
       const key = item.toLocaleLowerCase("vi");
@@ -44,23 +59,23 @@ function digitalActivitySupport(subject: string, lessonTitle: string, competency
   const title = lessonTitle.trim() || "bài học";
   if (code === "5.3" || /toán|toan/.test(normalizedSubject)) {
     return {
-      teacher: `GV hướng dẫn HS trực tiếp sử dụng công cụ số đơn giản để thực hiện hoặc kiểm tra một nhiệm vụ phù hợp với ${title}.`,
-      student: "HS thao tác trên công cụ số theo hướng dẫn, đối chiếu kết quả và nêu điều chỉnh nếu cần.",
+      teacher: `- GV tổ chức nhiệm vụ tích hợp Năng lực số (${code || "5.3"}): hướng dẫn HS trực tiếp sử dụng công cụ số đơn giản (bảng tương tác/ứng dụng học toán) để thực hiện hoặc kiểm tra nhanh một phép tính/nhiệm vụ toán học của bài ${title}.`,
+      student: "- HS trực tiếp thao tác trên công cụ số theo hướng dẫn, đối chiếu kết quả vừa thực hiện và nêu nhận xét trước lớp.",
       material: "Công cụ số đơn giản dùng cho học sinh thực hành",
       product: "Kết quả thao tác hoặc kiểm tra nhiệm vụ trên công cụ số của học sinh",
     };
   }
   if (code === "1.1") {
     return {
-      teacher: `GV hướng dẫn HS trực tiếp truy cập học liệu số đã chuẩn bị để tìm và chọn thông tin phù hợp với ${title}.`,
-      student: "HS thao tác trên học liệu số, chọn thông tin phù hợp và trình bày căn cứ lựa chọn.",
+      teacher: `- GV tổ chức nhiệm vụ tích hợp Năng lực số (${code}): hướng dẫn HS trực tiếp truy cập học liệu số đã chuẩn bị để tìm, quan sát và chọn thông tin phù hợp với bài ${title}.`,
+      student: "- HS trực tiếp thao tác trên học liệu số, chọn thông tin/hình ảnh phù hợp và trình bày căn cứ lựa chọn trước lớp.",
       material: "Học liệu số được chọn lọc cho học sinh thao tác",
       product: "Thông tin học sinh lựa chọn từ học liệu số",
     };
   }
   return {
-    teacher: `GV hướng dẫn HS trực tiếp sử dụng công cụ số đơn giản để tạo sản phẩm học tập phù hợp với ${title}.`,
-    student: "HS thao tác trên công cụ số theo hướng dẫn, hoàn thiện và chia sẻ sản phẩm học tập.",
+    teacher: `- GV tổ chức nhiệm vụ tích hợp Năng lực số (${code || "3.1"}): hướng dẫn HS trực tiếp sử dụng công cụ số đơn giản (ghi âm/bảng tương tác/ứng dụng học tập) để tạo hoặc hoàn thiện sản phẩm học tập phù hợp với bài ${title}.`,
+    student: "- HS trực tiếp thao tác trên công cụ số theo hướng dẫn, hoàn thiện và chia sẻ sản phẩm số với bạn/trước lớp.",
     material: "Công cụ số đơn giản để học sinh tạo sản phẩm",
     product: "Sản phẩm số đơn giản của học sinh",
   };
@@ -70,12 +85,12 @@ function ensureDigitalActivity(lesson: LessonPlan) {
   const competencies = lesson.outcomes.digitalCompetencies || [];
   if (!competencies.length) return lesson;
   const currentText = JSON.stringify(lesson.activities);
-  const hasStudentDigitalOperation = /HS[^"\n]{0,100}(?:thao tác|sử dụng|truy cập|tìm kiếm|tạo|chỉnh sửa|lưu|chia sẻ|ghi âm|chụp|quay)[^"\n]{0,100}(?:công cụ số|thiết bị số|học liệu số|phần mềm|ứng dụng|máy tính|máy tính bảng|điện thoại)/i.test(currentText);
+  const hasStudentDigitalOperation = /HS[^"\n]{0,100}(?:thao tác|sử dụng|truy cập|tìm kiếm|tạo|chỉnh sửa|lưu|chia sẻ|ghi âm|chụp|quay)[^"\n]{0,100}(?:công cụ số|thiết bị số|học liệu số|phần mềm|ứng dụng|máy tính|máy tính bảng|điện thoại|bảng tương tác)/i.test(currentText);
   const hasMatchingCode = competencies.some((competency) => {
     const code = competencyCode(competency);
     if (code === "1.1") return /tìm kiếm|truy cập|chọn thông tin|học liệu số/i.test(currentText);
     if (code === "3.1") return /tạo|chỉnh sửa|ghi âm|soạn thảo|sản phẩm số/i.test(currentText);
-    if (code === "5.3") return /giải quyết|thực hiện|kiểm tra.*(?:công cụ số|phần mềm|ứng dụng)/i.test(currentText);
+    if (code === "5.3") return /giải quyết|thực hiện|kiểm tra.*(?:công cụ số|phần mềm|ứng dụng|bảng tương tác)/i.test(currentText);
     return hasStudentDigitalOperation;
   });
   if (hasStudentDigitalOperation && hasMatchingCode) {
@@ -92,16 +107,14 @@ function ensureDigitalActivity(lesson: LessonPlan) {
     if (activityIndex !== index) return activity;
     const teacherActions = [...(activity.teacherActions || [])];
     const studentActions = [...(activity.studentActions || [])];
-    const pairIndex = Math.max(teacherActions.length, studentActions.length) - 1;
-    if (pairIndex >= 0) {
-      while (teacherActions.length <= pairIndex) teacherActions.push("GV quan sát và hỗ trợ HS thực hiện nhiệm vụ.");
-      while (studentActions.length <= pairIndex) studentActions.push("HS thực hiện nhiệm vụ theo hướng dẫn.");
-      teacherActions[pairIndex] = `${teacherActions[pairIndex] || "GV giao nhiệm vụ."} ${support.teacher}`;
-      studentActions[pairIndex] = `${studentActions[pairIndex] || "HS thực hiện nhiệm vụ."} ${support.student}`;
-    } else {
-      teacherActions.push(support.teacher);
-      studentActions.push(support.student);
+    while (teacherActions.length < studentActions.length) {
+      teacherActions.push("- GV quan sát, gợi mở và hướng dẫn HS tự đối chiếu, điều chỉnh.");
     }
+    while (studentActions.length < teacherActions.length) {
+      studentActions.push("- HS suy nghĩ, trao đổi cùng bạn và hoàn thành yêu cầu học tập cụ thể.");
+    }
+    teacherActions.push(support.teacher);
+    studentActions.push(support.student);
     return {
       ...activity,
       teacherActions,

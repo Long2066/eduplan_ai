@@ -75,16 +75,22 @@ function compactText(value: string, maxLength = 180) {
 }
 
 function compactProducts(activity: LessonActivity) {
-  const product = firstClean(activity.learningProducts);
-  if (product) return compactText(product, 160);
+  const products = safeStringArray(activity.learningProducts).map(clean).filter(Boolean);
+  const first = products[0] || "";
+  const digital = products.slice(1).find((p) => /công cụ số|học liệu số|sản phẩm số|ghi âm|tra cứu số/i.test(p));
+  const combined = digital ? `${first}; ${digital}` : first;
+  if (combined) return compactText(combined, 200);
   return compactText(firstClean(activity.successCriteria), 160);
 }
 
 function conciseProducts(activity: LessonActivity) {
-  const product = firstClean(activity.learningProducts);
+  const products = safeStringArray(activity.learningProducts).map(clean).filter(Boolean);
+  const first = products[0] || "";
+  const digital = products.slice(1).find((p) => /công cụ số|học liệu số|sản phẩm số|ghi âm|tra cứu số/i.test(p));
+  const product = digital ? `${first}; ${digital}` : first;
   const criteria = safeStringArray(activity.successCriteria).map(clean).filter(Boolean).join("; ");
-  if (product && criteria) return compactText(`${product}; đánh giá: ${criteria}`, 220);
-  if (product) return compactText(product, 180);
+  if (product && criteria) return compactText(`${product}; đánh giá: ${criteria}`, 260);
+  if (product) return compactText(product, 200);
   return compactText(criteria, 180);
 }
 

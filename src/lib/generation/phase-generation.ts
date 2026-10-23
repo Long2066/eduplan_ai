@@ -13,6 +13,7 @@ import {
   type StagedPhaseInput,
 } from "@/lib/generation/section-types";
 import {
+  digitalCompetencyInstruction,
   learningContextGuidance,
   mathLatexPolicy,
   mathGradeBandGuidance,
@@ -157,6 +158,15 @@ ${vtWorkflow.stepsSummary.map((s) => `  * ${s}`).join("\n")}` : "";
     subjectGuidance = naturalSocialStrictGuidance;
   } else {
     subjectGuidance = pedagogyProfileGuidance(input);
+  }
+
+  const allocatedObjectives = outcomes.outcomes.objectiveMetadata.filter((o) =>
+    (phaseBp.objectiveIds || []).includes(o.id),
+  );
+  const hasDigitalObjectiveAllocated = allocatedObjectives.some((o) => o.category === "digitalCompetencies");
+  if (input.enableDigitalCompetency && (hasDigitalObjectiveAllocated || phase === "apply")) {
+    const digitalStmt = outcomes.outcomes.digitalCompetencies?.[0] || "";
+    subjectGuidance = `${subjectGuidance}\n${digitalCompetencyInstruction(input)}\nBẮT BUỘC TRONG PHA NÀY: Vì bài học bật Tích hợp Năng lực số (${digitalStmt || "TT 02/2025/TT-BGDĐT"}), pha này PHẢI có ít nhất 1 cặp bước tương tác rõ ràng trong teacherActions/studentActions: GV giao nhiệm vụ sử dụng công cụ/học liệu số và HS trực tiếp thao tác (chạm/chọn/ghi âm/tra cứu/kiểm tra kết quả trên công cụ số), kèm sản phẩm số cụ thể trong learningProducts.`;
   }
 
   const feedbackInstruction = options.feedback

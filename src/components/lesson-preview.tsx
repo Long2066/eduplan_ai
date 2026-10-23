@@ -178,13 +178,16 @@ function LessonPeriodPage({
   totalPeriods?: number;
 }) {
   const heading = lessonDocumentHeading(lesson, period);
-  const outcomes = ensureNonEmptyOutcomes(period.outcomes || lesson.outcomes, heading.lessonTitle);
+  const isMultiPeriod = totalPeriods > 1;
+  const outcomes = ensureNonEmptyOutcomes(
+    isMultiPeriod ? lesson.outcomes || period.outcomes : period.outcomes || lesson.outcomes,
+    heading.lessonTitle,
+  );
   const compact = lesson.meta?.plan === "free";
   const displayMode = {
     compact,
     concise: true,
   };
-  const isMultiPeriod = totalPeriods > 1;
 
   if (!isFirst) {
     return (

@@ -93,7 +93,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   }
 
   function patchAdvanced(next: Partial<LessonInput>) {
-    setAdvancedDraft((current) => ({ ...(current || cloneInput(input)), ...next }));
+    setAdvancedDraft((current) => (current ? { ...current, ...next } : { ...cloneInput(input), ...next }));
   }
 
   function openAdvanced() {
@@ -107,7 +107,18 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
   }
 
   function saveAdvanced() {
-    if (advancedDraft) onChange(advancedDraft);
+    if (advancedDraft) {
+      onChange({
+        ...input,
+        style: advancedDraft.style,
+        studentProfile: advancedDraft.studentProfile,
+        teachingEnvironment: advancedDraft.teachingEnvironment,
+        hometownProvince: advancedDraft.hometownProvince,
+        localityNote: advancedDraft.localityNote,
+        facilities: advancedDraft.facilities,
+        specialRequest: advancedDraft.specialRequest,
+      });
+    }
     setAdvancedDraft(null);
     setShowAdvanced(false);
   }
@@ -444,7 +455,7 @@ export function LessonForm({ input, errors, isGenerating, generationUsageLabel, 
               onChange={(event) => {
                 const checked = event.target.checked;
                 patch({ enableDigitalCompetency: checked });
-                patchAdvanced({ enableDigitalCompetency: checked });
+                if (showAdvanced) patchAdvanced({ enableDigitalCompetency: checked });
               }}
             />
             <span>

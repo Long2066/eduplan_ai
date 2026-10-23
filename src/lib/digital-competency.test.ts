@@ -46,4 +46,24 @@ describe("ensureLessonDigitalCompetencies", () => {
 
     expect(ensureLessonDigitalCompetencies(input, lesson).outcomes.digitalCompetencies).toEqual([]);
   });
+
+  it("chuẩn hóa mã CV 3456 (3.1.CB1a) và thêm bước hoạt động số tách biệt trong bảng tiến trình", () => {
+    const input = makeInput({ subject: "Toán", lessonTitle: "Bài 57. Quy đồng mẫu số các phân số", enableDigitalCompetency: true });
+    const lesson = makeLesson({
+      generalInfo: { subject: input.subject, grade: "Lớp 4", lessonTitle: input.lessonTitle, periods: 1, duration: 35 },
+    });
+    lesson.outcomes.digitalCompetencies = ["3.1.CB1a: Sử dụng công cụ số để tạo sản phẩm học tập."];
+    const applyActivity = lesson.activities.find((a) => /vận dụng/i.test(a.phase));
+    const beforeCount = applyActivity?.teacherActions.length || 0;
+
+    const result = ensureLessonDigitalCompetencies(input, lesson);
+
+    expect(result.outcomes.digitalCompetencies).toEqual([
+      "Năng lực số (3.1): Sử dụng công cụ số để tạo sản phẩm học tập.",
+    ]);
+    const updatedApply = result.activities.find((a) => /vận dụng/i.test(a.phase));
+    expect(updatedApply?.teacherActions.length).toBe(beforeCount + 1);
+    expect(updatedApply?.teacherActions.at(-1)).toContain("tích hợp Năng lực số");
+    expect(updatedApply?.studentActions.at(-1)).toContain("trực tiếp thao tác trên công cụ số");
+  });
 });
