@@ -113,6 +113,15 @@ describe("resolveLessonTitle", () => {
     expect(result.title).toBe("Bài 3. Thanh âm của gió");
   });
 
+  it("joins lowercase continuation lines in multi-line OCR headings (e.g. Công nghệ)", () => {
+    const result = resolveLessonTitle({
+      subject: "Công nghệ",
+      ocrText: "Bài 3\nVật liệu và dụng cụ trồng\nhoa, cây cảnh trong chậu",
+      candidates: [],
+    });
+    expect(result.title).toBe("Bài 3. Vật liệu và dụng cụ trồng hoa, cây cảnh trong chậu");
+  });
+
   it("returns unresolved instead of inventing a title", () => {
     const result = resolveLessonTitle({
       subject: "Khoa học",

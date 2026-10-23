@@ -110,18 +110,19 @@ export function extractOcrLessonTitleEvidence(ocrText: string): LessonTitleEvide
   const collectContinuation = (startIdx: number, firstLine: string) => {
     const collected = [firstLine];
     let endIdx = startIdx;
-    if (isAllCapsHeading(firstLine)) {
-      const next = lines[startIdx + 1];
-      if (
-        next
-        && !next.marker
-        && isAllCapsHeading(next.raw)
-        && viableHeadingName(next.raw)
-        && !/^(?:chủ\s*đề|bài|ôn\s*tập|khởi\s*động|khám\s*phá|hoạt\s*động|luyện\s*tập|vận\s*dụng)\b/iu.test(next.raw)
-      ) {
-        collected.push(next.raw);
-        endIdx = startIdx + 1;
-      }
+    const next = lines[startIdx + 1];
+    if (
+      next
+      && !next.marker
+      && viableHeadingName(next.raw)
+      && !/^(?:chủ\s*đề|bài|ôn\s*tập|khởi\s*động|khám\s*phá|hoạt\s*động|luyện\s*tập|vận\s*dụng|mục\s*tiêu|yêu\s*cầu)\b/iu.test(next.raw)
+      && (
+        (isAllCapsHeading(firstLine) && isAllCapsHeading(next.raw))
+        || (/^[a-zà-ỹđ]/u.test(next.raw.trim()) && !/[.!?]$/.test(firstLine.trim()) && next.raw.trim().split(/\s+/).length <= 8)
+      )
+    ) {
+      collected.push(next.raw);
+      endIdx = startIdx + 1;
     }
     return { text: collected.join(" "), lines: collected, endIdx };
   };
@@ -214,6 +215,24 @@ export function resolveLessonTitle(options: { subject?: string; ocrText?: string
     }
   }
   const selected = normalized[0];
+  if (selected && selected.source === "ocr-heading") {
+    const fuller = normalized.find(
+      (c) =>
+        (c.source === "user-input" || c.source === "source-facts")
+        && lessonTitlesEqual(c.title, selected.title)
+        && c.title.length > selected.title.length,
+    );
+    if (fuller) {
+      return {
+        status: "resolved",
+        title: fuller.title,
+        source: selected.source,
+        confidence: selected.confidence,
+        reason: `Đã khóa tên bài đầy đủ từ ${fuller.source} khớp với ${selected.source}.`,
+        evidence: selected.evidence,
+      };
+    }
+  }
   return selected
     ? { status: "resolved", title: selected.title, source: selected.source, confidence: selected.confidence, reason: `Đã khóa tên bài từ nguồn ${selected.source}.`, evidence: selected.evidence }
     : { status: "unresolved", title: "", source: null, confidence: 0, reason: LESSON_TITLE_REQUIRED_MESSAGE, evidence: [] };

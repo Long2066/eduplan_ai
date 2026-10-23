@@ -199,8 +199,11 @@ Trả về duy nhất JSON:
     "durationMinutes": ${phaseBp.durationMinutes},
     "teacherActions": string[],
     "studentActions": string[],
-    "learningProducts": string[],
+    "learningProducts": [string],
     "successCriteria": string[],
+    "expectedAnswer": string,
+    "commonErrors": string[],
+    "teacherFeedback": string[],
     "objectiveIds": string[],
     "organization": "whole_class"|"group"|"pair"|"individual"
   },
@@ -241,6 +244,9 @@ Trả về duy nhất JSON:
     objectiveIds: parsed.activity?.objectiveIds ?? [],
     learningProducts: parsed.activity?.learningProducts || phaseBp.learningProducts || [],
     successCriteria: (parsed.activity as any)?.successCriteria || [],
+    expectedAnswer: (parsed.activity as any)?.expectedAnswer || "",
+    commonErrors: Array.isArray((parsed.activity as any)?.commonErrors) ? (parsed.activity as any).commonErrors : [],
+    teacherFeedback: Array.isArray((parsed.activity as any)?.teacherFeedback) ? (parsed.activity as any).teacherFeedback : [],
     sourceUnitIds: Array.isArray((parsed.activity as any)?.sourceUnitIds) && (parsed.activity as any).sourceUnitIds.length > 0
       ? (parsed.activity as any).sourceUnitIds
       : (phaseBp.sourceUnitIds?.length ? phaseBp.sourceUnitIds : phaseSourceIds),
@@ -282,8 +288,8 @@ Trả về duy nhất JSON:
     }
   }
 
-  // Math All Grades Enhancement: Ensure 1:1 action pairing, meaningful student dialogue, and no robotic placeholders
-  if (sourceFacts.subjectKind === "math") {
+  // All Subjects Enhancement: Ensure 1:1 action pairing, meaningful student dialogue, and no robotic placeholders
+  {
     const tActions = Array.isArray(safeActivity.teacherActions) ? [...safeActivity.teacherActions] : [];
     const sActions = Array.isArray(safeActivity.studentActions) ? [...safeActivity.studentActions] : [];
 
@@ -299,11 +305,11 @@ Trả về duy nhất JSON:
         } else if (sCursor < sActions.length && tActions.length - i <= sActions.length - sCursor) {
           alignedSActions.push(sActions[sCursor++]);
         } else if (/^["“]?(?:gv\s+)?(?:nhận xét|chốt|kết luận)/i.test(tTrimmed)) {
-          alignedSActions.push("- HS lắng nghe nhận xét của GV, ghi nhớ kiến thức chốt và tự kiểm tra kết quả.");
+          alignedSActions.push("- HS lắng nghe nhận xét của GV, ghi nhớ kiến thức trọng tâm và tự kiểm tra kết quả.");
         } else if (/chiếu|quan sát|tranh|sơ đồ|mô hình|bảng/i.test(tTrimmed)) {
-          alignedSActions.push("- HS quan sát hình ảnh/bảng số liệu trên màn hình và nhận diện các thông tin toán học.");
+          alignedSActions.push("- HS quan sát hình ảnh/ngữ liệu trên màn hình và nhận diện các thông tin chính.");
         } else if (/phát phiếu|giao nhiệm vụ|tổ chức|thảo luận|cặp đôi|nhóm/i.test(tTrimmed)) {
-          alignedSActions.push("- HS nhận nhiệm vụ, trao đổi cùng bạn và thực hiện yêu cầu trên phiếu/bảng con.");
+          alignedSActions.push("- HS nhận nhiệm vụ, trao đổi cùng bạn và hoàn thành yêu cầu trên phiếu/bảng con.");
         } else {
           alignedSActions.push("- HS theo dõi hướng dẫn của GV và chuẩn bị thực hiện bước tiếp theo.");
         }

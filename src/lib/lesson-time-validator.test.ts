@@ -52,10 +52,10 @@ describe("validateLessonTime", () => {
     expect(validateLessonTime(lesson())).toEqual([]);
   });
 
-  it("bắt buộc tổng hoạt động Tiếng Việt nằm trong khoảng 32–33 phút", () => {
+  it("bắt buộc tổng hoạt động Tiếng Việt nằm trong khoảng 32–35 phút", () => {
     const activities = validActivities();
-    activities[3] = activity({ phase: "Vận dụng", durationMinutes: 6, timeBreakdown: { workingMinutes: 6 } });
-    expect(findingsByCode(lesson({ activities }), "LQ-TIME-01")[0]?.message).toContain("34 phút");
+    activities[3] = activity({ phase: "Vận dụng", durationMinutes: 8, timeBreakdown: { workingMinutes: 8 } });
+    expect(findingsByCode(lesson({ activities }), "LQ-TIME-01")[0]?.message).toContain("36 phút");
   });
 
   it("kiểm tra tổng timeBreakdown bằng durationMinutes", () => {
@@ -122,7 +122,7 @@ describe("validateLessonTime", () => {
 
   it("kiểm tra từng tiết độc lập trong giáo án nhiều tiết", () => {
     const shortActivities = validActivities();
-    shortActivities[3] = activity({ phase: "Vận dụng", durationMinutes: 6, timeBreakdown: { workingMinutes: 6 } });
+    shortActivities[3] = activity({ phase: "Vận dụng", durationMinutes: 8, timeBreakdown: { workingMinutes: 8 } });
     const value = lesson({
       generalInfo: { subject: "Tiếng Việt", grade: "Lớp 3", lessonTitle: "Bài đọc", periods: 2, duration: 35 },
       activities: [...validActivities(), ...shortActivities],

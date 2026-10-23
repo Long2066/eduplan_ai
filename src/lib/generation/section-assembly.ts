@@ -73,7 +73,15 @@ function sanitizeStigmatizingLabelsDeep<T>(value: T): T {
     return value
       .replace(/\bhọc sinh yếu\b/gi, "học sinh cần hỗ trợ")
       .replace(/\bHS yếu\b/g, "HS cần hỗ trợ")
-      .replace(/\bhs yếu\b/gi, "HS cần hỗ trợ") as T;
+      .replace(/\bhs yếu\b/gi, "HS cần hỗ trợ")
+      .replace(/gv tổ chức hoạt động bám ngữ liệu và trọng tâm/gi, "GV dẫn dắt và nêu yêu cầu trọng tâm của hoạt động")
+      .replace(/gv giao nhiệm vụ cụ thể/gi, "GV nêu câu hỏi gợi mở và hướng dẫn các bước thực hiện")
+      .replace(/hs quan sát,?\s*đọc,?\s*nghe ngữ liệu/gi, "HS chú ý quan sát hình ảnh/ngữ liệu và xác định thông tin chính")
+      .replace(/hs thực hiện nhiệm vụ và tạo sản phẩm/gi, "HS trao đổi cùng bạn, hoàn thành yêu cầu học tập và ghi kết quả")
+      .replace(/gv hỗ trợ học sinh theo lỗi thường gặp/gi, "GV quan sát, gợi mở và hướng dẫn HS tự đối chiếu, điều chỉnh")
+      .replace(/hs thực hiện nhiệm vụ theo hướng dẫn/gi, "HS suy nghĩ, trao đổi và hoàn thành yêu cầu học tập cụ thể")
+      .replace(/hs thực hiện nhiệm vụ tương ứng/gi, "HS tích cực tham gia trả lời câu hỏi và thực hiện thao tác học tập")
+      .replace(/hs phản hồi theo hướng dẫn/gi, "HS trình bày câu trả lời trước lớp và nhận xét bài làm của bạn") as T;
   }
   if (Array.isArray(value)) {
     return value.map((item) => sanitizeStigmatizingLabelsDeep(item)) as T;

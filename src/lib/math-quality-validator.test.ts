@@ -145,6 +145,11 @@ describe("validateMathLesson", () => {
     expect(codes(plan)).toContain("MATH-QUALITY-13");
   });
 
+  it("does not report MATH-QUALITY-13 on valid multi-term addition like 4 + 4 + 4 = 12", () => {
+    const plan = lesson({ activities: [activity({ studentActions: ["HS tính \\(4 + 4 + 4 = 12\\)."], expectedAnswer: "12" })] });
+    expect(codes(plan)).not.toContain("MATH-QUALITY-13");
+  });
+
   it("reports when warm-up leaks the core problem and presents a formula too early", () => {
     const activities = lesson().activities;
     activities[0] = activity({ phase: "Khởi động", title: "Khởi động", objective: "Nhận ra công thức tính.", inputOrMaterials: ["Bài toán có tổng 70 và hiệu 10."], teacherActions: ["GV nêu công thức S = a × b và yêu cầu tính với 70, 10."], studentActions: ["HS giải bài."], expectedAnswer: "40 và 30", learningProducts: ["Kết quả 40 và 30."], successCriteria: ["Tính đúng."] });

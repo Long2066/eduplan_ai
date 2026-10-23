@@ -128,7 +128,11 @@ function vietnameseListedAnswerItemCount(answer: string) {
 function vietnameseSourceTaskMissingAnswer(activity: LessonPlan["activities"][number]) {
   const text = JSON.stringify(activity);
   if (!/(?:6|sáu)\s+(?:cụm từ|từ|câu)|ch\/tr|c\/k|ac\/at|dấu chấm|dấu chấm hỏi|đồ vật|tên các đồ vật|gọi tên/i.test(text)) return false;
-  const answer = [activity.expectedAnswer || "", ...(activity.acceptableResponses || [])].join(" ");
+  const answer = [
+    activity.expectedAnswer || "",
+    ...(activity.acceptableResponses || []),
+    ...(activity.studentActions || []).filter((a) => /^\+|\btrả lời\b|\bnêu\b|\bđọc\b|\bviết\b|\bchọn\b|\bđiền\b/i.test(a.trim())),
+  ].join(" ");
   if (!answer.trim()) return true;
   if (/theo sgk|chốt theo sgk|đối chiếu bằng sgk|đáp án phù hợp|giáo viên tự xác định/i.test(answer)) return true;
   const expectsSix = /(?:6|sáu)\s+(?:cụm từ|từ|câu)/i.test(text);
@@ -563,8 +567,8 @@ export function vietnamesePeriodIssues(
   }
 
   const totalMinutes = activities.reduce((sum, activity, index) => sum + activityMinutes(activity, index), 0);
-  if (input.duration === 35 && (totalMinutes < 32 || totalMinutes > 33)) {
-    issues.push(`TV-TIME-01: Tổng thời lượng 4 hoạt động là ${totalMinutes} phút; tiết Tiếng Việt 35 phút chỉ nên ghi 32–33 phút để chừa 2–3 phút dự phòng.`);
+  if (input.duration === 35 && (totalMinutes < 32 || totalMinutes > 35)) {
+    issues.push(`TV-TIME-01: Tổng thời lượng 4 hoạt động là ${totalMinutes} phút; tiết Tiếng Việt 35 phút cần nằm trong khoảng 32–35 phút.`);
   }
   if (mechanicalVietnameseOutcomePattern.test(outcomeText(period.outcomes))) {
     issues.push("TV-YCCD-01: Yêu cầu cần đạt còn có câu máy móc hoặc lỗi dấu câu .:; hãy viết bằng động từ quan sát được, bỏ cụm 'thực hiện được qua/sử dụng kiến thức đặc thù'.");

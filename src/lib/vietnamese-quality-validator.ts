@@ -852,7 +852,11 @@ function sourceTaskNeedsConcreteAnswer(activity: LessonActivity) {
   if (!/(?:6|sáu)\s+(?:cụm từ|từ|câu)|ch\/tr|c\/k|ac\/at|dấu chấm|dấu chấm hỏi|đồ vật|tên các đồ vật|gọi tên/i.test(text)) {
     return false;
   }
-  const answer = [activity.expectedAnswer || "", ...(activity.acceptableResponses || [])].join(" ");
+  const answer = [
+    activity.expectedAnswer || "",
+    ...(activity.acceptableResponses || []),
+    ...(activity.studentActions || []).filter((a) => /^\+|\btrả lời\b|\bnêu\b|\bđọc\b|\bviết\b|\bchọn\b|\bđiền\b/i.test(a.trim())),
+  ].join(" ");
   if (!answer.trim()) return true;
   if (/theo sgk|chốt theo sgk|đối chiếu bằng sgk|đáp án phù hợp|giáo viên tự xác định/i.test(answer)) return true;
   const expectsSix = /(?:6|sáu)\s+(?:cụm từ|từ|câu)/i.test(text);

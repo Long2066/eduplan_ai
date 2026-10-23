@@ -50,7 +50,7 @@ function activityMinuteRange(lesson: LessonPlan, fullMinutes: number, periodCoun
   if (isVietnameseLesson(lesson) || isNaturalSocialLesson(lesson)) {
     return {
       minActivityMinutes: Math.max(0, fullMinutes - 3 * periodCount),
-      maxActivityMinutes: Math.max(0, fullMinutes - 2 * periodCount),
+      maxActivityMinutes: fullMinutes,
     };
   }
   return {

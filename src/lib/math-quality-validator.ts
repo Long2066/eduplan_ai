@@ -1,5 +1,5 @@
 import { activityPhaseKey } from "@/lib/lesson-format";
-import { validateMathContent } from "@/lib/math-content";
+import { findSimpleArithmeticMismatch, validateMathContent } from "@/lib/math-content";
 import type { LessonActivity, LessonInput, LessonPlan, PedagogyAuditFinding, PedagogyAuditSourceEvidence } from "@/types/lesson";
 
 type MathRule = { code: string; severity: PedagogyAuditFinding["severity"]; autoFixable: boolean };
@@ -54,15 +54,9 @@ function hasErrorAndFeedback(activity: LessonActivity) { const text = activityTe
 function gradeNumber(value: string) { const match = String(value).match(/([1-5])/); return match ? Number(match[1]) : 0 }
 function gradeMismatchMessage(grade: number, text: string) { if (!grade) return ""; if (grade <= 2 && /tỉ số phần trăm|phân số|số thập phân|diện tích (hình|tam giác)|thể tích|vận tốc|chuyển động đều|ẩn số|phương trình/i.test(text)) return "Nội dung phân số/số thập phân/tỉ số phần trăm/diện tích-thể tích/chuyển động hoặc phương trình vượt mức điển hình lớp 1–2."; if (grade === 3 && /tỉ số phần trăm|số thập phân|thể tích|vận tốc|chuyển động đều|phương trình/i.test(text)) return "Nội dung tỉ số phần trăm/số thập phân/thể tích/chuyển động hoặc phương trình vượt mức điển hình lớp 3."; if (grade <= 3 && /chứng minh|suy luận đại số|biến số/i.test(text)) return "Yêu cầu chứng minh hoặc suy luận đại số vượt mức diễn đạt điển hình của khối lớp."; return "" }
 function answerMismatchMessage(activity: LessonActivity) {
-  const pattern = /(-?\d+(?:[.,]\d+)?)\s*([+×÷]|[−–—-])\s*(-?\d+(?:[.,]\d+)?)\s*=\s*(-?\d+(?:[.,]\d+)?)/g;
-  for (const match of activityText(activity).matchAll(pattern)) {
-    const left = Number(match[1].replace(",", "."));
-    const right = Number(match[3].replace(",", "."));
-    const stated = Number(match[4].replace(",", "."));
-    const computed = match[2] === "+" ? left + right : /[−–—-]/.test(match[2]) ? left - right : match[2] === "×" ? left * right : right !== 0 ? left / right : Number.NaN;
-    if (Number.isFinite(computed) && Math.abs(stated - computed) > 1e-9) {
-      return `Đẳng thức ${match[0]} sai; kết quả đúng của phép tính là ${computed}.`;
-    }
+  const mismatch = findSimpleArithmeticMismatch(activityText(activity));
+  if (mismatch) {
+    return `Đẳng thức ${mismatch.equation} sai; kết quả đúng của phép tính là ${mismatch.computed}.`;
   }
   return "";
 }

@@ -268,8 +268,15 @@ export async function loadEffectivePhases(jobId: string, totalPhases: number): P
   for (let seq = 1; seq <= totalPhases; seq += 1) {
     const orig = await readGenerationJobArtifact<StagedPhaseArtifact>(jobId, { kind: "period-phase", sequence: seq });
     if (!orig) throw new Error(`Không tìm thấy artifact của pha thứ ${seq}/${totalPhases}.`);
-    const repair = await readGenerationJobArtifact<{ artifact: StagedPhaseArtifact; baseAnchor?: { hash: string } }>(jobId, { kind: "phase-repair", sequence: seq });
-    if (repair?.payload?.artifact && (!repair.payload.baseAnchor || repair.payload.baseAnchor.hash === orig.payload.anchor.hash)) {
+    const repair = await readGenerationJobArtifact<{ artifact: StagedPhaseArtifact; baseAnchor?: { hash: string; revision?: number } }>(jobId, { kind: "phase-repair", sequence: seq });
+    if (
+      repair?.payload?.artifact &&
+      (
+        !repair.payload.baseAnchor ||
+        repair.payload.baseAnchor.hash === orig.payload.anchor.hash ||
+        (repair.payload.artifact.anchor?.revision || 0) > (orig.payload.anchor?.revision || 1)
+      )
+    ) {
       phases.push(repair.payload.artifact);
       continue;
     }
@@ -335,7 +342,15 @@ export async function advanceStagedGenerationJobV2(
   const currentAttempts = Number(job.unitAttempts?.[unitKey] || 0);
 
   // Check attempt exhaustion before executing AI
-  if (currentAttempts >= MAX_UNIT_ATTEMPTS && job.currentStage !== "ocr" && job.currentStage !== "quota-settlement") {
+  const nonAiStages = new Set<GenerationJobStage>([
+    "ocr",
+    "assembly",
+    "subject-validation",
+    "final-validation",
+    "persistence",
+    "quota-settlement",
+  ]);
+  if (currentAttempts >= MAX_UNIT_ATTEMPTS && !nonAiStages.has(job.currentStage)) {
     const exhaustionError: GenerationJobError = {
       code: "SECTION_UNIT_ATTEMPTS_EXHAUSTED",
       message: `Đơn vị "${unitKey}" đã thử ${currentAttempts}/${MAX_UNIT_ATTEMPTS} lần nhưng không đạt. Quá trình tạm dừng để tránh lãng phí tài nguyên.`,
@@ -1228,7 +1243,7 @@ async function executeSubjectValidationStepV2(ctx: ExecutionContext): Promise<vo
     );
   }
 
-  const needsRepair = repairableIssues.length > 0;
+  const needsRepair = repairableIssues.length > 0 && !assembly?.payload?.repairApplied;
 
   if (needsRepair) {
     const totalRepairTargets = repairableIssues.length;
@@ -1520,7 +1535,7 @@ async function executeFinalValidationStepV2(ctx: ExecutionContext): Promise<void
     : assembly.payload;
   const finalArtifact = finalizeStagedLesson(input, assemblyPayload, blueprint.payload);
 
-  const repairTargets = !finalArtifact.canPersist && !hasUnrepairableFatalFinding(finalArtifact)
+  const repairTargets = !finalArtifact.canPersist && !assemblyPayload.repairApplied && !hasUnrepairableFatalFinding(finalArtifact)
     ? finalRepairTargets(finalArtifact, assemblyPayload)
     : [];
   const nextStage = repairTargets.length ? "phase-repair" : finalArtifact.canPersist ? "persistence" : "quota-settlement";
