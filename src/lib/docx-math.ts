@@ -41,9 +41,26 @@ function extractMathMl(expression: string, display: boolean) {
     .replace(/<semantics>\s*([\s\S]*?)\s*<\/semantics>/gi, "$1");
 }
 
+export function sanitizeXmlText(value: string) {
+  return String(value || "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "");
+}
+
+export function sanitizeOmmlFragment(omml: string) {
+  return sanitizeXmlText(omml)
+    .replace(/<m:t([^>]*)>([\s\S]*?)<\/m:t>/g, (_, attrs: string, content: string) => {
+      const safe = content
+        .replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return `<m:t${attrs}>${safe}</m:t>`;
+    })
+    .replace(/<m:sty\s+m:val="undefined"\s*\/>/g, "")
+    .replace(/<w:rPr\s*\/>/g, "");
+}
+
 async function expressionToOmml(expression: string, displayMode: boolean) {
   const { mml2omml } = await import("mathml2omml");
-  const omml = mml2omml(extractMathMl(expression, displayMode));
+  const omml = sanitizeOmmlFragment(mml2omml(extractMathMl(expression, displayMode)));
   if (!/<m:oMath\b/.test(omml)) throw new Error("Bộ chuyển đổi không tạo OMML.");
   return omml;
 }
@@ -94,8 +111,11 @@ function replaceMarkerRun(xml: string, marker: string, replacement: string) {
       output = `${output.slice(0, markerIndex)}${escapeXml(markerExpressions.get(marker) || marker)}${output.slice(markerIndex + marker.length)}`;
       markerIndex = output.indexOf(marker, markerIndex + 1);
     } else {
-      output = `${output.slice(0, run.start)}${replacement}${output.slice(run.end)}`;
-      markerIndex = output.indexOf(marker, run.start + replacement.length);
+      const runXml = output.slice(run.start, run.end);
+      const breakPrefix = /<w:br\b[^>]*\/>/.test(runXml) ? "<w:r><w:br/></w:r>" : "";
+      const fullReplacement = `${breakPrefix}${replacement}`;
+      output = `${output.slice(0, run.start)}${fullReplacement}${output.slice(run.end)}`;
+      markerIndex = output.indexOf(marker, run.start + fullReplacement.length);
     }
   }
   return output;
@@ -123,7 +143,7 @@ export async function injectMathIntoDocx(input: Blob | ArrayBuffer | Uint8Array)
     markerExpressions.delete(marker);
   }
 
-  xml = xml.replace(markerPattern, "");
+  xml = sanitizeXmlText(xml).replace(markerPattern, "");
   zip.file("word/document.xml", xml);
   return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
 import sharp from "sharp";
+import JSZip from "jszip";
 import { Packer } from "docx";
 import {
   cropImageWithPadding,
@@ -8,6 +12,7 @@ import {
   ensureAssetDataUrl,
 } from "./sgk-crop";
 import { buildLessonDocxDocument } from "@/lib/export-docx";
+import { injectMathIntoDocx } from "@/lib/docx-math";
 import { activityDocumentBlock } from "@/lib/lesson-document-model";
 import type { LessonActivity, LessonPlan, UploadedAsset } from "@/types/lesson";
 
@@ -383,5 +388,125 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
     expect(block.actionPairs[1].visual).toBeDefined();
     expect(block.actionPairs[1].visual?.caption).toBe("Câu ứng dụng SGK");
     expect(block.unplacedVisuals.length).toBe(0);
+  });
+
+  it("embeds inline JPEG visuals and sanitizes OMML/<, > and null chars in DOCX export", async () => {
+    const testSvg = Buffer.from(
+      '<svg width="240" height="160"><rect width="240" height="160" fill="#10b981"/></svg>',
+    );
+    const jpegBuffer = await sharp(testSvg).jpeg({ quality: 80 }).toBuffer();
+    const jpegDataUrl = `data:image/jpeg;base64,${jpegBuffer.toString("base64")}`;
+
+    const lesson: LessonPlan = {
+      generalInfo: {
+        subject: "Toán",
+        grade: "Lớp 3",
+        lessonTitle: "Bài 73. Thu thập, phân loại, ghi chép số liệu, bảng số liệu",
+        book: "Kết nối tri thức với cuộc sống",
+        periods: 2,
+        duration: 35,
+      },
+      outcomes: {
+        knowledgeAndSkills: [String.raw`So sánh \(30 > 23\) và \(6 < 23\)`],
+        generalCompetencies: ["Tự chủ và tự học"],
+        specificCompetencies: ["Năng lực toán học"],
+        qualities: ["Chăm chỉ"],
+      },
+      materials: {
+        teacher: ["Tranh SGK"],
+        students: ["SGK Toán 3"],
+      },
+      activities: [],
+      periodPlans: [
+        {
+          periodNumber: 1,
+          focus: "Thu thập và phân loại số liệu",
+          activities: [
+            {
+              id: "act_p1_1",
+              phase: "Khởi động",
+              title: "Khởi động tình huống",
+              objective: String.raw`Đếm số thẻ và so sánh \(30 > 23\)`,
+              durationMinutes: 10,
+              teacherActions: [
+                "GV chiếu tranh tình huống mở đầu lên màn hình.",
+                "GV yêu cầu HS tính tổng \u00005 + 4 + 3 = 12\u0000 thẻ và so sánh \\(6 < 23\\).",
+              ],
+              studentActions: [
+                "HS quan sát tranh.",
+                "HS nêu kết quả \\(12 - 7 = 5\\,^\\circ\\text{C}\\) và kí hiệu \\(|\\!|\\!|\\!|/\\!|\\!|\\).",
+              ],
+              teacherVisuals: [
+                {
+                  id: "vis_inline_jpg",
+                  caption: "Tranh tình huống bài toán mở đầu SGK",
+                  dataUrl: jpegDataUrl,
+                  widthPx: 240,
+                  heightPx: 160,
+                  targetStepIndex: 0,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          periodNumber: 2,
+          focus: "Thực hành bảng số liệu",
+          activities: [
+            {
+              id: "act_p2_1",
+              phase: "Luyện tập",
+              title: "Bài tập 1",
+              objective: "Đọc bảng số liệu",
+              durationMinutes: 25,
+              teacherActions: ["GV chiếu bảng số liệu Bài tập 1."],
+              studentActions: ["HS đọc số liệu."],
+              teacherVisuals: [
+                {
+                  id: "vis_unplaced_jpg",
+                  caption: "Bảng số liệu Bài tập 1 SGK",
+                  dataUrl: jpegDataUrl,
+                  widthPx: 240,
+                  heightPx: 160,
+                  targetStepIndex: 99,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const doc = buildLessonDocxDocument(lesson);
+    const rawBuffer = await Packer.toBuffer(doc);
+    const finalBlob = await injectMathIntoDocx(rawBuffer);
+    const finalBuffer = Buffer.from(await finalBlob.arrayBuffer());
+
+    const zip = await JSZip.loadAsync(finalBuffer);
+    const mediaFiles = Object.keys(zip.files).filter((name) => name.startsWith("word/media/"));
+    expect(mediaFiles.length).toBeGreaterThanOrEqual(1);
+    expect(mediaFiles.some((name) => name.endsWith(".jpg") || name.endsWith(".jpeg"))).toBe(true);
+
+    const docXml = await zip.file("word/document.xml")!.async("string");
+    expect(docXml).toContain("Tranh tình huống bài toán mở đầu SGK");
+    expect(docXml).toContain("Bảng số liệu Bài tập 1 SGK");
+    expect(docXml).not.toMatch(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/);
+    expect(docXml).not.toContain('m:val="undefined"');
+    expect(docXml).not.toMatch(/<m:t[^>]*>[^<]*[<>][^<]*<\/m:t>/);
+    expect(docXml).toContain("&gt;");
+    expect(docXml).toContain("&lt;");
+
+    const tempDocxPath = path.join(process.cwd(), "tests", "temp_test_bai73_inline_jpg.docx");
+    fs.writeFileSync(tempDocxPath, finalBuffer);
+    try {
+      const output = execSync(`python tools/verify_docx_table.py "${tempDocxPath}"`, {
+        encoding: "utf-8",
+      });
+      expect(output).toContain("PASSED");
+    } finally {
+      if (fs.existsSync(tempDocxPath)) {
+        fs.unlinkSync(tempDocxPath);
+      }
+    }
   });
 });

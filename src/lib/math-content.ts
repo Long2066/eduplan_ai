@@ -17,6 +17,7 @@ const plainFormulaPattern = /(?:^|[\s:;(])(?:(?:[A-Za-z]\s*=\s*)?\d+(?:[.,]\d+)?
 
 function repairOverEscapedMathSource(value: string) {
   return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "")
     .replace(/\\+\u0332/g, "")
     .replace(/\\\\\(/g, String.raw`\(`)
     .replace(/\\\\\)/g, String.raw`\)`)

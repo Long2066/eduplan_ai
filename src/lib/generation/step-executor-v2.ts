@@ -678,6 +678,7 @@ async function executeOcrStepV2(ctx: ExecutionContext): Promise<void> {
         sourceHash: result.sourceHash,
         cacheHit: result.cacheHit,
         model: result.model,
+        ...(asset.dataUrl && asset.dataUrl.length <= 700_000 ? { dataUrl: asset.dataUrl } : {}),
       };
     }
 
@@ -1187,10 +1188,34 @@ async function executeSectionAssessmentStepV2(ctx: ExecutionContext): Promise<vo
   });
 }
 
+async function hydrateInputWithOcrPageAssetsV2(
+  jobId: string,
+  persistedInput: PersistedGenerationInput,
+): Promise<ReturnType<typeof lessonInputFromPersisted>> {
+  const input = lessonInputFromPersisted(persistedInput);
+  if (!input.uploadedAssets.length) return input;
+  const ordered = sortGenerationOcrAssets(input.uploadedAssets);
+  const dataUrlById = new Map<string, string>();
+  for (let seq = 1; seq <= ordered.length; seq += 1) {
+    const page = await readGenerationJobArtifact<StagedOcrPageArtifact>(jobId, { kind: "ocr-page", sequence: seq });
+    if (page?.payload?.dataUrl && page.payload.assetId) {
+      dataUrlById.set(page.payload.assetId, page.payload.dataUrl);
+    }
+  }
+  if (!dataUrlById.size) return input;
+  return {
+    ...input,
+    uploadedAssets: input.uploadedAssets.map((asset) => {
+      const dataUrl = dataUrlById.get(asset.id);
+      return dataUrl ? { ...asset, dataUrl } : asset;
+    }),
+  };
+}
+
 async function executeAssemblyStepV2(ctx: ExecutionContext): Promise<void> {
   const { job, uid, owner, epoch } = ctx;
   const persistedInput = await requiredInputArtifact(job.id);
-  const input = lessonInputFromPersisted(persistedInput);
+  const input = await hydrateInputWithOcrPageAssetsV2(job.id, persistedInput);
   const sourceFacts = await requiredSourceFacts(job.id);
   const outcomes = await requiredOutcomes(job.id);
   const lessonMap = await requiredLessonMap(job.id);

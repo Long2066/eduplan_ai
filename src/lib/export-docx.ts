@@ -14,7 +14,7 @@ import {
   VerticalAlign,
   WidthType,
 } from "docx";
-import { docxMathParts, injectMathIntoDocx } from "@/lib/docx-math";
+import { docxMathParts, injectMathIntoDocx, sanitizeXmlText } from "@/lib/docx-math";
 import { ensureNonEmptyOutcomes, lessonHeadingTitle, safeStringArray, sanitizeMaterialList } from "@/lib/lesson-format";
 import { assertSpecificLessonTitle } from "@/lib/lesson-title";
 import { activityDocumentBlock, lessonDocumentHeading, normalizedPeriods } from "@/lib/lesson-document-model";
@@ -34,13 +34,38 @@ const noBorder = { style: BorderStyle.NONE, size: 0, color: BLACK };
 
 function text(content: string, options: { bold?: boolean; italic?: boolean; color?: string; size?: number } = {}) {
   return new TextRun({
-    text: content,
+    text: sanitizeXmlText(content),
     font: "Times New Roman",
     size: options.size || 28,
     bold: options.bold,
     italics: options.italic,
     color: options.color || BLACK,
   });
+}
+
+function decodeBase64ToBytes(b64: string): Uint8Array | null {
+  try {
+    const clean = b64.replace(/\s+/g, "");
+    if (typeof Buffer !== "undefined") {
+      return new Uint8Array(Buffer.from(clean, "base64"));
+    }
+    const bin = atob(clean);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) {
+      bytes[i] = bin.charCodeAt(i);
+    }
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+function detectDocxImageType(mimeType: string | undefined, data: Uint8Array): "png" | "jpg" | "gif" | "bmp" {
+  const mime = (mimeType || "").toLowerCase();
+  if (mime.includes("jpeg") || mime.includes("jpg") || (data[0] === 0xff && data[1] === 0xd8)) return "jpg";
+  if (mime.includes("gif") || (data[0] === 0x47 && data[1] === 0x49 && data[2] === 0x46)) return "gif";
+  if (mime.includes("bmp") || (data[0] === 0x42 && data[1] === 0x4d)) return "bmp";
+  return "png";
 }
 
 function paragraph(
@@ -58,9 +83,9 @@ function mathRuns(
   content: string,
   options: { bold?: boolean; italic?: boolean; color?: string; size?: number; breakFirst?: boolean } = {},
 ) {
-  return docxMathParts(content).map((part, index) =>
+  return docxMathParts(sanitizeXmlText(content)).map((part, index) =>
     new TextRun({
-      text: part.type === "text" ? part.value : part.marker,
+      text: part.type === "text" ? sanitizeXmlText(part.value) : part.marker,
       font: "Times New Roman",
       size: options.size || 28,
       bold: options.bold,
@@ -122,14 +147,12 @@ function cell(children: (Paragraph | Table)[], options: { header?: boolean; topB
 
 function singleVisualParagraphs(vis: LessonActivityVisual, isInline = false): Paragraph[] {
   if (!vis.dataUrl) return [];
-  let buffer: Buffer | null = null;
-  const match = vis.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  let bytes: Uint8Array | null = null;
+  let mimeType: string | undefined;
+  const match = vis.dataUrl.match(/^data:([^;]+);base64,([\s\S]+)$/);
   if (match) {
-    try {
-      buffer = Buffer.from(match[2], "base64");
-    } catch {
-      buffer = null;
-    }
+    mimeType = match[1];
+    bytes = decodeBase64ToBytes(match[2]);
   } else if (typeof window === "undefined" && (vis.dataUrl.startsWith("/") || vis.dataUrl.startsWith("public/"))) {
     try {
       const fs = eval("require")("fs");
@@ -137,16 +160,17 @@ function singleVisualParagraphs(vis: LessonActivityVisual, isInline = false): Pa
       const cleanPath = vis.dataUrl.replace(/^\/?(public\/)?/, "");
       const fullPath = path.join(process.cwd(), "public", cleanPath);
       if (fs.existsSync(fullPath)) {
-        buffer = fs.readFileSync(fullPath);
+        bytes = new Uint8Array(fs.readFileSync(fullPath));
       }
     } catch {
-      buffer = null;
+      bytes = null;
     }
   }
 
-  if (!buffer) return [];
+  if (!bytes || bytes.byteLength === 0) return [];
 
   try {
+    const imageType = detectDocxImageType(mimeType, bytes);
     const maxWidth = isInline ? 320 : 280;
     const targetWidth = Math.min(vis.widthPx || maxWidth, maxWidth);
     const aspect = (vis.heightPx && vis.widthPx) ? vis.heightPx / vis.widthPx : 0.65;
@@ -161,8 +185,8 @@ function singleVisualParagraphs(vis: LessonActivityVisual, isInline = false): Pa
           spacing: { before: 50, after: 30 },
           children: [
             new ImageRun({
-              data: buffer,
-              type: "png",
+              data: bytes,
+              type: imageType,
               transformation: {
                 width: targetWidth,
                 height: targetHeight,
@@ -194,8 +218,8 @@ function singleVisualParagraphs(vis: LessonActivityVisual, isInline = false): Pa
           spacing: { after: 50 },
           children: [
             new ImageRun({
-              data: buffer,
-              type: "png",
+              data: bytes,
+              type: imageType,
               transformation: {
                 width: targetWidth,
                 height: targetHeight,
@@ -452,10 +476,16 @@ function buildPeriodsTable(periods: PeriodPlan[], displayOptions: ActivityDocume
           ],
         }),
         ...block.actionPairs.map(
-          (pair, pairIndex) =>
-            new TableRow({
+          (pair, pairIndex) => {
+            const teacherParagraphs: Paragraph[] = [
+              paragraphWithBreaks(`- ${pair.teacher}`, { spacingAfter: pair.visual ? 30 : 25 }),
+            ];
+            if (pair.visual) {
+              teacherParagraphs.push(...singleVisualParagraphs(pair.visual, true));
+            }
+            return new TableRow({
               children: [
-                cell([paragraphWithBreaks(`- ${pair.teacher}`, { spacingAfter: 25 })], {
+                cell(teacherParagraphs, {
                   topBorder: false,
                   bottomBorder: pairIndex === block.actionPairs.length - 1,
                 }),
@@ -464,7 +494,8 @@ function buildPeriodsTable(periods: PeriodPlan[], displayOptions: ActivityDocume
                   bottomBorder: pairIndex === block.actionPairs.length - 1,
                 }),
               ],
-            }),
+            });
+          },
         ),
       ];
     });

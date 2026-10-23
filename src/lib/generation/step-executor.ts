@@ -73,6 +73,7 @@ export type StagedOcrPageArtifact = {
   sourceHash: string;
   cacheHit: boolean;
   model: string;
+  dataUrl?: string;
 };
 
 export type StagedOcrArtifact = {
@@ -232,6 +233,7 @@ async function executeOcrStep(job: GenerationJob, owner: string, submittedAsset?
         sourceHash: result.sourceHash,
         cacheHit: result.cacheHit,
         model: result.model,
+        ...(asset.dataUrl && asset.dataUrl.length <= 700_000 ? { dataUrl: asset.dataUrl } : {}),
       } satisfies StagedOcrPageArtifact);
     }
     nextPosition = sequence;
@@ -361,11 +363,35 @@ async function executePeriodGenerationStep(job: GenerationJob, owner: string) {
   });
 }
 
+async function hydrateLessonInputWithOcrPageAssets(
+  jobId: string,
+  persistedInput: PersistedGenerationInput,
+): Promise<ReturnType<typeof lessonInputFromPersisted>> {
+  const input = lessonInputFromPersisted(persistedInput);
+  if (!input.uploadedAssets.length) return input;
+  const ordered = sortGenerationOcrAssets(input.uploadedAssets);
+  const dataUrlById = new Map<string, string>();
+  for (let seq = 1; seq <= ordered.length; seq += 1) {
+    const page = await readGenerationJobArtifact<StagedOcrPageArtifact>(jobId, { kind: "ocr-page", sequence: seq });
+    if (page?.payload?.dataUrl && page.payload.assetId) {
+      dataUrlById.set(page.payload.assetId, page.payload.dataUrl);
+    }
+  }
+  if (!dataUrlById.size) return input;
+  return {
+    ...input,
+    uploadedAssets: input.uploadedAssets.map((asset) => {
+      const dataUrl = dataUrlById.get(asset.id);
+      return dataUrl ? { ...asset, dataUrl } : asset;
+    }),
+  };
+}
+
 async function executeAssemblyStep(job: GenerationJob, owner: string) {
   const existing = await readGenerationJobArtifact<StagedAssemblyArtifact>(job.id, { kind: "assembly" });
   if (!existing) {
     const persistedInput = await requiredInputArtifact(job.id);
-    const input = lessonInputFromPersisted(persistedInput);
+    const input = await hydrateLessonInputWithOcrPageAssets(job.id, persistedInput);
     const blueprint = await requiredBlueprintArtifact(job.id);
     const total = Math.max(1, Number(input.periods || 1));
     const periods: StagedPeriodArtifact[] = [];
@@ -432,7 +458,7 @@ async function finalizeStagedRepairs(job: GenerationJob, validation: StagedValid
   if (currentAssembly.repairApplied) return;
 
   const persistedInput = await requiredInputArtifact(job.id);
-  const input = lessonInputFromPersisted(persistedInput);
+  const input = await hydrateLessonInputWithOcrPageAssets(job.id, persistedInput);
   const blueprint = await requiredBlueprintArtifact(job.id);
   const totalPeriods = Math.max(1, Number(input.periods || 1));
   const originalPeriods: StagedPeriodArtifact[] = [];
