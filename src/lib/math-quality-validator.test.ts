@@ -80,6 +80,23 @@ describe("validateMathLesson", () => {
     expect(findings.filter((finding) => finding.code.startsWith("MATH-QUALITY"))).toEqual([]);
   });
 
+  it("passes a statistics/data-collection math lesson without arithmetic operator equations", () => {
+    const statPlan = lesson({
+      activities: [
+        activity({
+          id: "warmup",
+          phase: "Khởi động",
+          title: "Khởi động: Thu thập thông tin",
+          inputOrMaterials: ["Tranh tình huống ném bóng vào rổ"],
+          teacherActions: ["GV chiếu bảng ghi chép dấu × và O; hỏi vì sao cần phân loại dữ kiện."],
+          studentActions: ["HS đếm bảng ghi chép: Nam có 7 lần, Việt có 10 lần, Mai có 5 lần ném bóng vào rổ."],
+          expectedAnswer: "Nam: 7 lần, Việt: 10 lần, Mai: 5 lần.",
+        }),
+      ],
+    });
+    expect(codes(statPlan)).not.toContain("MATH-QUALITY-01");
+  });
+
   it("reports generic math content without data or an actual calculation", () => {
     const plan = lesson({ activities: [activity({ inputOrMaterials: [], teacherActions: ["GV yêu cầu HS làm bài trong SGK."], studentActions: ["HS làm bài."], expectedAnswer: undefined })] });
     expect(codes(plan)).toContain("MATH-QUALITY-01");

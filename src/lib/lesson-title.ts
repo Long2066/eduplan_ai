@@ -107,6 +107,24 @@ export function extractOcrLessonTitleEvidence(ocrText: string): LessonTitleEvide
     rawIndex,
     marker: OCR_PAGE_MARKER_PATTERN.test(cleanText(raw)),
   })).filter((item) => item.raw);
+  const collectContinuation = (startIdx: number, firstLine: string) => {
+    const collected = [firstLine];
+    let endIdx = startIdx;
+    if (isAllCapsHeading(firstLine)) {
+      const next = lines[startIdx + 1];
+      if (
+        next
+        && !next.marker
+        && isAllCapsHeading(next.raw)
+        && viableHeadingName(next.raw)
+        && !/^(?:chủ\s*đề|bài|ôn\s*tập|khởi\s*động|khám\s*phá|hoạt\s*động|luyện\s*tập|vận\s*dụng)\b/iu.test(next.raw)
+      ) {
+        collected.push(next.raw);
+        endIdx = startIdx + 1;
+      }
+    }
+    return { text: collected.join(" "), lines: collected, endIdx };
+  };
   const candidates: LessonTitleEvidence[] = [];
   for (let index = 0; index < lines.length; index += 1) {
     const current = lines[index];
@@ -118,9 +136,11 @@ export function extractOcrLessonTitleEvidence(ocrText: string): LessonTitleEvide
         ? numberLine.raw.match(/^(?:số\s*)?(\d+[a-z]?)\s*[.:;\-–—)]?$/iu)
         : null;
       if (number && nameLine && !nameLine.marker && viableHeadingName(nameLine.raw)) {
-        const title = canonicalizeLessonTitle(`Bài ${number[1]}. ${nameLine.raw}`);
-        candidates.push({ raw: `${current.raw}\n${numberLine.raw}\n${nameLine.raw}`, title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(nameLine.raw), true), evidence: [current.raw, numberLine.raw, nameLine.raw], lineStart: current.rawIndex + 1, lineEnd: nameLine.rawIndex + 1 });
-        index += 2;
+        const cont = collectContinuation(index + 2, nameLine.raw);
+        const title = canonicalizeLessonTitle(`Bài ${number[1]}. ${cont.text}`);
+        const ev = [current.raw, numberLine.raw, ...cont.lines];
+        candidates.push({ raw: ev.join("\n"), title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(nameLine.raw), true), evidence: ev, lineStart: current.rawIndex + 1, lineEnd: lines[cont.endIdx].rawIndex + 1 });
+        index = cont.endIdx;
       }
       continue;
     }
@@ -128,14 +148,20 @@ export function extractOcrLessonTitleEvidence(ocrText: string): LessonTitleEvide
     if (standalone) {
       const next = lines[index + 1];
       if (!next || next.marker || !viableHeadingName(next.raw)) continue;
-      const title = canonicalizeLessonTitle(`Bài ${standalone[1]}. ${next.raw}`);
-      candidates.push({ raw: `${current.raw}\n${next.raw}`, title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(current.raw) || isAllCapsHeading(next.raw), true), evidence: [current.raw, next.raw], lineStart: current.rawIndex + 1, lineEnd: next.rawIndex + 1 });
+      const cont = collectContinuation(index + 1, next.raw);
+      const title = canonicalizeLessonTitle(`Bài ${standalone[1]}. ${cont.text}`);
+      const ev = [current.raw, ...cont.lines];
+      candidates.push({ raw: ev.join("\n"), title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(current.raw) || isAllCapsHeading(next.raw), true), evidence: ev, lineStart: current.rawIndex + 1, lineEnd: lines[cont.endIdx].rawIndex + 1 });
+      index = cont.endIdx;
       continue;
     }
     const parts = current.raw.match(/^bài\s*(?:số\s*)?(\d+[a-z]?)(?:\s*[.:;\-–—)]\s*|\s+)(.+)$/iu);
     if (parts && viableHeadingName(parts[2])) {
-      const title = canonicalizeLessonTitle(current.raw);
-      candidates.push({ raw: current.raw, title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(current.raw), false), evidence: [current.raw], lineStart: current.rawIndex + 1, lineEnd: current.rawIndex + 1 });
+      const cont = collectContinuation(index, parts[2]);
+      const title = canonicalizeLessonTitle(`Bài ${parts[1]}. ${cont.text}`);
+      const ev = cont.lines.length > 1 ? [current.raw, ...cont.lines.slice(1)] : [current.raw];
+      candidates.push({ raw: ev.join("\n"), title, source: "ocr-heading", confidence: candidateConfidence(index, isAllCapsHeading(current.raw), false), evidence: ev, lineStart: current.rawIndex + 1, lineEnd: lines[cont.endIdx].rawIndex + 1 });
+      index = cont.endIdx;
     } else if (index <= 12 && /^(?:chủ\s*đề|ôn\s*tập)\b/iu.test(current.raw) && viableHeadingName(current.raw)) {
       candidates.push({ raw: current.raw, title: canonicalizeLessonTitle(current.raw), source: "ocr-heading", confidence: Math.min(0.95, 0.82 + (isAllCapsHeading(current.raw) ? 0.08 : 0)), evidence: [current.raw], lineStart: current.rawIndex + 1, lineEnd: current.rawIndex + 1 });
     }
@@ -154,7 +180,18 @@ const SOURCE_PRIORITY: Record<LessonTitleSource, number> = {
 };
 
 export function lessonTitlesEqual(left: unknown, right: unknown) {
-  return foldLessonTitle(canonicalizeLessonTitle(left)) === foldLessonTitle(canonicalizeLessonTitle(right));
+  const fLeft = foldLessonTitle(canonicalizeLessonTitle(left));
+  const fRight = foldLessonTitle(canonicalizeLessonTitle(right));
+  if (fLeft === fRight) return true;
+  const mLeft = fLeft.match(/^bai\s+(\d+[a-z]?)\s+(.+)$/);
+  const mRight = fRight.match(/^bai\s+(\d+[a-z]?)\s+(.+)$/);
+  if (mLeft && mRight && mLeft[1] === mRight[1]) {
+    const [shorter, longer] = mLeft[2].length <= mRight[2].length ? [mLeft[2], mRight[2]] : [mRight[2], mLeft[2]];
+    if (shorter.split(" ").length >= 3 && longer.startsWith(`${shorter} `)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function resolveLessonTitle(options: { subject?: string; ocrText?: string; candidates?: LessonTitleCandidate[] }): LessonTitleResolution {

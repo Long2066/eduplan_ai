@@ -70,6 +70,11 @@ describe("extractOcrLessonTitleEvidence", () => {
     const candidates = extractOcrLessonTitleEvidence("BÀI 10: CÙNG KHÁM PHÁ QUANG CẢNH XUNG QUANH\nNội dung bài học");
     expect(candidates[0]?.title).toBe("Bài 10. CÙNG KHÁM PHÁ QUANG CẢNH XUNG QUANH");
   });
+
+  it("joins a wrapped uppercase continuation line for multi-line SGK headings", () => {
+    const candidates = extractOcrLessonTitleEvidence("Chủ đề 5\nPHÉP CỘNG VÀ PHÉP TRỪ\nBài 22\nPHÉP CỘNG CÁC SỐ\nCÓ NHIỀU CHỮ SỐ\nKhám phá");
+    expect(candidates[0]?.title).toBe("Bài 22. PHÉP CỘNG CÁC SỐ CÓ NHIỀU CHỮ SỐ");
+  });
 });
 
 describe("resolveLessonTitle", () => {

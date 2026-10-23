@@ -158,9 +158,9 @@ describe("staged final validation", () => {
     });
   });
 
-  it("rejects persistence when any error remains", () => {
+  it("rejects persistence when a fatal math error remains", () => {
     const error: PedagogyAuditFinding = {
-      code: "MATH-QUALITY-01", severity: "error", message: "Thiếu nội dung toán", autoFixable: false,
+      code: "MATH-QUALITY-13", severity: "error", message: "Phép tính sai", autoFixable: true,
     };
     validationMocks.validateStagedLesson.mockReturnValue(validation([error]));
     const result = finalizeStagedLesson(input(), assembly(true), blueprint());
@@ -168,7 +168,7 @@ describe("staged final validation", () => {
     expect(result).toMatchObject({
       decision: "reject",
       canPersist: false,
-      blockingCodes: ["MATH-QUALITY-01"],
+      blockingCodes: ["MATH-QUALITY-13"],
     });
     expect(result.summary.errors).toBe(1);
     expect(result.audit.status).toBe("needs-review");

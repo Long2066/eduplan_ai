@@ -7,7 +7,7 @@ type Scope = { periodNumber?: number; focus?: string; activities: LessonActivity
 type ActivityLocation = { activity: LessonActivity; activityIndex: number; periodNumber?: number };
 
 export const mathQualityRules = {
-  missingConcreteMath: { code: "MATH-QUALITY-01", severity: "error", autoFixable: false },
+  missingConcreteMath: { code: "MATH-QUALITY-01", severity: "error", autoFixable: true },
   invalidMathNotation: { code: "MATH-QUALITY-02", severity: "error", autoFixable: true },
   missingExpectedAnswer: { code: "MATH-QUALITY-03", severity: "warning", autoFixable: true },
   missingRepresentation: { code: "MATH-QUALITY-04", severity: "warning", autoFixable: true },
@@ -25,8 +25,8 @@ export const mathQualityRules = {
   sourceVerificationUnavailable: { code: "MATH-QUALITY-16", severity: "suggestion", autoFixable: false },
 } as const satisfies Record<string, MathRule>;
 
-const visualPattern = /sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ số|thẻ dữ kiện|trục số|phần bằng nhau|vật thật|khối lập phương|đồng hồ|thước/i;
-const concreteMathPattern = /\\\([^)]*(?:\d|[a-z])[+\-×÷=*<>\\][^)]*\\\)|\\\[[^\]]*(?:\d|[a-z])[+\-×÷=*<>\\][^\]]*\\\]|\d+\s*(?:[+×÷=<>]|[−–—-])\s*\d+|(?:S|P|V|C|A)\s*=|công thức\s*[:：]|đáp (?:số|án)\s*[:：]|dữ kiện\s*[:：]|bài toán\s*[:：]|hình (?:vuông|chữ nhật|tam giác|tròn).{0,40}\d/iu;
+const visualPattern = /sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ số|thẻ dữ kiện|trục số|phần bằng nhau|vật thật|khối lập phương|đồng hồ|thước|biểu đồ/i;
+const concreteMathPattern = /\\\([^)]*(?:\d|[a-z])[+\-×÷=*<>\\][^)]*\\\)|\\\[[^\]]*(?:\d|[a-z])[+\-×÷=*<>\\][^\]]*\\\]|\d+\s*(?:[+×÷=<>]|[−–—-])\s*\d+|(?:S|P|V|C|A)\s*=|công thức\s*[:：]|đáp (?:số|án)\s*[:：]|dữ kiện\s*[:：]|bài toán\s*[:：]|hình (?:vuông|chữ nhật|tam giác|tròn|khối|lập phương|hộp chữ nhật|trụ|cầu).{0,60}\d|(?:bảng số liệu|thu thập|ghi chép|phân loại|kiểm đếm|biểu đồ|khả năng|xác suất|đo|độ dài|khối lượng|dung tích|thời gian|nhiệt độ|diện tích|chu vi|thể tích|góc|cạnh|đỉnh|tâm|bán kính|đường kính)[\s\S]{0,160}\d|\d+\s*(?:lần|bạn|cái|chiếc|quyển|quả|con|viên|hình|nhóm|loại|ô|cm|mm|dm|m|km|g|kg|yến|tạ|tấn|ml|l|lít|giây|phút|giờ|ngày|tuần|tháng|năm|đồng|°C)\b/iu;
 const relationPattern = /dữ kiện|đề bài cho|yêu cầu tìm|câu hỏi cần tìm|quan hệ|lớn hơn|bé hơn|nhiều hơn|ít hơn|gấp|kém|tổng|hiệu|tỉ số|số phần|vì sao|lý do chọn|chọn phép tính/i;
 const checkPattern = /kiểm tra ngược|thử lại|đối chiếu.{0,35}(dữ kiện|đề bài|kết quả)|thay.{0,20}(kết quả|đáp số).{0,20}(vào|lại)|ước lượng|hợp lý/i;
 const unitPattern = /(?:^|[\s(,;:])(?:mm|cm|dm|m|km|g|kg|tấn|ml|lít|giây|phút|giờ|đồng|cm2|cm²|m2|m²|cm3|cm³|m3|m³)(?=$|[\s).,;:])/i;

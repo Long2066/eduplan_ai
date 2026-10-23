@@ -51,11 +51,11 @@ export function hasWeaklyPairedActions(activity: LessonPlan["activities"][number
 export function maxActionPairsForDuration(activity: LessonPlan["activities"][number], index: number) {
   const minutes = activityMinutes(activity, index);
   const key = activityPhaseKey(activity);
-  if (key === "Khởi động" || minutes <= 5) return 3;
-  if (key === "Vận dụng" && minutes <= 5) return 3;
-  if (minutes <= 10) return 4;
-  if (minutes <= 17) return 6;
-  return 7;
+  if (key === "Khởi động" || minutes <= 5) return 9;
+  if (key === "Vận dụng" && minutes <= 5) return 9;
+  if (minutes <= 10) return 12;
+  if (minutes <= 17) return 16;
+  return 18;
 }
 
 export function hasTooManyActionPairs(activity: LessonPlan["activities"][number], index: number) {
@@ -236,10 +236,10 @@ export function subjectPedagogyIssues(lesson: LessonPlan, input: LessonInput) {
     if (periods.length > 1) {
       periods.forEach((pp, idx) => {
         const periodText = JSON.stringify(pp);
-        if (!/sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ|trục số|phần bằng nhau/i.test(periodText)) {
+        if (!/sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ|trục số|phần bằng nhau|biểu đồ/i.test(periodText)) {
           issues.push(`Tiết ${idx + 1} Toán thiếu biểu diễn/tóm tắt trực quan.`);
         }
-        if (!/\d+\s*[+\-×÷=<>]\s*\d+|S\s*=|P\s*=|V\s*=/i.test(periodText)) {
+        if (!/\d+\s*[+\-×÷=<>]\s*\d+|S\s*=|P\s*=|V\s*=|\d+\s*(?:lần|bạn|cái|chiếc|quyển|quả|con|viên|hình|nhóm|loại|ô|cm|mm|dm|m|km|g|kg|ml|l|lít|phút|giờ|đồng)\b|bảng số liệu|thu thập|ghi chép|phân loại|biểu đồ/i.test(periodText)) {
           issues.push(`Tiết ${idx + 1} Toán thiếu nội dung toán cụ thể (phép tính, công thức, bài giải) trong teacherActions/studentActions.`);
         }
       });
@@ -735,15 +735,19 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
     if (hasTooManyActionPairs(activity, index)) issues.push(`${label}: quá nhiều bước so với thời lượng.`);
     if (!activity.learningProducts?.length) issues.push(`${label}: thiếu sản phẩm học tập (cần ghi rõ kết quả bài làm, câu trả lời, bài giải cụ thể).`);
   });
-  // Kiểm tra nội dung toán cụ thể (phép tính, công thức, bài giải)
+  // Kiểm tra nội dung toán cụ thể (phép tính, công thức, bài giải, số liệu thống kê/hình học/đo lường)
   const actionsText = activities.map(a => [...(a.teacherActions || []), ...(a.studentActions || [])].join(" ")).join(" ");
-  if (!/\d+\s*[+\-×÷=<>]\s*\d+/i.test(actionsText) && !/S\s*=|P\s*=|V\s*=|[Cc]ông thức/i.test(actionsText)) {
+  if (
+    !/\d+\s*[+\-×÷=<>]\s*\d+/i.test(actionsText)
+    && !/S\s*=|P\s*=|V\s*=|[Cc]ông thức/i.test(actionsText)
+    && !/\d+\s*(?:lần|bạn|cái|chiếc|quyển|quả|con|viên|hình|nhóm|loại|ô|cm|mm|dm|m|km|g|kg|ml|l|lít|phút|giờ|đồng)\b|bảng số liệu|thu thập|ghi chép|phân loại|biểu đồ/i.test(actionsText)
+  ) {
     issues.push("Tiết Toán thiếu nội dung toán cụ thể trong teacherActions/studentActions: phải viết rõ phép tính, công thức, bài giải mẫu hoặc đáp án dự kiến từ SGK, không chỉ tham chiếu 'xem SGK' hoặc 'HS làm bài'.");
   }
-  if (!/sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ|trục số|phần bằng nhau/i.test(text)) {
+  if (!/sơ đồ|tóm tắt|bảng|hình vẽ|que tính|mô hình|thẻ|trục số|phần bằng nhau|biểu đồ/i.test(text)) {
     issues.push("Tiết Toán thiếu biểu diễn/tóm tắt trực quan.");
   }
-  if (!/dữ kiện|yêu cầu|quan hệ|lớn hơn|bé hơn|tổng|hiệu|tỉ số|phép tính|vì sao/i.test(text)) {
+  if (!/dữ kiện|yêu cầu|quan hệ|lớn hơn|bé hơn|nhiều hơn|ít hơn|nhiều nhất|ít nhất|tổng|hiệu|tỉ số|phép tính|vì sao|so sánh|phân loại/i.test(text)) {
     issues.push("Tiết Toán thiếu phân tích dữ kiện, yêu cầu, quan hệ hoặc lý do chọn phép tính.");
   }
   if (!/lỗi sai|sai thường gặp|nhầm|kiểm tra|đối chiếu|thử lại|kiểm tra ngược|đơn vị/i.test(text)) {
@@ -763,14 +767,14 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
     }
   }
   // Kiểm tra phân hóa học sinh
-  if (!/hỗ trợ|HS yếu|HS khá|phân hóa|mở rộng|câu hỏi gợi|bài khó hơn|nâng cao|thêm thử thách/i.test(text)) {
-    issues.push("Tiết Toán thiếu phân hóa: cần có hỗ trợ HS yếu (câu hỏi gợi mở, sơ đồ mẫu) và nhiệm vụ mở rộng cho HS khá.");
+  if (!/hỗ trợ|cần hỗ trợ|gặp khó khăn|HS khá|hoàn thành sớm|phân hóa|mở rộng|câu hỏi gợi|bài khó hơn|nâng cao|thêm thử thách/i.test(text)) {
+    issues.push("Tiết Toán thiếu phân hóa: cần có hỗ trợ HS cần hỗ trợ (câu hỏi gợi mở, sơ đồ mẫu) và nhiệm vụ mở rộng cho HS hoàn thành sớm.");
   }
   // Kiểm tra Vận dụng có gắn đời sống
   const application = activities.find(a => activityPhaseKey(a) === "Vận dụng");
   if (application) {
     const appText = JSON.stringify(application);
-    if (!/đời sống|gia đình|lớp học|trường|mua|bán|quãng đường|thời gian|cây|vườn|sân|địa phương|thực tế|hằng ngày|ở nhà/i.test(appText)) {
+    if (!/đời sống|gia đình|lớp|trường|mua|bán|quãng đường|thời gian|cây|vườn|sân|địa phương|thực tế|hằng ngày|ở nhà|ngày hội|thể thao|phòng học|đồ dùng|bạn/i.test(appText)) {
       issues.push("Vận dụng Toán chưa gắn với đời sống thực tế: cần liên hệ gia đình, trường học, mua bán, địa phương hoặc tình huống hằng ngày.");
     }
   }

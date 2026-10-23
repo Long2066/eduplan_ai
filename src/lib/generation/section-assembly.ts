@@ -68,6 +68,24 @@ function uniqueValues<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
+function sanitizeStigmatizingLabelsDeep<T>(value: T): T {
+  if (typeof value === "string") {
+    return value
+      .replace(/\bhọc sinh yếu\b/gi, "học sinh cần hỗ trợ")
+      .replace(/\bHS yếu\b/g, "HS cần hỗ trợ")
+      .replace(/\bhs yếu\b/gi, "HS cần hỗ trợ") as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeStigmatizingLabelsDeep(item)) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, sanitizeStigmatizingLabelsDeep(v)]),
+    ) as T;
+  }
+  return value;
+}
+
 function cloneOutcomes(outcomes: LessonOutcomes): LessonOutcomes {
   return {
     generalCompetencies: [...(outcomes.generalCompetencies || [])],
@@ -576,8 +594,8 @@ export async function assembleStagedSections(
     },
   };
 
-  // 9. Enrich with digital competencies if enabled
-  const finalLesson = ensureLessonDigitalCompetencies(input, lesson);
+  // 9. Enrich with digital competencies if enabled and sanitize stigmatizing labels
+  const finalLesson = sanitizeStigmatizingLabelsDeep(ensureLessonDigitalCompetencies(input, lesson));
 
   const syncedPeriodArtifacts = periodArtifacts.map((art, index) => ({
     ...art,

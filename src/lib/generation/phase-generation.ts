@@ -288,28 +288,38 @@ Trả về duy nhất JSON:
     const sActions = Array.isArray(safeActivity.studentActions) ? [...safeActivity.studentActions] : [];
 
     if (tActions.length > sActions.length) {
-      for (let i = sActions.length; i < tActions.length; i++) {
-        const t = tActions[i].toLowerCase();
-        let s = "HS quan sát, ghi nhớ trọng tâm và đối chiếu kết quả.";
-        if (/hỏi|\?|câu hỏi|mấy|bao nhiêu|như thế nào|tại sao|vì sao/i.test(t)) {
-          s = "HS suy nghĩ, trao đổi theo cặp và nêu câu trả lời/phép tính trước lớp.";
-        } else if (/tính|cộng|trừ|nhân|chia|bảng|dãy số|điền/i.test(t)) {
-          s = "HS thực hiện phép tính vào bảng con hoặc vở nháp, giơ bảng báo cáo kết quả.";
-        } else if (/chiếu|quan sát|tranh|sơ đồ|mô hình/i.test(t)) {
-          s = "HS quan sát hình ảnh trực quan, nhận diện dữ kiện và nêu phép tính tương ứng.";
-        } else if (/nhận xét|chốt|kết luận|khen/i.test(t)) {
-          s = "HS lắng nghe nhận xét của GV, tự kiểm tra và sửa sai vào vở.";
+      const alignedSActions: string[] = [];
+      let sCursor = 0;
+      for (let i = 0; i < tActions.length; i++) {
+        const t = tActions[i];
+        const tTrimmed = t.trim();
+        const isTeacherQuestion = /^\+/.test(tTrimmed) || /\?|bao nhiêu|mấy|như thế nào|tại sao|vì sao|nêu|hãy/i.test(tTrimmed);
+        if (isTeacherQuestion && sCursor < sActions.length) {
+          alignedSActions.push(sActions[sCursor++]);
+        } else if (sCursor < sActions.length && tActions.length - i <= sActions.length - sCursor) {
+          alignedSActions.push(sActions[sCursor++]);
+        } else if (/^["“]?(?:gv\s+)?(?:nhận xét|chốt|kết luận)/i.test(tTrimmed)) {
+          alignedSActions.push("- HS lắng nghe nhận xét của GV, ghi nhớ kiến thức chốt và tự kiểm tra kết quả.");
+        } else if (/chiếu|quan sát|tranh|sơ đồ|mô hình|bảng/i.test(tTrimmed)) {
+          alignedSActions.push("- HS quan sát hình ảnh/bảng số liệu trên màn hình và nhận diện các thông tin toán học.");
+        } else if (/phát phiếu|giao nhiệm vụ|tổ chức|thảo luận|cặp đôi|nhóm/i.test(tTrimmed)) {
+          alignedSActions.push("- HS nhận nhiệm vụ, trao đổi cùng bạn và thực hiện yêu cầu trên phiếu/bảng con.");
+        } else {
+          alignedSActions.push("- HS theo dõi hướng dẫn của GV và chuẩn bị thực hiện bước tiếp theo.");
         }
-        sActions.push(s);
       }
+      while (sCursor < sActions.length && alignedSActions.length > 0) {
+        alignedSActions[alignedSActions.length - 1] += ` ${sActions[sCursor++]}`;
+      }
+      safeActivity.teacherActions = tActions;
+      safeActivity.studentActions = alignedSActions;
     } else if (sActions.length > tActions.length) {
       for (let i = tActions.length; i < sActions.length; i++) {
-        tActions.push("GV quan sát, lắng nghe câu trả lời của HS và hướng dẫn điều chỉnh nếu cần.");
+        tActions.push("- GV quan sát, lắng nghe câu trả lời của HS và hướng dẫn điều chỉnh nếu cần.");
       }
+      safeActivity.teacherActions = tActions;
+      safeActivity.studentActions = sActions;
     }
-
-    safeActivity.teacherActions = tActions;
-    safeActivity.studentActions = sActions;
   }
 
   const payload = {
