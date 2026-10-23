@@ -407,7 +407,7 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
         duration: 35,
       },
       outcomes: {
-        knowledgeAndSkills: [String.raw`So sánh \(30 > 23\) và \(6 < 23\)`],
+        knowledgeAndSkills: [String.raw`Quy đồng \(\frac{1}{4}\) và \(\frac{3}{8}\), so sánh \(30 > 23\) và \(6 < 23\)`],
         generalCompetencies: ["Tự chủ và tự học"],
         specificCompetencies: ["Năng lực toán học"],
         qualities: ["Chăm chỉ"],

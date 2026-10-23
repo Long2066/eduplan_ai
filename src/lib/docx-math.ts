@@ -47,12 +47,14 @@ export function sanitizeXmlText(value: string) {
 
 export function sanitizeOmmlFragment(omml: string) {
   return sanitizeXmlText(omml)
-    .replace(/<m:t([^>]*)>([\s\S]*?)<\/m:t>/g, (_, attrs: string, content: string) => {
+    .replace(/<m:t(?:\s[^>]*)?>([\s\S]*?)<\/m:t>/g, (full, content: string) => {
+      const openEnd = full.indexOf(">") + 1;
+      const openTag = full.slice(0, openEnd);
       const safe = content
         .replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-      return `<m:t${attrs}>${safe}</m:t>`;
+      return `${openTag}${safe}</m:t>`;
     })
     .replace(/<m:sty\s+m:val="undefined"\s*\/>/g, "")
     .replace(/<w:rPr\s*\/>/g, "");
