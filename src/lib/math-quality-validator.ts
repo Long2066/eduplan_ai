@@ -53,8 +53,20 @@ function hasExpectedAnswer(activity: LessonActivity) {
 function hasErrorAndFeedback(activity: LessonActivity) { const text = activityText(activity); const hasError = Boolean(activity.commonErrors?.some((item) => item.trim())) || /lỗi sai|sai thường gặp|dễ nhầm|nếu hs (sai|nhầm)|nhầm/i.test(text); const hasFeedback = Boolean(activity.teacherFeedback?.some((item) => item.trim())) || Boolean(activity.errorFeedback?.some((item) => item.error.trim() && item.feedback.some((value) => value.trim()))) || /sửa lỗi|gợi hỏi|gợi ý|đối chiếu|hướng dẫn.{0,30}(sửa|thử lại)|phản hồi/i.test(text); return hasError && hasFeedback }
 function gradeNumber(value: string) { const match = String(value).match(/([1-5])/); return match ? Number(match[1]) : 0 }
 function gradeMismatchMessage(grade: number, text: string) { if (!grade) return ""; if (grade <= 2 && /tỉ số phần trăm|phân số|số thập phân|diện tích (hình|tam giác)|thể tích|vận tốc|chuyển động đều|ẩn số|phương trình/i.test(text)) return "Nội dung phân số/số thập phân/tỉ số phần trăm/diện tích-thể tích/chuyển động hoặc phương trình vượt mức điển hình lớp 1–2."; if (grade === 3 && /tỉ số phần trăm|số thập phân|thể tích|vận tốc|chuyển động đều|phương trình/i.test(text)) return "Nội dung tỉ số phần trăm/số thập phân/thể tích/chuyển động hoặc phương trình vượt mức điển hình lớp 3."; if (grade <= 3 && /chứng minh|suy luận đại số|biến số/i.test(text)) return "Yêu cầu chứng minh hoặc suy luận đại số vượt mức diễn đạt điển hình của khối lớp."; return "" }
+function answerVerificationText(activity: LessonActivity) {
+  return [
+    activity.objective,
+    ...(activity.inputOrMaterials || []),
+    ...(activity.teacherActions || []),
+    ...(activity.studentActions || []),
+    ...(activity.learningProducts || []),
+    ...(activity.successCriteria || []),
+    activity.expectedAnswer || "",
+    ...(activity.acceptableResponses || []),
+  ].join(" ");
+}
 function answerMismatchMessage(activity: LessonActivity) {
-  const mismatch = findSimpleArithmeticMismatch(activityText(activity));
+  const mismatch = findSimpleArithmeticMismatch(answerVerificationText(activity));
   if (mismatch) {
     return `Đẳng thức ${mismatch.equation} sai; kết quả đúng của phép tính là ${mismatch.computed}.`;
   }

@@ -3,6 +3,7 @@ import { extractAiJsonValue } from "@/lib/ai-json";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
 import { stagedArtifactAnchor } from "@/lib/generation/section-validation";
 import {
+  STAGED_PHASES,
   STAGED_PHASE_LABELS,
   stagedActivityId,
   type GenerateStagedPhaseOptions,
@@ -11,7 +12,10 @@ import {
   type StagedPhaseArtifact,
   type StagedPhaseHandoff,
   type StagedPhaseInput,
+  type StagedPhaseName,
 } from "@/lib/generation/section-types";
+import { normalizeMathContentDeep } from "@/lib/math-content";
+import { maxActionPairsForDuration } from "@/lib/subject-checkers";
 import {
   digitalCompetencyInstruction,
   learningContextGuidance,
@@ -34,6 +38,114 @@ import {
   extractAppliedWords,
 } from "@/lib/vietnamese-stroke-engine";
 import type { LessonActivity, VietnameseLessonClassification } from "@/types/lesson";
+
+function buildMatchedStudentFallback(teacherStep: string): string {
+  const t = teacherStep.trim();
+  if (/^["“]?(?:gv\s+)?(?:nhận xét|chốt|kết luận)/i.test(t) || /chốt|kết luận|chuyển\s+(?:sang|vào|ý)|giới thiệu.*(?:phần|hoạt động|nội dung)/i.test(t)) {
+    return "- HS lắng nghe nhận xét của GV, ghi nhớ kiến thức trọng tâm và tự đối chiếu, kiểm tra lại bài làm.";
+  }
+  if (/^\+/.test(t) || /\?|bao nhiêu|mấy|như thế nào|tại sao|vì sao|nêu|hãy/i.test(t)) {
+    return "+ HS suy nghĩ, vận dụng dữ kiện bài học để nêu câu trả lời và giải thích cách làm trước lớp.";
+  }
+  if (/chiếu|quan sát|tranh|sơ đồ|mô hình|bảng/i.test(t)) {
+    return "- HS quan sát hình ảnh/ngữ liệu, xác định các dữ kiện chính và nêu nhận xét theo yêu cầu của GV.";
+  }
+  if (/phát phiếu|giao nhiệm vụ|tổ chức|thảo luận|cặp đôi|nhóm/i.test(t)) {
+    return "- HS nhận nhiệm vụ, thảo luận trao đổi cùng bạn và hoàn thành bài làm trên phiếu/bảng con.";
+  }
+  return "- HS quan sát hướng dẫn của GV, thực hiện yêu cầu học tập và ghi kết quả/trình bày sản phẩm.";
+}
+
+function isWeakStudentResponseForTeacher(teacherStep: string, studentStep: string): boolean {
+  const teacher = teacherStep.toLowerCase();
+  const student = studentStep.toLowerCase();
+  const teacherRequiresResponse = /đặt câu hỏi|câu hỏi|yêu cầu|giao nhiệm vụ|hướng dẫn.*(tìm|xác định|viết|làm|thảo luận|trao đổi|đọc|tính|vẽ|lập|hoàn thành)|mời hs|tổ chức.*(thảo luận|trao đổi|làm việc|trình bày)/i.test(teacher);
+  const studentHasMatchingAction = /trả lời|nêu|giải thích|chia sẻ|thảo luận|trao đổi|thực hiện|làm|đọc|viết|tìm|xác định|tính|vẽ|lập|hoàn thành|trình bày|báo cáo|nhận xét|ghi|đóng vai|vận dụng|quan sát|dự đoán|chọn|giơ|chỉ|cúi|co|duỗi|mở|cảm nhận|dừng|nghỉ|ghép|xếp|đánh dấu|đối chiếu|kiểm tra/i.test(student);
+  const studentOnlyPassive = /^(?:[-+•]\s*)?hs\s+(lắng nghe|nghe|quan sát|theo dõi)(\.|$)/i.test(studentStep.trim()) && !studentHasMatchingAction;
+  const teacherOnlyCloses = /chốt|kết luận|chuyển\s+(sang|vào|ý)|giới thiệu.*(phần|hoạt động|nội dung)/i.test(teacher);
+  const studentUsesGenericFallback = /thực hiện nhiệm vụ tương ứng|phản hồi theo hướng dẫn|trao đổi kết quả và phản hồi|chuẩn bị thực hiện bước tiếp theo/i.test(student);
+  return (teacherRequiresResponse && (!studentHasMatchingAction || studentOnlyPassive)) || (teacherOnlyCloses && studentUsesGenericFallback);
+}
+
+export function balanceAndNormalizePhaseActivity(
+  activity: LessonActivity,
+  phase: StagedPhaseName,
+  subjectKind: string,
+): LessonActivity {
+  const normalizedActivity = subjectKind === "math"
+    ? normalizeMathContentDeep(activity)
+    : { ...activity };
+
+  let tActions = (Array.isArray(normalizedActivity.teacherActions) ? normalizedActivity.teacherActions : [])
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+  let sActions = (Array.isArray(normalizedActivity.studentActions) ? normalizedActivity.studentActions : [])
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+
+  if (tActions.length === 0) {
+    tActions = [`- GV dẫn dắt, nêu yêu cầu và hướng dẫn HS thực hiện hoạt động ${normalizedActivity.title || normalizedActivity.phase}.`];
+  }
+  if (sActions.length === 0) {
+    sActions = [buildMatchedStudentFallback(tActions[0]!)];
+  }
+
+  if (tActions.length > sActions.length) {
+    const alignedSActions: string[] = [];
+    let sCursor = 0;
+    for (let i = 0; i < tActions.length; i++) {
+      const t = tActions[i]!;
+      const tTrimmed = t.trim();
+      const isTeacherQuestion = /^\+/.test(tTrimmed) || /\?|bao nhiêu|mấy|như thế nào|tại sao|vì sao|nêu|hãy/i.test(tTrimmed);
+      if (isTeacherQuestion && sCursor < sActions.length) {
+        alignedSActions.push(sActions[sCursor++]!);
+      } else if (sCursor < sActions.length && tActions.length - i <= sActions.length - sCursor) {
+        alignedSActions.push(sActions[sCursor++]!);
+      } else {
+        alignedSActions.push(buildMatchedStudentFallback(tTrimmed));
+      }
+    }
+    while (sCursor < sActions.length && alignedSActions.length > 0) {
+      alignedSActions[alignedSActions.length - 1] += ` ${sActions[sCursor++]}`;
+    }
+    sActions = alignedSActions;
+  } else if (sActions.length > tActions.length) {
+    while (sActions.length > tActions.length && sActions.length >= 2) {
+      const last = sActions.pop()!;
+      sActions[sActions.length - 1] = `${sActions[sActions.length - 1]} ${last}`;
+    }
+  }
+
+  // Upgrade any weakly-paired student lines
+  sActions = sActions.map((s, idx) => {
+    const t = tActions[idx] || "";
+    if (isWeakStudentResponseForTeacher(t, s)) {
+      return buildMatchedStudentFallback(t);
+    }
+    return s;
+  });
+
+  // Cap action pairs to duration budget so `hasTooManyActionPairs` never triggers
+  const phaseIndex = Math.max(0, STAGED_PHASES.indexOf(phase));
+  const maxPairs = maxActionPairsForDuration(normalizedActivity, phaseIndex);
+  while (tActions.length > maxPairs && tActions.length >= 2) {
+    let mergeIdx = tActions.length - 2;
+    let minCombinedLen = Infinity;
+    for (let i = 0; i < tActions.length - 1; i++) {
+      const combinedLen = (tActions[i]?.length || 0) + (tActions[i + 1]?.length || 0);
+      if (combinedLen < minCombinedLen) {
+        minCombinedLen = combinedLen;
+        mergeIdx = i;
+      }
+    }
+    tActions.splice(mergeIdx, 2, `${tActions[mergeIdx]} ${tActions[mergeIdx + 1]}`);
+    sActions.splice(mergeIdx, 2, `${sActions[mergeIdx]} ${sActions[mergeIdx + 1]}`);
+  }
+
+  normalizedActivity.teacherActions = tActions;
+  normalizedActivity.studentActions = sActions;
+  return subjectKind === "math" ? normalizeMathContentDeep(normalizedActivity) : normalizedActivity;
+}
 
 export async function generateStagedPhase(
   options: GenerateStagedPhaseOptions,
@@ -298,60 +410,22 @@ Trả về duy nhất JSON:
     }
   }
 
-  // All Subjects Enhancement: Ensure 1:1 action pairing, meaningful student dialogue, and no robotic placeholders
-  {
-    const tActions = Array.isArray(safeActivity.teacherActions) ? [...safeActivity.teacherActions] : [];
-    const sActions = Array.isArray(safeActivity.studentActions) ? [...safeActivity.studentActions] : [];
-
-    if (tActions.length > sActions.length) {
-      const alignedSActions: string[] = [];
-      let sCursor = 0;
-      for (let i = 0; i < tActions.length; i++) {
-        const t = tActions[i];
-        const tTrimmed = t.trim();
-        const isTeacherQuestion = /^\+/.test(tTrimmed) || /\?|bao nhiêu|mấy|như thế nào|tại sao|vì sao|nêu|hãy/i.test(tTrimmed);
-        if (isTeacherQuestion && sCursor < sActions.length) {
-          alignedSActions.push(sActions[sCursor++]);
-        } else if (sCursor < sActions.length && tActions.length - i <= sActions.length - sCursor) {
-          alignedSActions.push(sActions[sCursor++]);
-        } else if (/^["“]?(?:gv\s+)?(?:nhận xét|chốt|kết luận)/i.test(tTrimmed)) {
-          alignedSActions.push("- HS lắng nghe nhận xét của GV, ghi nhớ kiến thức trọng tâm và tự kiểm tra kết quả.");
-        } else if (/chiếu|quan sát|tranh|sơ đồ|mô hình|bảng/i.test(tTrimmed)) {
-          alignedSActions.push("- HS quan sát hình ảnh/ngữ liệu trên màn hình và nhận diện các thông tin chính.");
-        } else if (/phát phiếu|giao nhiệm vụ|tổ chức|thảo luận|cặp đôi|nhóm/i.test(tTrimmed)) {
-          alignedSActions.push("- HS nhận nhiệm vụ, trao đổi cùng bạn và hoàn thành yêu cầu trên phiếu/bảng con.");
-        } else {
-          alignedSActions.push("- HS theo dõi hướng dẫn của GV và chuẩn bị thực hiện bước tiếp theo.");
-        }
-      }
-      while (sCursor < sActions.length && alignedSActions.length > 0) {
-        alignedSActions[alignedSActions.length - 1] += ` ${sActions[sCursor++]}`;
-      }
-      safeActivity.teacherActions = tActions;
-      safeActivity.studentActions = alignedSActions;
-    } else if (sActions.length > tActions.length) {
-      for (let i = tActions.length; i < sActions.length; i++) {
-        tActions.push("- GV quan sát, lắng nghe câu trả lời của HS và hướng dẫn điều chỉnh nếu cần.");
-      }
-      safeActivity.teacherActions = tActions;
-      safeActivity.studentActions = sActions;
-    }
-  }
-
+  const balancedActivity = balanceAndNormalizePhaseActivity(safeActivity, phase, sourceFacts.subjectKind);
+  const rawHandoff = parsed.handoff || {
+    activityId,
+    knowledge: [],
+    products: balancedActivity.learningProducts,
+    pending: [],
+    bridge: `Chuyển tiếp sau pha ${phaseLabel}.`,
+    objectiveIds: balancedActivity.objectiveIds || [],
+    sourceIds: phaseSourceIds,
+    materialIds: parsed.materialIds || [],
+  };
   const payload = {
-    activity: safeActivity,
+    activity: balancedActivity,
     materialIds: parsed.materialIds || [],
     sourceIds: phaseSourceIds,
-    handoff: parsed.handoff || {
-      activityId,
-      knowledge: [],
-      products: safeActivity.learningProducts,
-      pending: [],
-      bridge: `Chuyển tiếp sau pha ${phaseLabel}.`,
-      objectiveIds: safeActivity.objectiveIds || [],
-      sourceIds: phaseSourceIds,
-      materialIds: parsed.materialIds || [],
-    },
+    handoff: sourceFacts.subjectKind === "math" ? normalizeMathContentDeep(rawHandoff) : rawHandoff,
   };
 
   const artifact: StagedPhaseArtifact = {
@@ -484,15 +558,21 @@ Yêu cầu:
     const safeSourceIds = (Array.isArray(parsed.sourceIds) ? parsed.sourceIds : currentPhase.sourceIds)
       .filter((id) => validSrcIdSet.has(id));
 
+    const balancedRepairedActivity = balanceAndNormalizePhaseActivity(
+      repairedActivity,
+      currentPhase.phase,
+      sourceFacts.subjectKind,
+    );
+    const rawRepairedHandoff = {
+      ...(currentPhase.handoff || {}),
+      ...(parsed.handoff || {}),
+      bridge: parsed.handoff?.bridge?.trim() || currentPhase.handoff?.bridge || `Chuyển tiếp sau pha ${currentPhase.phase}.`,
+    };
     const payload = {
-      activity: repairedActivity,
+      activity: balancedRepairedActivity,
       materialIds: safeMaterialIds.length ? safeMaterialIds : currentPhase.materialIds.filter((id) => validMatIdSet.has(id)),
       sourceIds: safeSourceIds.length ? safeSourceIds : currentPhase.sourceIds.filter((id) => validSrcIdSet.has(id)),
-      handoff: {
-        ...(currentPhase.handoff || {}),
-        ...(parsed.handoff || {}),
-        bridge: parsed.handoff?.bridge?.trim() || currentPhase.handoff?.bridge || `Chuyển tiếp sau pha ${currentPhase.phase}.`,
-      },
+      handoff: sourceFacts.subjectKind === "math" ? normalizeMathContentDeep(rawRepairedHandoff) : rawRepairedHandoff,
     };
 
     const nextRevision = currentPhase.anchor.revision + 1;

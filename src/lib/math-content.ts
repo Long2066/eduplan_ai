@@ -30,43 +30,115 @@ function repairOverEscapedLatexCommands(value: string) {
 }
 
 function numericValue(value: string) {
-  return Number(value.replace(",", "."));
+  return Number(value.replace(/\\[,;:!]/g, "").replace(/\s+/g, "").replace(",", "."));
 }
 
-const arithmeticEquationPattern = /(-?\d+(?:[.,]\d+)?(?:\s*(?:\\times|\\div|[+×÷]|[−–—-])\s*-?\d+(?:[.,]\d+)?)+)\s*=\s*(-?\d+(?:[.,]\d+)?)/g;
-const arithmeticTokenPattern = /-?\d+(?:[.,]\d+)?|\\times|\\div|[+×÷]|[−–—-]/g;
+const arithmeticNumberChunk = String.raw`-?\d+(?:(?:\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?`;
+const arithmeticOperatorChunk = String.raw`\\times|\\div|[+×÷:]|[−–—-]`;
+const arithmeticSidePattern = new RegExp(
+  String.raw`^(?:\s*\(*\s*${arithmeticNumberChunk}\s*\)*\s*(?:${arithmeticOperatorChunk})\s*)*\s*\(*\s*${arithmeticNumberChunk}\s*\)*\s*$`,
+);
+const arithmeticTokenPattern = new RegExp(
+  String.raw`(?<![+\-×÷:(=\s])-?\d+(?:(?:\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\d+(?:(?:\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\\times|\\div|[+×÷:()]|[−–—-]`,
+  "g",
+);
+const negatedEquationContextPattern = /(?:không\s*phải(?:\s*bằng|\s*là)?|thay\s*vì|chứ\s*không\s*phải|tránh\s*(?:viết|nhầm|ghi)|nếu\s*(?:hs|học\s*sinh|em)\s*(?:nhầm|sai|viết\s*sai|tính\s*sai)|nhầm\s*(?:thành|là|rằng)?|sai\s*thường\s*gặp|lỗi\s*sai)\s*[:：]?\s*$/iu;
 
-function computeArithmeticExpression(expression: string) {
-  const tokens = expression.match(arithmeticTokenPattern) || [];
-  if (tokens.length < 3 || tokens.length % 2 === 0) return null;
-  let current = numericValue(tokens[0] ?? "");
-  if (!Number.isFinite(current)) return null;
-  const values: number[] = [];
-  const ops: string[] = [];
-  for (let index = 1; index < tokens.length; index += 2) {
-    const op = tokens[index];
-    const right = numericValue(tokens[index + 1] ?? "");
-    if (!op || !Number.isFinite(right)) return null;
-    if (op === "×" || op === String.raw`\times`) current *= right;
-    else if (op === "÷" || op === String.raw`\div`) {
-      if (right === 0) return null;
-      current /= right;
+function computeArithmeticExpression(expression: string): number | null {
+  if (!arithmeticSidePattern.test(expression)) return null;
+  const rawTokens = expression.match(arithmeticTokenPattern) || [];
+  if (!rawTokens.length) return null;
+
+  const evalFlat = (tokens: Array<number | string>): number | null => {
+    if (tokens.length === 0 || tokens.length % 2 === 0) return null;
+    const first = tokens[0];
+    if (typeof first !== "number" || !Number.isFinite(first)) return null;
+    let current = first;
+    const values: number[] = [];
+    const ops: string[] = [];
+    for (let index = 1; index < tokens.length; index += 2) {
+      const op = String(tokens[index] ?? "");
+      const right = tokens[index + 1];
+      if (typeof right !== "number" || !Number.isFinite(right)) return null;
+      if (op === "×" || op === String.raw`\times`) {
+        current *= right;
+      } else if (op === "÷" || op === ":" || op === String.raw`\div`) {
+        if (right === 0) return null;
+        current /= right;
+      } else if (op === "+" || /[−–—-]/.test(op)) {
+        values.push(current);
+        ops.push(/[−–—-]/.test(op) ? "-" : "+");
+        current = right;
+      } else {
+        return null;
+      }
+    }
+    values.push(current);
+    return values.slice(1).reduce((total, val, idx) => (ops[idx] === "-" ? total - val : total + val), values[0] ?? 0);
+  };
+
+  const stack: Array<Array<number | string>> = [[]];
+  for (const token of rawTokens) {
+    if (token === "(") {
+      stack.push([]);
+    } else if (token === ")") {
+      if (stack.length <= 1) return null;
+      const group = stack.pop()!;
+      const groupVal = evalFlat(group);
+      if (groupVal === null) return null;
+      stack[stack.length - 1].push(groupVal);
+    } else if (/^-?\d/.test(token)) {
+      const num = numericValue(token);
+      if (!Number.isFinite(num)) return null;
+      stack[stack.length - 1].push(num);
     } else {
-      values.push(current);
-      ops.push(/[−–—-]/.test(op) ? "-" : "+");
-      current = right;
+      stack[stack.length - 1].push(token);
     }
   }
-  values.push(current);
-  return values.slice(1).reduce((total, value, index) => ops[index] === "-" ? total - value : total + value, values[0] ?? 0);
+  if (stack.length !== 1) return null;
+  const top = stack[0];
+  if (top.length < 1) return null;
+  return evalFlat(top);
 }
 
+const chainedEquationSideChunk = String.raw`(?:(?:\(\s*)*${arithmeticNumberChunk}(?:\s*\))*(?:\s*(?:${arithmeticOperatorChunk})\s*(?:\(\s*)*${arithmeticNumberChunk}(?:\s*\))*)*)`;
+const chainedEquationRunPattern = new RegExp(
+  String.raw`${chainedEquationSideChunk}(?:\s*=\s*${chainedEquationSideChunk})+`,
+  "g",
+);
+
 export function findSimpleArithmeticMismatch(value: string) {
-  for (const match of repairOverEscapedMathSource(String(value || "")).matchAll(arithmeticEquationPattern)) {
-    const computed = computeArithmeticExpression(match[1]);
-    const stated = numericValue(match[2]);
-    if (computed !== null && Number.isFinite(stated) && Math.abs(stated - computed) > 1e-9) {
-      return { equation: match[0], expression: match[1], stated: match[2], computed };
+  const rawCleaned = repairOverEscapedMathSource(String(value || ""));
+  const cleaned = rawCleaned.replace(/\\\(|\\\)|\\\[|\\\]/g, " ");
+  for (const match of cleaned.matchAll(chainedEquationRunPattern)) {
+    const fullRun = match[0].replace(/[.,;]+$/g, "").trim();
+    const startIdx = match.index ?? 0;
+    const prefixContext = cleaned.slice(Math.max(0, startIdx - 70), startIdx).trim();
+    if (negatedEquationContextPattern.test(prefixContext)) {
+      continue;
+    }
+    const sides = fullRun.split("=").map((s) => s.trim()).filter(Boolean);
+    if (sides.length < 2) continue;
+    const evaluatedSides = sides.map((side) => ({
+      side,
+      hasOperator: /(?:\\times|\\div|[+×÷:]|[−–—-])/.test(side.replace(/^-/, "")),
+      value: computeArithmeticExpression(side),
+    }));
+    if (evaluatedSides.some((item) => item.value === null)) continue;
+    if (!evaluatedSides.some((item) => item.hasOperator)) continue;
+    const first = evaluatedSides[0]!;
+    for (let i = 1; i < evaluatedSides.length; i += 1) {
+      const current = evaluatedSides[i]!;
+      if (Math.abs((first.value ?? 0) - (current.value ?? 0)) > 1e-9) {
+        const exprSide = first.hasOperator ? first : current;
+        const otherSide = exprSide === first ? current : first;
+        return {
+          equation: `${first.side} = ${current.side}`,
+          expression: exprSide.side,
+          stated: otherSide.side,
+          computed: exprSide.value!,
+        };
+      }
     }
   }
   return null;
@@ -177,9 +249,33 @@ export function validateMathContent(value: string, options: { requireDelimitedFo
   return issues;
 }
 
+function autoWrapPlainMathInText(text: string): string {
+  const repaired = repairOverEscapedMathSource(text);
+  // 1. Convert legacy single-dollar $...$ formulas when contents contain math operators/commands
+  const dollarFixed = repaired.replace(
+    /(^|[^\\])\$([^$\n]{1,120}?)\$(?!\$)/g,
+    (match, prefix: string, inner: string) => {
+      if (/(?:\\(?:frac|times|div|sqrt|leq|geq|neq)|\d\s*(?:[+×÷=<>]|[−–—-])\s*\d|[A-Za-z]\s*=\s*[A-Za-z0-9])/u.test(inner)) {
+        return `${prefix}\\(${normalizeLatexExpression(inner)}\\)`;
+      }
+      return match;
+    },
+  );
+  // 2. Wrap plain arithmetic/algebraic formulas in text segments without touching time ranges like "3-5 phút"
+  const plainFormulaGlobal = new RegExp(
+    String.raw`(^|[\s:;(\["“])((?:[A-Za-z]\s*=\s*)?(?:\(\s*)?${arithmeticNumberChunk}(?:\s*\))?(?:\s*(?:\\times|\\div|[+×÷:<>]|<=|>=|!=|[−–—-])\s*(?:\(\s*)?${arithmeticNumberChunk}(?:\s*\))?)+\s*=\s*(?:\(\s*)?${arithmeticNumberChunk}(?:\s*\))?(?:\s*(?:=|\+|[−–—-]|\\times|\\div|[×÷:])\s*(?:\(\s*)?${arithmeticNumberChunk}(?:\s*\))?)*|(?:[A-Za-z]\s*=\s*)?${arithmeticNumberChunk}\s*(?:[+×÷=<>]|<=|>=|!=)\s*${arithmeticNumberChunk}(?:\s*(?:[+×÷=<>]|<=|>=|!=|[−–—-])\s*${arithmeticNumberChunk})*)`,
+    "gu",
+  );
+  return dollarFixed.replace(plainFormulaGlobal, (match, prefix: string, formula: string) => {
+    const trimmed = formula.trim();
+    if (!trimmed) return match;
+    return `${prefix}\\(${normalizeLatexExpression(trimmed)}\\)`;
+  });
+}
+
 export function normalizeMathContent(value: string) {
   return parseMathContent(repairOverEscapedMathSource(value)).map((segment) => {
-    if (segment.type === "text") return repairOverEscapedMathSource(segment.value);
+    if (segment.type === "text") return autoWrapPlainMathInText(segment.value);
     const delimiters = segment.type === "inline-math" ? [String.raw`\(`, String.raw`\)`] : [String.raw`\[`, String.raw`\]`];
     return `${delimiters[0]}${normalizeLatexExpression(segment.value)}${delimiters[1]}`;
   }).join("");

@@ -150,6 +150,22 @@ describe("validateMathLesson", () => {
     expect(codes(plan)).not.toContain("MATH-QUALITY-13");
   });
 
+  it("does not report MATH-QUALITY-13 on chained commutative/associative equations or commonErrors examples", () => {
+    const plan = lesson({
+      activities: [
+        activity({
+          studentActions: [
+            String.raw`HS tính \(746 + 487 = 487 + 746 = 1\,233\) và \((45\,000 + 75\,000) + 25\,000 = 145\,000\).`,
+          ],
+          commonErrors: [String.raw`HS viết dở \(746 + 487 = 487\) mà quên tính tổng.`],
+          teacherFeedback: [String.raw`GV nhắc kết quả là \(1\,233\), không phải \(746 + 487 = 487\).`],
+          expectedAnswer: String.raw`\(1\,233\); \(145\,000\)`,
+        }),
+      ],
+    });
+    expect(codes(plan)).not.toContain("MATH-QUALITY-13");
+  });
+
   it("reports when warm-up leaks the core problem and presents a formula too early", () => {
     const activities = lesson().activities;
     activities[0] = activity({ phase: "Khởi động", title: "Khởi động", objective: "Nhận ra công thức tính.", inputOrMaterials: ["Bài toán có tổng 70 và hiệu 10."], teacherActions: ["GV nêu công thức S = a × b và yêu cầu tính với 70, 10."], studentActions: ["HS giải bài."], expectedAnswer: "40 và 30", learningProducts: ["Kết quả 40 và 30."], successCriteria: ["Tính đúng."] });

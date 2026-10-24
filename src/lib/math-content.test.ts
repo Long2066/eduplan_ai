@@ -60,6 +60,26 @@ describe("math-content", () => {
       .toMatchObject({ equation: "2 + 2 = 6", expression: "2 + 2", stated: "6", computed: 4 });
   });
 
+  it("handles chained equations, parentheses, thousand separators and negated contexts without false positives", () => {
+    expect(findSimpleArithmeticMismatch(String.raw`\(4 + 3 = 3 + 4 = 7\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(746 + 487 = 487 + 746 = 1\,233\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(182 + 75 + 218 = 182 + 218 + 75 = 475\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\((45\,000 + 75\,000) + 25\,000 = 45\,000 + (75\,000 + 25\,000) = 145\,000\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`Kết quả đúng là \(746 + 487 = 1\,233\), không phải \(746 + 487 = 487\).`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`HS nhầm thành \(4 + 3 = 3\) thay vì 7.`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(746 + 487 = 487 + 746 = 1\,200\)`)).toMatchObject({
+      computed: 1233,
+    });
+  });
+
+  it("auto-wraps plain arithmetic formulas in text segments during normalizeMathContent", () => {
+    const raw = "GV yêu cầu tính 20 000 + 15 000 = 35 000 trong khoảng 3-5 phút.";
+    const normalized = normalizeMathContent(raw);
+    expect(normalized).toContain(String.raw`\(20 000 + 15 000 = 35 000\)`);
+    expect(normalized).toContain("3-5 phút");
+    expect(validateMathContent(normalized, { requireDelimitedFormulas: true })).toEqual([]);
+  });
+
   it("deep-normalizes only string values without changing schema", () => {
     const source = {
       lesson: String.raw`Tính \(6 × 4 ≥ 20\)`,

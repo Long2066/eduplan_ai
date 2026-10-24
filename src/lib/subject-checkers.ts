@@ -40,8 +40,8 @@ export function hasWeaklyPairedActions(activity: LessonPlan["activities"][number
     const teacher = pair.teacher.toLowerCase();
     const student = pair.student.toLowerCase();
     const teacherRequiresResponse = /đặt câu hỏi|câu hỏi|yêu cầu|giao nhiệm vụ|hướng dẫn.*(tìm|xác định|viết|làm|thảo luận|trao đổi|đọc|tính|vẽ|lập|hoàn thành)|mời hs|tổ chức.*(thảo luận|trao đổi|làm việc|trình bày)/i.test(teacher);
-    const studentHasMatchingAction = /trả lời|nêu|giải thích|chia sẻ|thảo luận|trao đổi|thực hiện|làm|đọc|viết|tìm|xác định|tính|vẽ|lập|hoàn thành|trình bày|báo cáo|nhận xét|ghi|đóng vai|vận dụng|quan sát|dự đoán|chọn|giơ|chỉ|cúi|co|duỗi|mở|cảm nhận|dừng|nghỉ|ghép|xếp|đánh dấu/i.test(student);
-    const studentOnlyPassive = /^hs\s+(lắng nghe|nghe|quan sát|theo dõi)(\.|$)/i.test(pair.student.trim()) && !studentHasMatchingAction;
+    const studentHasMatchingAction = /trả lời|nêu|giải thích|chia sẻ|thảo luận|trao đổi|thực hiện|làm|đọc|viết|tìm|xác định|tính|vẽ|lập|hoàn thành|trình bày|báo cáo|nhận xét|ghi|đóng vai|vận dụng|quan sát|dự đoán|chọn|giơ|chỉ|cúi|co|duỗi|mở|cảm nhận|dừng|nghỉ|ghép|xếp|đánh dấu|đối chiếu|kiểm tra|theo dõi/i.test(student);
+    const studentOnlyPassive = /^(?:[-+•]\s*)?hs\s+(lắng nghe|nghe|quan sát|theo dõi)(\.|$)/i.test(pair.student.trim()) && !studentHasMatchingAction;
     const teacherOnlyCloses = /chốt|kết luận|chuyển\s+(sang|vào|ý)|giới thiệu.*(phần|hoạt động|nội dung)/i.test(teacher);
     const studentUsesGenericFallback = /thực hiện nhiệm vụ tương ứng|phản hồi theo hướng dẫn|trao đổi kết quả và phản hồi/i.test(student);
     return (teacherRequiresResponse && (!studentHasMatchingAction || studentOnlyPassive)) || (teacherOnlyCloses && studentUsesGenericFallback);
@@ -757,16 +757,17 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
   if (!/lỗi sai|sai thường gặp|nhầm|kiểm tra|đối chiếu|thử lại|kiểm tra ngược|đơn vị/i.test(text)) {
     issues.push("Tiết Toán thiếu lỗi sai thường gặp hoặc bước kiểm tra kết quả/đơn vị.");
   }
-  // Kiểm tra Khởi động lộ đáp án bài chính
+  // Kiểm tra Khởi động lộ đáp án bài chính (bỏ qua các số tròn chục/trăm/nghìn phổ biến)
   const startup = activities.find(a => activityPhaseKey(a) === "Khởi động");
   const explore = activities.find(a => activityPhaseKey(a) === "Khám phá");
   if (startup && explore) {
     const startupActions = [...(startup.teacherActions || []), ...(startup.studentActions || [])].join(" ");
     const exploreActions = [...(explore.teacherActions || []), ...(explore.studentActions || [])].join(" ");
-    const startupNumbers: string[] = startupActions.match(/\d{2,}/g) || [];
-    const exploreNumbers: string[] = exploreActions.match(/\d{2,}/g) || [];
-    const overlap = startupNumbers.filter(n => exploreNumbers.includes(n));
-    if (overlap.length >= 2) {
+    const isSpecificProblemNumber = (n: string) => !/^(?:10|20|30|40|50|60|70|80|90|100|1000|000)$/.test(n);
+    const startupNumbers: string[] = (startupActions.match(/\d{2,}/g) || []).filter(isSpecificProblemNumber);
+    const exploreNumbers: string[] = (exploreActions.match(/\d{2,}/g) || []).filter(isSpecificProblemNumber);
+    const overlap = [...new Set(startupNumbers.filter(n => exploreNumbers.includes(n)))];
+    if (overlap.length >= 3) {
       issues.push("Khởi động có thể lộ đáp án/dữ kiện bài chính (trùng số liệu với Khám phá); cần đổi sang ôn kiến thức nền hoặc tình huống dẫn vào.");
     }
   }

@@ -20,6 +20,8 @@ import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
 import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
 import { ensureLessonDigitalCompetencies } from "@/lib/digital-competency";
+import { normalizeMathContentDeep } from "@/lib/math-content";
+import { balanceAndNormalizePhaseActivity } from "@/lib/generation/phase-generation";
 import type {
   LessonActivity,
   LessonInput,
@@ -435,7 +437,11 @@ export async function assembleStagedSections(
     const pBpArt = orderedPeriodBlueprints.find((bp) => bp.periodNumber === pNum)!;
     const periodPhases = phasesByPeriod.get(pNum) || [];
     const activities: LessonActivity[] = periodPhases.map((art) => {
-      const cloned = { ...art.activity };
+      const cloned = balanceAndNormalizePhaseActivity(
+        { ...art.activity },
+        art.phase,
+        subjectKind,
+      );
       if (!cloned.phase || cloned.phase === art.phase) {
         cloned.phase = STAGED_PHASE_LABELS[art.phase] || art.phase;
       }
@@ -603,7 +609,10 @@ export async function assembleStagedSections(
   };
 
   // 9. Enrich with digital competencies if enabled and sanitize stigmatizing labels
-  const finalLesson = sanitizeStigmatizingLabelsDeep(ensureLessonDigitalCompetencies(input, lesson));
+  const sanitizedLesson = sanitizeStigmatizingLabelsDeep(ensureLessonDigitalCompetencies(input, lesson));
+  const finalLesson = subjectKind === "math"
+    ? normalizeMathContentDeep(sanitizedLesson)
+    : sanitizedLesson;
 
   const syncedPeriodArtifacts = periodArtifacts.map((art, index) => ({
     ...art,

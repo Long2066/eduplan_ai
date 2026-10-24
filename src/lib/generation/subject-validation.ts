@@ -185,6 +185,15 @@ function subjectFindingCode(issue: string, fallback: string) {
   return issue.trim().match(/^([A-Z][A-Z0-9-]+)(?::|\s)/)?.[1] || fallback;
 }
 
+function inferActivityIndexFromIssueMessage(message: string): number | undefined {
+  const m = message.trim();
+  if (/^(?:[A-Z][A-Z0-9-]+\s+)?Khởi động\b/i.test(m) || /Chuẩn LaTeX chưa đạt:\s*Khởi động\b/i.test(m)) return 0;
+  if (/^(?:[A-Z][A-Z0-9-]+\s+)?Khám phá\b/i.test(m) || /Chuẩn LaTeX chưa đạt:\s*Khám phá\b/i.test(m)) return 1;
+  if (/^(?:[A-Z][A-Z0-9-]+\s+)?Luyện tập\b/i.test(m) || /Chuẩn LaTeX chưa đạt:\s*Luyện tập\b/i.test(m)) return 2;
+  if (/^(?:[A-Z][A-Z0-9-]+\s+)?Vận dụng\b/i.test(m) || /Chuẩn LaTeX chưa đạt:\s*Vận dụng\b/i.test(m)) return 3;
+  return undefined;
+}
+
 function subjectPeriodValidation(
   lesson: LessonPlan,
   input: LessonInput,
@@ -192,31 +201,35 @@ function subjectPeriodValidation(
 ): { issues: string[]; findings: PedagogyAuditFinding[] } {
   const issues: string[] = [];
   const findings: PedagogyAuditFinding[] = [];
-  const addIssues = (periodNumber: number, scopedIssues: string[], fallbackCode: string) => {
+  const addIssues = (periodNumber: number, activities: LessonPlan["activities"], scopedIssues: string[], fallbackCode: string) => {
     scopedIssues.forEach((issue) => {
       issues.push(`Tiết ${periodNumber}: ${issue}`);
+      const activityIndex = inferActivityIndexFromIssueMessage(issue);
+      const activityId = typeof activityIndex === "number" ? activities?.[activityIndex]?.id : undefined;
       findings.push({
         code: subjectFindingCode(issue, fallbackCode),
         severity: "error",
         message: issue,
         periodNumber,
+        ...(typeof activityIndex === "number" ? { activityIndex } : {}),
+        ...(activityId ? { activityId } : {}),
         autoFixable: true,
       });
     });
   };
   if (blueprint.subjectKind === "math") {
     (lesson.periodPlans || []).forEach((period) => {
-      addIssues(period.periodNumber, mathPeriodIssues(period), "MATH-PERIOD");
+      addIssues(period.periodNumber, period.activities || [], mathPeriodIssues(period), "MATH-PERIOD");
     });
   } else if (blueprint.subjectKind === "vietnamese") {
     (lesson.periodPlans || []).forEach((period) => {
       const descriptor = blueprintPeriodAt(blueprint, period.periodNumber) as VietnamesePeriodBlueprint;
-      addIssues(period.periodNumber, vietnamesePeriodIssues(period, descriptor, input), "TV-PERIOD");
+      addIssues(period.periodNumber, period.activities || [], vietnamesePeriodIssues(period, descriptor, input), "TV-PERIOD");
     });
   } else if (blueprint.subjectKind === "natural-social") {
     (lesson.periodPlans || []).forEach((period) => {
       const descriptor = blueprintPeriodAt(blueprint, period.periodNumber) as NaturalSocialPeriodBlueprint;
-      addIssues(period.periodNumber, naturalSocialPeriodIssues(period, descriptor, input), "NSXH-PERIOD");
+      addIssues(period.periodNumber, period.activities || [], naturalSocialPeriodIssues(period, descriptor, input), "NSXH-PERIOD");
     });
   }
   return { issues, findings };

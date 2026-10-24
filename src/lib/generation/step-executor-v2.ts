@@ -1306,12 +1306,17 @@ async function executeSubjectValidationStepV2(ctx: ExecutionContext): Promise<vo
     const subjectValidation = validateStagedLesson(input, assembly.payload, blueprint.payload);
     const blockingErrors = subjectValidation.findings.filter((f) => f.severity === "error");
     for (const b of blockingErrors) {
-      if (!validation.issues.some((i) => i.code === b.code && i.periodNumber === b.periodNumber)) {
+      const resolvedPhase = typeof b.activityIndex === "number"
+        ? phaseFromActivityIndex(b.activityIndex)
+        : undefined;
+      if (!validation.issues.some((i) => i.code === b.code && i.periodNumber === b.periodNumber && i.phase === resolvedPhase && i.message === b.message)) {
         subjectAuditIssues.push({
           code: b.code,
           message: b.message,
           path: "lesson",
           periodNumber: b.periodNumber,
+          ...(resolvedPhase ? { phase: resolvedPhase } : {}),
+          ...(b.activityId ? { activityId: b.activityId } : {}),
         });
       }
     }
@@ -1400,11 +1405,6 @@ function arithmeticIssueForActivity(
     ...(activity.successCriteria || []),
     activity.expectedAnswer || "",
     ...(activity.acceptableResponses || []),
-    ...(activity.commonErrors || []),
-    ...(activity.teacherFeedback || []),
-    ...(activity.errorFeedback || []).flatMap((item) => [item.error, ...(item.feedback || [])]),
-    ...(activity.supportForStudentsNeedingHelp || []),
-    ...(activity.extensionForEarlyFinishers || []),
   ];
   for (const field of fields) {
     const mismatch = findSimpleArithmeticMismatch(field);
