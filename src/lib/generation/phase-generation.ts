@@ -67,12 +67,12 @@ function isWeakStudentResponseForTeacher(teacherStep: string, studentStep: strin
   return (teacherRequiresResponse && (!studentHasMatchingAction || studentOnlyPassive)) || (teacherOnlyCloses && studentUsesGenericFallback);
 }
 
-export function balanceAndNormalizePhaseActivity(
-  activity: LessonActivity,
+export function balanceAndNormalizePhaseActivity<T extends LessonActivity>(
+  activity: T,
   phase: StagedPhaseName,
   subjectKind: string,
-): LessonActivity {
-  const normalizedActivity = subjectKind === "math"
+): T {
+  const normalizedActivity: T = subjectKind === "math"
     ? normalizeMathContentDeep(activity)
     : { ...activity };
 
