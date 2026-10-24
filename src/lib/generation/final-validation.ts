@@ -31,7 +31,6 @@ const FATAL_EXACT_CODES = new Set([
   "NSXH-COVERAGE-15",
   "NSXH-QUALITY-06",
   "NSXH-QUALITY-17",
-  "MATH-QUALITY-13",
   "STAGED-STRUCT-01",
   "STAGED-STRUCT-04",
   "STAGED-TITLE-01",
@@ -113,6 +112,7 @@ export function finalizeStagedLesson(
   const canPersist = fatalFindings.length === 0;
   const repairApplied = Boolean(assembly.repairApplied);
   const stillNeedsReview = validation.audit.issues.length > 0
+    || blockingFindings.length > 0
     || findings.some((finding) => finding.severity === "warning");
   const validationStatus = blockingFindings.length || stillNeedsReview ? "needs_adjustment" : "passed";
   const lesson = withLessonValidationStatus(assembly.lesson, {

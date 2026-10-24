@@ -1624,7 +1624,8 @@ async function executeFinalValidationStepV2(ctx: ExecutionContext): Promise<void
     : assembly.payload;
   const finalArtifact = finalizeStagedLesson(input, assemblyPayload, blueprint.payload);
 
-  const repairTargets = !finalArtifact.canPersist && !assemblyPayload.repairApplied && !hasUnrepairableFatalFinding(finalArtifact)
+  const hasRepairableFindings = finalArtifact.findings.some((finding) => finding.severity === "error" && finding.autoFixable);
+  const repairTargets = (!finalArtifact.canPersist || hasRepairableFindings) && !assemblyPayload.repairApplied && !hasUnrepairableFatalFinding(finalArtifact)
     ? finalRepairTargets(finalArtifact, assemblyPayload)
     : [];
   const nextStage = repairTargets.length ? "phase-repair" : finalArtifact.canPersist ? "persistence" : "quota-settlement";

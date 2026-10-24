@@ -65,6 +65,8 @@ describe("math-content", () => {
     expect(findSimpleArithmeticMismatch(String.raw`\(746 + 487 = 487 + 746 = 1\,233\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(7{,}142 + 462 = 7{,}604\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(56 + 4{,}763 = 4{,}763 + 56 = 4{,}819\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`Ví dụ bàn dài \(120\,\mathrm{cm}\) thì đoạn vẽ dài \(120 : 50 = 2{,}4\,\mathrm{cm}\), không phải \(2\,\mathrm{cm}\).`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(120 : 50 = 2{,}4\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(? + 304 = 304 + 1\,975\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(746 + ? = 487 + 746\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(\square + 304 = 304 + 1\,975\)`)).toBeNull();
@@ -75,6 +77,15 @@ describe("math-content", () => {
     expect(findSimpleArithmeticMismatch(String.raw`\((45\,000 + 75\,000) + 25\,000 = 45\,000 + (75\,000 + 25\,000) = 145\,000\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`Kết quả đúng là \(746 + 487 = 1\,233\), không phải \(746 + 487 = 487\).`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`HS nhầm thành \(4 + 3 = 3\) thay vì 7.`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`HS có thể nhầm \(120 : 50 = 2\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(120 : 50 = 2\) (sai do chưa chia phần thập phân)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(120 : 50 = 2\) là sai`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(17 : 3 = 5\text{ (dư 2)}\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(17 : 3 = 5\) (dư 2)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(17 : 3 = 5\) dư 2`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(3 : 4 = 75\%\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(45 : 100 = 45\%\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`Ước lượng: \(48 + 51 = 100\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(746 + 487 = 487 + 746 = 1\,200\)`)).toMatchObject({
       computed: 1233,
     });

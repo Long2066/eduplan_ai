@@ -32,7 +32,8 @@ function repairOverEscapedLatexCommands(value: string) {
 function numericValue(value: string) {
   return Number(
     value
-      .replace(/\{,\}/g, "")
+      .replace(/(\d)(?:\{,\}|\\\\[,;:!]|\\[,;:!])(\d{3}\b)/g, "$1$2")
+      .replace(/\{,\}/g, ".")
       .replace(/\\[,;:!]/g, "")
       .replace(/\s+/g, "")
       .replace(",", "."),
@@ -48,7 +49,11 @@ const arithmeticTokenPattern = new RegExp(
   String.raw`(?<![+\-×÷:(=\s])-?\d+(?:(?:\{,\}|\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\d+(?:(?:\{,\}|\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\\times|\\div|[+×÷:()]|[−–—-]`,
   "g",
 );
-const negatedEquationContextPattern = /(?:không\s*phải(?:\s*bằng|\s*là)?|thay\s*vì|chứ\s*không\s*phải|tránh\s*(?:viết|nhầm|ghi)|nếu\s*(?:hs|học\s*sinh|em)\s*(?:nhầm|sai|viết\s*sai|tính\s*sai)|nhầm\s*(?:thành|là|rằng)?|sai\s*thường\s*gặp|lỗi\s*sai)\s*[:：]?\s*$/iu;
+const negatedEquationContextPattern = /(?:không\s*phải(?:\s*bằng|\s*là)?|thay\s*vì|chứ\s*không\s*phải|tránh\s*(?:viết|nhầm|ghi)|nếu\s*(?:hs|học\s*sinh|em)\s*(?:nhầm|sai|viết\s*sai|tính\s*sai|làm\s*sai)|(?:hs|học\s*sinh|em)?\s*(?:dễ|thường|có\s*thể)?\s*nhầm\s*(?:thành|là|rằng)?|sai\s*thường\s*gặp|lỗi\s*(?:sai|thường\s*gặp|dự\s*kiến|hs\s*dễ\s*mắc)|dự\s*kiến\s*lỗi|sai\s*lầm|sai\s*sót)\s*[:：]?\s*$/iu;
+const negatedEquationPostContextPattern = /^\s*(?:[,;.]\s*)?(?:chứ\s*không\s*phải|không\s*phải(?:\s*bằng|\s*là)?|thay\s*vì|tránh\s*(?:viết|nhầm|ghi)|\((?:sai|chưa\s*đúng|không\s*đúng|nhầm)[^)]*\)|là\s*(?:sai|chưa\s*đúng|không\s*đúng)|(?:chưa\s*đúng|không\s*đúng|sai\b))/iu;
+const remainderPostContextPattern = /^\s*(?:\\text\s*\{)?\s*(?:[,;.]\s*)?\(?\s*dư\b/iu;
+const percentagePostContextPattern = /^\s*(?:\\?%|\\text\s*\{\s*%\}|\s*phần\s*trăm)/iu;
+const approximationContextPattern = /(?:làm\s*tròn|ước\s*lượng|xấp\s*xỉ|gần\s*bằng|khoảng)\s*[:：]?\s*$/iu;
 
 function computeArithmeticExpression(expression: string): number | null {
   if (!arithmeticSidePattern.test(expression)) return null;
@@ -120,6 +125,7 @@ export function findSimpleArithmeticMismatch(value: string) {
     .replace(/\\\(|\\\)|\\\[|\\\]/g, " ")
     .replace(/(\d)(?:\{,\}|\\\\[,;:!]|\\[,;:!])(\d{3}\b)/g, "$1$2")
     .replace(/(\d)(?:\{,\}|\\\\[,;:!]|\\[,;:!])(\d{3}\b)/g, "$1$2")
+    .replace(/(\d)\{,\}(\d)/g, "$1.$2")
     .replace(/\\(?:dots|ldots|cdots|square|Box|text\s*\{\s*\?\s*\})|\[\s*\?\s*\]|\(\s*\?\s*\)|\.{3,}|_{2,}|…/gu, " ? ")
     .replace(
       /(?:bài|câu|ý|phần|nhiệm vụ|nhóm|tổ|cách|bước|mẫu|ví dụ|phiếu|hình|tiết|đợt|lần|tỉ lệ|tỉ số)\s*\d+\s*:/giu,
@@ -135,9 +141,22 @@ export function findSimpleArithmeticMismatch(value: string) {
     if (/(?:\\times|\\div|[+×÷:=?]|[−–—-])\s*$/u.test(beforeSlice) || /^\s*(?:\\times|\\div|[+×÷:=?]|[−–—-])/u.test(afterSlice)) {
       continue;
     }
+    // Skip division with remainder (e.g. 17 : 3 = 5 (dư 2) or 17 : 3 = 5 dư 2)
+    if (remainderPostContextPattern.test(afterSlice)) {
+      continue;
+    }
+    // Skip percentages (e.g. 3 : 4 = 75% or 0,25 = 25%)
+    if (percentagePostContextPattern.test(afterSlice)) {
+      continue;
+    }
     const fullRun = match[0].replace(/[.,;]+$/g, "").trim();
     const prefixContext = cleaned.slice(Math.max(0, startIdx - 70), startIdx).trim();
-    if (negatedEquationContextPattern.test(prefixContext)) {
+    const postfixContext = cleaned.slice(endIdx, Math.min(cleaned.length, endIdx + 70));
+    if (
+      negatedEquationContextPattern.test(prefixContext) ||
+      negatedEquationPostContextPattern.test(postfixContext) ||
+      approximationContextPattern.test(prefixContext)
+    ) {
       continue;
     }
     const sides = fullRun.split("=").map((s) => s.trim()).filter(Boolean);

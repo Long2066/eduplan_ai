@@ -158,7 +158,7 @@ describe("staged final validation", () => {
     });
   });
 
-  it("rejects persistence when a fatal math error remains", () => {
+  it("persists as needs-adjustment draft when math calculation error remains", () => {
     const error: PedagogyAuditFinding = {
       code: "MATH-QUALITY-13", severity: "error", message: "Phép tính sai", autoFixable: true,
     };
@@ -166,9 +166,27 @@ describe("staged final validation", () => {
     const result = finalizeStagedLesson(input(), assembly(true), blueprint());
 
     expect(result).toMatchObject({
+      decision: "draft",
+      canPersist: true,
+      fatalCodes: [],
+      blockingCodes: ["MATH-QUALITY-13"],
+    });
+    expect(result.summary.errors).toBe(1);
+    expect(result.audit.status).toBe("needs-review");
+  });
+
+  it("rejects persistence when a fatal structural error remains", () => {
+    const error: PedagogyAuditFinding = {
+      code: "STAGED-STRUCT-01", severity: "error", message: "Lỗi cấu trúc khung bài", autoFixable: false,
+    };
+    validationMocks.validateStagedLesson.mockReturnValue(validation([error]));
+    const result = finalizeStagedLesson(input(), assembly(true), blueprint());
+
+    expect(result).toMatchObject({
       decision: "reject",
       canPersist: false,
-      blockingCodes: ["MATH-QUALITY-13"],
+      fatalCodes: ["STAGED-STRUCT-01"],
+      blockingCodes: ["STAGED-STRUCT-01"],
     });
     expect(result.summary.errors).toBe(1);
     expect(result.audit.status).toBe("needs-review");
