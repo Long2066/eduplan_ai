@@ -144,6 +144,23 @@ export function balanceAndNormalizePhaseActivity(
 
   normalizedActivity.teacherActions = tActions;
   normalizedActivity.studentActions = sActions;
+
+  if (
+    subjectKind === "math" &&
+    (phase === "explore" || phase === "practice")
+  ) {
+    if (!Array.isArray(normalizedActivity.supportForStudentsNeedingHelp) || normalizedActivity.supportForStudentsNeedingHelp.length === 0) {
+      normalizedActivity.supportForStudentsNeedingHelp = [
+        "Hỗ trợ HS cần hỗ trợ bằng câu hỏi gợi mở từng bước và sơ đồ/thẻ số trực quan để xác định đúng dữ kiện, phép tính.",
+      ];
+    }
+    if (!Array.isArray(normalizedActivity.extensionForEarlyFinishers) || normalizedActivity.extensionForEarlyFinishers.length === 0) {
+      normalizedActivity.extensionForEarlyFinishers = [
+        "Mở rộng cho HS hoàn thành sớm: nêu thêm cách tính thuận tiện khác hoặc tự đặt một phép tính/bài toán tương tự để đố bạn.",
+      ];
+    }
+  }
+
   return subjectKind === "math" ? normalizeMathContentDeep(normalizedActivity) : normalizedActivity;
 }
 

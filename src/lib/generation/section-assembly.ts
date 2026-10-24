@@ -609,10 +609,24 @@ export async function assembleStagedSections(
   };
 
   // 9. Enrich with digital competencies if enabled and sanitize stigmatizing labels
-  const sanitizedLesson = sanitizeStigmatizingLabelsDeep(ensureLessonDigitalCompetencies(input, lesson));
+  const digitalEnriched = sanitizeStigmatizingLabelsDeep(ensureLessonDigitalCompetencies(input, lesson));
+  const phaseNames: StagedPhaseName[] = ["warmup", "explore", "practice", "apply"];
+  if (Array.isArray(digitalEnriched.periodPlans) && digitalEnriched.periodPlans.length > 0) {
+    digitalEnriched.periodPlans = digitalEnriched.periodPlans.map((pp) => ({
+      ...pp,
+      activities: (pp.activities || []).map((act, idx) =>
+        balanceAndNormalizePhaseActivity(act, phaseNames[idx] || "practice", subjectKind),
+      ),
+    }));
+    digitalEnriched.activities = digitalEnriched.periodPlans.flatMap((pp) => pp.activities);
+  } else if (Array.isArray(digitalEnriched.activities)) {
+    digitalEnriched.activities = digitalEnriched.activities.map((act, idx) =>
+      balanceAndNormalizePhaseActivity(act, phaseNames[idx % 4] || "practice", subjectKind),
+    );
+  }
   const finalLesson = subjectKind === "math"
-    ? normalizeMathContentDeep(sanitizedLesson)
-    : sanitizedLesson;
+    ? normalizeMathContentDeep(digitalEnriched)
+    : digitalEnriched;
 
   const syncedPeriodArtifacts = periodArtifacts.map((art, index) => ({
     ...art,

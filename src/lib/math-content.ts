@@ -30,16 +30,22 @@ function repairOverEscapedLatexCommands(value: string) {
 }
 
 function numericValue(value: string) {
-  return Number(value.replace(/\\[,;:!]/g, "").replace(/\s+/g, "").replace(",", "."));
+  return Number(
+    value
+      .replace(/\{,\}/g, "")
+      .replace(/\\[,;:!]/g, "")
+      .replace(/\s+/g, "")
+      .replace(",", "."),
+  );
 }
 
-const arithmeticNumberChunk = String.raw`-?\d+(?:(?:\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?`;
+const arithmeticNumberChunk = String.raw`-?\d+(?:(?:\{,\}|\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?`;
 const arithmeticOperatorChunk = String.raw`\\times|\\div|[+×÷:]|[−–—-]`;
 const arithmeticSidePattern = new RegExp(
   String.raw`^(?:\s*\(*\s*${arithmeticNumberChunk}\s*\)*\s*(?:${arithmeticOperatorChunk})\s*)*\s*\(*\s*${arithmeticNumberChunk}\s*\)*\s*$`,
 );
 const arithmeticTokenPattern = new RegExp(
-  String.raw`(?<![+\-×÷:(=\s])-?\d+(?:(?:\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\d+(?:(?:\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\\times|\\div|[+×÷:()]|[−–—-]`,
+  String.raw`(?<![+\-×÷:(=\s])-?\d+(?:(?:\{,\}|\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\d+(?:(?:\{,\}|\\\\[,;:!]|\\[,;:!]|\s)\d{3})*(?:[.,]\d+)?|\\times|\\div|[+×÷:()]|[−–—-]`,
   "g",
 );
 const negatedEquationContextPattern = /(?:không\s*phải(?:\s*bằng|\s*là)?|thay\s*vì|chứ\s*không\s*phải|tránh\s*(?:viết|nhầm|ghi)|nếu\s*(?:hs|học\s*sinh|em)\s*(?:nhầm|sai|viết\s*sai|tính\s*sai)|nhầm\s*(?:thành|là|rằng)?|sai\s*thường\s*gặp|lỗi\s*sai)\s*[:：]?\s*$/iu;
@@ -152,6 +158,7 @@ function normalizeUnicodeSquareRoot(value: string) {
 
 export function normalizeLatexExpression(expression: string) {
   return normalizeUnicodeSquareRoot(repairOverEscapedLatexCommands(expression))
+    .replace(/(\d)\{,\}(\d{3}\b)/g, String.raw`$1\,$2`)
     .replace(/[−–—]/g, "-")
     .replace(/×/g, String.raw`\times `)
     .replace(/÷/g, String.raw`\div `)

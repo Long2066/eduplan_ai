@@ -757,20 +757,7 @@ export function mathPeriodIssues(period: MathPeriodChunk) {
   if (!/lỗi sai|sai thường gặp|nhầm|kiểm tra|đối chiếu|thử lại|kiểm tra ngược|đơn vị/i.test(text)) {
     issues.push("Tiết Toán thiếu lỗi sai thường gặp hoặc bước kiểm tra kết quả/đơn vị.");
   }
-  // Kiểm tra Khởi động lộ đáp án bài chính (bỏ qua các số tròn chục/trăm/nghìn phổ biến)
-  const startup = activities.find(a => activityPhaseKey(a) === "Khởi động");
-  const explore = activities.find(a => activityPhaseKey(a) === "Khám phá");
-  if (startup && explore) {
-    const startupActions = [...(startup.teacherActions || []), ...(startup.studentActions || [])].join(" ");
-    const exploreActions = [...(explore.teacherActions || []), ...(explore.studentActions || [])].join(" ");
-    const isSpecificProblemNumber = (n: string) => !/^(?:10|20|30|40|50|60|70|80|90|100|1000|000)$/.test(n);
-    const startupNumbers: string[] = (startupActions.match(/\d{2,}/g) || []).filter(isSpecificProblemNumber);
-    const exploreNumbers: string[] = (exploreActions.match(/\d{2,}/g) || []).filter(isSpecificProblemNumber);
-    const overlap = [...new Set(startupNumbers.filter(n => exploreNumbers.includes(n)))];
-    if (overlap.length >= 3) {
-      issues.push("Khởi động có thể lộ đáp án/dữ kiện bài chính (trùng số liệu với Khám phá); cần đổi sang ôn kiến thức nền hoặc tình huống dẫn vào.");
-    }
-  }
+  // Kiểm tra Khởi động lộ đáp án bài chính (chỉ cảnh báo ở validateMathLesson MATH-QUALITY-14, không chặn cứng tiết khi SGK dùng chung tình huống mở đầu/ôn bài cũ)
   // Kiểm tra phân hóa học sinh
   if (!/hỗ trợ|cần hỗ trợ|gặp khó khăn|HS khá|hoàn thành sớm|phân hóa|mở rộng|câu hỏi gợi|bài khó hơn|nâng cao|thêm thử thách/i.test(text)) {
     issues.push("Tiết Toán thiếu phân hóa: cần có hỗ trợ HS cần hỗ trợ (câu hỏi gợi mở, sơ đồ mẫu) và nhiệm vụ mở rộng cho HS hoàn thành sớm.");
