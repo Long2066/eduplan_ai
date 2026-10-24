@@ -145,19 +145,59 @@ export function balanceAndNormalizePhaseActivity<T extends LessonActivity>(
   normalizedActivity.teacherActions = tActions;
   normalizedActivity.studentActions = sActions;
 
-  if (
-    subjectKind === "math" &&
-    (phase === "explore" || phase === "practice")
-  ) {
-    if (!Array.isArray(normalizedActivity.supportForStudentsNeedingHelp) || normalizedActivity.supportForStudentsNeedingHelp.length === 0) {
-      normalizedActivity.supportForStudentsNeedingHelp = [
-        "Hỗ trợ HS cần hỗ trợ bằng câu hỏi gợi mở từng bước và sơ đồ/thẻ số trực quan để xác định đúng dữ kiện, phép tính.",
-      ];
+  if (!normalizedActivity.objective || !normalizedActivity.objective.trim()) {
+    normalizedActivity.objective = `Thực hiện được yêu cầu trọng tâm của hoạt động ${normalizedActivity.title || normalizedActivity.phase}.`;
+  }
+  if (!Array.isArray(normalizedActivity.learningProducts) || normalizedActivity.learningProducts.filter((p) => String(p || "").trim()).length === 0) {
+    normalizedActivity.learningProducts = [
+      subjectKind === "math"
+        ? "Bài giải, phép tính, sơ đồ tóm tắt và câu trả lời đúng của học sinh"
+        : "Câu trả lời, phiếu học tập và sản phẩm thực hành của học sinh",
+    ];
+  }
+  if (!Array.isArray(normalizedActivity.successCriteria) || normalizedActivity.successCriteria.filter((c) => String(c || "").trim()).length === 0) {
+    normalizedActivity.successCriteria = [
+      subjectKind === "math"
+        ? "Xác định đúng dữ kiện, chọn đúng phép tính, tính đúng kết quả và kiểm tra lại đơn vị, đáp số"
+        : "Trình bày rõ ràng, hoàn thành đúng yêu cầu nhiệm vụ học tập",
+    ];
+  }
+
+  if (subjectKind === "math") {
+    if (phase === "explore" || phase === "practice") {
+      if (!Array.isArray(normalizedActivity.supportForStudentsNeedingHelp) || normalizedActivity.supportForStudentsNeedingHelp.length === 0) {
+        normalizedActivity.supportForStudentsNeedingHelp = [
+          "Hỗ trợ HS cần hỗ trợ bằng câu hỏi gợi mở từng bước và sơ đồ/thẻ số trực quan để xác định đúng dữ kiện, phép tính.",
+        ];
+      }
+      if (!Array.isArray(normalizedActivity.extensionForEarlyFinishers) || normalizedActivity.extensionForEarlyFinishers.length === 0) {
+        normalizedActivity.extensionForEarlyFinishers = [
+          "Mở rộng cho HS hoàn thành sớm: nêu thêm cách tính thuận tiện khác hoặc tự đặt một phép tính/bài toán tương tự để đố bạn.",
+        ];
+      }
+      if (!Array.isArray(normalizedActivity.commonErrors) || normalizedActivity.commonErrors.filter((e) => String(e || "").trim()).length === 0) {
+        normalizedActivity.commonErrors = [
+          "HS dễ nhầm lẫn thứ tự thực hiện phép tính, đặt tính lệch hàng hoặc quên ghi đơn vị trong lời giải.",
+        ];
+      }
+      if (!Array.isArray(normalizedActivity.teacherFeedback) || normalizedActivity.teacherFeedback.filter((f) => String(f || "").trim()).length === 0) {
+        normalizedActivity.teacherFeedback = [
+          "GV gợi mở HS đối chiếu lại dữ kiện đề bài, kiểm tra ngược kết quả phép tính và rà soát đơn vị đo.",
+        ];
+      }
     }
-    if (!Array.isArray(normalizedActivity.extensionForEarlyFinishers) || normalizedActivity.extensionForEarlyFinishers.length === 0) {
-      normalizedActivity.extensionForEarlyFinishers = [
-        "Mở rộng cho HS hoàn thành sớm: nêu thêm cách tính thuận tiện khác hoặc tự đặt một phép tính/bài toán tương tự để đố bạn.",
-      ];
+    if ((phase === "explore" || phase === "practice" || phase === "apply") && (!normalizedActivity.expectedAnswer || !normalizedActivity.expectedAnswer.trim())) {
+      const studentAnswerSummary = sActions
+        .filter((line) => /\d|trả lời|bằng|kết quả|đáp số/i.test(line))
+        .slice(0, 2)
+        .join("; ");
+      normalizedActivity.expectedAnswer = studentAnswerSummary || normalizedActivity.learningProducts[0] || "HS nêu đúng phép tính, cách làm và kết quả theo yêu cầu.";
+    }
+    if (phase === "apply") {
+      const fullAppText = JSON.stringify(normalizedActivity);
+      if (!/đời sống|gia đình|lớp|trường|mua|bán|quãng đường|thời gian|cây|vườn|sân|địa phương|thực tế|hằng ngày|ở nhà|ngày hội|thể thao|phòng học|đồ dùng|bạn/i.test(fullAppText)) {
+        normalizedActivity.objective = `${normalizedActivity.objective.replace(/\.$/, "")} gắn với tình huống thực tế trong đời sống, gia đình và lớp học.`;
+      }
     }
   }
 
@@ -372,7 +412,12 @@ Trả về duy nhất JSON:
     handoff: StagedPhaseHandoff;
   }>(res.content);
 
-  const phaseSourceIds = Array.isArray(parsed.sourceIds) ? parsed.sourceIds : [];
+  const validMatIdSet = new Set(materials.items.map((m) => m.id));
+  const validSrcIdSet = new Set(sourceFacts.facts.sourceEvidence.map((s) => s.id));
+  const safeMaterialIds = (Array.isArray(parsed.materialIds) ? parsed.materialIds : [])
+    .filter((id) => typeof id === "string" && validMatIdSet.has(id));
+  const phaseSourceIds = (Array.isArray(parsed.sourceIds) ? parsed.sourceIds : [])
+    .filter((id) => typeof id === "string" && validSrcIdSet.has(id));
   const safeActivity = {
     ...parsed.activity,
     id: activityId,
@@ -387,8 +432,8 @@ Trả về duy nhất JSON:
     commonErrors: Array.isArray((parsed.activity as any)?.commonErrors) ? (parsed.activity as any).commonErrors : [],
     teacherFeedback: Array.isArray((parsed.activity as any)?.teacherFeedback) ? (parsed.activity as any).teacherFeedback : [],
     sourceUnitIds: Array.isArray((parsed.activity as any)?.sourceUnitIds) && (parsed.activity as any).sourceUnitIds.length > 0
-      ? (parsed.activity as any).sourceUnitIds
-      : (phaseBp.sourceUnitIds?.length ? phaseBp.sourceUnitIds : phaseSourceIds),
+      ? (parsed.activity as any).sourceUnitIds.filter((id: string) => validSrcIdSet.has(id))
+      : (phaseBp.sourceUnitIds?.length ? phaseBp.sourceUnitIds.filter((id) => validSrcIdSet.has(id)) : phaseSourceIds),
     sourceClusterIds: Array.isArray((parsed.activity as any)?.sourceClusterIds) && (parsed.activity as any).sourceClusterIds.length > 0
       ? (parsed.activity as any).sourceClusterIds
       : (phaseBp.sourceClusterIds || []),
@@ -428,19 +473,22 @@ Trả về duy nhất JSON:
   }
 
   const balancedActivity = balanceAndNormalizePhaseActivity(safeActivity, phase, sourceFacts.subjectKind);
-  const rawHandoff = parsed.handoff || {
+  const rawHandoff = {
+    ...(parsed.handoff || {}),
     activityId,
-    knowledge: [],
-    products: balancedActivity.learningProducts,
-    pending: [],
-    bridge: `Chuyển tiếp sau pha ${phaseLabel}.`,
+    knowledge: Array.isArray(parsed.handoff?.knowledge) ? parsed.handoff.knowledge : [],
+    products: Array.isArray(parsed.handoff?.products) && parsed.handoff.products.length > 0
+      ? parsed.handoff.products
+      : balancedActivity.learningProducts,
+    pending: Array.isArray(parsed.handoff?.pending) ? parsed.handoff.pending : [],
+    bridge: parsed.handoff?.bridge?.trim() || phaseBp.handoffToNext?.trim() || `Chuyển tiếp sau pha ${phaseLabel}.`,
     objectiveIds: balancedActivity.objectiveIds || [],
     sourceIds: phaseSourceIds,
-    materialIds: parsed.materialIds || [],
+    materialIds: safeMaterialIds,
   };
   const payload = {
     activity: balancedActivity,
-    materialIds: parsed.materialIds || [],
+    materialIds: safeMaterialIds,
     sourceIds: phaseSourceIds,
     handoff: sourceFacts.subjectKind === "math" ? normalizeMathContentDeep(rawHandoff) : rawHandoff,
   };

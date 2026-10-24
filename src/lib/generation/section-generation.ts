@@ -379,6 +379,21 @@ Trả về duy nhất JSON:
   if (!Array.isArray(parsed.continuityPlan.sourceUnits)) parsed.continuityPlan.sourceUnits = [];
   parsed.continuityPlan.sourceUnits = parsed.continuityPlan.sourceUnits
     .filter((u) => u && typeof u === "object" && typeof u.unitId === "string" && validSrcSet.has(u.unitId));
+  const existingUnitIds = new Set(parsed.continuityPlan.sourceUnits.map((u) => u.unitId));
+  for (const [srcIdx, src] of (sourceFacts.facts.sourceEvidence || []).entries()) {
+    if (src?.id && !existingUnitIds.has(src.id)) {
+      parsed.continuityPlan.sourceUnits.push({
+        unitId: src.id,
+        label: src.label || src.id,
+        kind: src.kind || "task",
+        page: src.page || undefined,
+        required: src.required !== false,
+        allowReuse: src.allowReuse === true || identity.periods > 1,
+        preferredPeriodNumber: (srcIdx % identity.periods) + 1,
+      });
+      existingUnitIds.add(src.id);
+    }
+  }
   const unitSet = new Set(parsed.continuityPlan.sourceUnits.map((u) => u.unitId));
   if (!Array.isArray(parsed.continuityPlan.clusters)) parsed.continuityPlan.clusters = [];
   parsed.continuityPlan.clusters = parsed.continuityPlan.clusters
@@ -388,7 +403,32 @@ Trả về duy nhất JSON:
       sourceUnitIds: (Array.isArray(c.sourceUnitIds) ? c.sourceUnitIds : [])
         .filter((uId) => typeof uId === "string" && (unitSet.size === 0 || unitSet.has(uId))),
       periodNumber: Math.min(identity.periods, Math.max(1, Number(c.periodNumber) || 1)),
-    }));
+    }))
+    .filter((c) => c.sourceUnitIds.length > 0);
+
+  const clusteredUnits = new Map<string, number>();
+  for (const cluster of parsed.continuityPlan.clusters) {
+    for (const uId of cluster.sourceUnitIds) {
+      clusteredUnits.set(uId, (clusteredUnits.get(uId) || 0) + 1);
+    }
+  }
+  for (const [uIdx, unit] of parsed.continuityPlan.sourceUnits.entries()) {
+    const count = clusteredUnits.get(unit.unitId) || 0;
+    if (unit.required !== false && count === 0) {
+      const targetPeriod = Math.min(identity.periods, Math.max(1, Number(unit.preferredPeriodNumber) || ((uIdx % identity.periods) + 1)));
+      parsed.continuityPlan.clusters.push({
+        clusterId: `cluster-auto-${unit.unitId}`,
+        label: unit.label || unit.unitId,
+        sourceUnitIds: [unit.unitId],
+        periodNumber: targetPeriod,
+        mustStayTogether: true,
+        estimatedMinutes: 12,
+      });
+      clusteredUnits.set(unit.unitId, 1);
+    } else if (count > 1 || identity.periods > 1) {
+      unit.allowReuse = true;
+    }
+  }
 
   const artifact: StagedLessonMapArtifact = {
     version: 2,
@@ -517,6 +557,36 @@ Trả về duy nhất JSON:
   for (const objId of expectedPeriodObjIds) {
     if (!phaseCovered.has(objId) && parsed.phases.length >= 3) {
       parsed.phases[2].objectiveIds.push(objId);
+    }
+  }
+  // Ensure the 4 phase durations sum to exact identity.duration (e.g. 35 minutes)
+  const targetPeriodMinutes = Math.max(20, Number(identity.duration) || 35);
+  const currentTotalMinutes = parsed.phases.reduce((sum, ph) => sum + (Number(ph.durationMinutes) || 0), 0);
+  if (currentTotalMinutes !== targetPeriodMinutes && parsed.phases.length === 4) {
+    let delta = targetPeriodMinutes - currentTotalMinutes;
+    for (const adjustIndex of [2, 1, 3, 0]) {
+      if (delta === 0) break;
+      const ph = parsed.phases[adjustIndex]!;
+      const minAllowed = adjustIndex === 1 || adjustIndex === 2 ? 8 : 4;
+      const nextVal = Math.max(minAllowed, ph.durationMinutes + delta);
+      delta -= (nextVal - ph.durationMinutes);
+      ph.durationMinutes = nextVal;
+    }
+  }
+  const periodClusterIds = allocatedClusters.map((c) => c.clusterId).filter(Boolean);
+  const periodUnitIds = Array.from(new Set([
+    ...(periodMap.sourceIds || []),
+    ...allocatedClusters.flatMap((c) => c.sourceUnitIds || []),
+  ])).filter(Boolean);
+  if (parsed.phases.length >= 3) {
+    const hasAnyCluster = parsed.phases.some((ph) => ph.sourceClusterIds?.length > 0);
+    if (!hasAnyCluster && periodClusterIds.length > 0) {
+      parsed.phases[1].sourceClusterIds = [...periodClusterIds];
+    }
+    const hasAnyUnit = parsed.phases.some((ph) => ph.sourceUnitIds?.length > 0 || ph.sourceIds?.length > 0);
+    if (!hasAnyUnit && periodUnitIds.length > 0) {
+      parsed.phases[1].sourceUnitIds = [...periodUnitIds];
+      parsed.phases[1].sourceIds = [...periodUnitIds];
     }
   }
   const artifact: StagedPeriodBlueprintArtifact = {

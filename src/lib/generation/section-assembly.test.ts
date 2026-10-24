@@ -556,7 +556,7 @@ describe("assembleStagedSections", () => {
     const result = await assembleStagedSections(options);
     expect(result.assembly).toBeDefined();
     expect(result.assembly.lesson.outcomes.objectiveMetadata?.[0].evidence).toBeDefined();
-    expect(result.assembly.lesson.outcomes.objectiveMetadata?.[0].evidence.activityIds).toEqual([]);
+    expect(result.assembly.lesson.outcomes.objectiveMetadata?.[0].evidence.activityIds.length).toBeGreaterThan(0);
   });
 });
 

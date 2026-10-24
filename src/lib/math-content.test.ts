@@ -67,6 +67,8 @@ describe("math-content", () => {
     expect(findSimpleArithmeticMismatch(String.raw`\(56 + 4{,}763 = 4{,}763 + 56 = 4{,}819\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(? + 304 = 304 + 1\,975\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(746 + ? = 487 + 746\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(\square + 304 = 304 + 1\,975\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(30 + 89 + 70 = 30 + 70 + \ldots = 189\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`Bài 2: \(92 + 74 + 26 = 192\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`Bài 3 : \(68 + 207 + 3 = 68 + (207 + 3) = 278\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(182 + 75 + 218 = 182 + 218 + 75 = 475\)`)).toBeNull();

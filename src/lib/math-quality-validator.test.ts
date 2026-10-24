@@ -200,4 +200,38 @@ describe("validateMathLesson", () => {
     expect(audit.findings?.some((finding) => finding.code === "MATH-QUALITY-01")).toBe(true);
     expect(Array.isArray(audit.issues)).toBe(true);
   });
+
+  it("produces zero blocking errors on a 3-period Grade 4 Math lesson (Bài 24: Tính chất giao hoán và kết hợp của phép cộng)", () => {
+    const p1Acts = [
+      activity({ id: "p1-warmup", phase: "Khởi động", durationMinutes: 5, teacherActions: ["- GV chiếu tranh tình huống cá voi.", "+ Hãy tính \\(4 + 3\\) và \\(3 + 4\\)?"], studentActions: ["- HS quan sát tranh cá voi.", "+ HS trả lời: \\(4 + 3 = 7\\) và \\(3 + 4 = 7\\)."] }),
+      activity({ id: "p1-explore", phase: "Khám phá", durationMinutes: 13, teacherActions: ["- GV chiếu bảng giá trị a, b và yêu cầu HS tính \\(a + b\\), \\(b + a\\).", "+ Em nhận xét gì về \\(746 + 487 = 487 + 746 = 1\\,233\\)?"], studentActions: ["- HS điền bảng giá trị và so sánh.", "+ HS nêu: Khi đổi chỗ các số hạng trong một tổng thì tổng không thay đổi."] }),
+      activity({ id: "p1-practice", phase: "Luyện tập", durationMinutes: 12, teacherActions: ["- GV giao Bài 1 và Bài 2 trang 81.", "+ Tìm số thích hợp cho \\(? + 304 = 304 + 1\\,975\\) và \\(56 + 4{,}763 = 4{,}763 + 56 = 4{,}819\\)?"], studentActions: ["- HS làm bài vào vở.", "+ HS trả lời: Số cần điền là \\(1\\,975\\); kết quả bằng \\(4{,}819\\) và kiểm tra lại kết quả."] }),
+      activity({ id: "p1-apply", phase: "Vận dụng", durationMinutes: 5, teacherActions: ["- GV nêu bài toán mua bán thực tế trong gia đình."], studentActions: ["- HS tính nhẩm nhanh tiền mua đồ dùng học tập: \\(15\\,000 + 25\\,000 = 40\\,000\\) đồng."] }),
+    ];
+    const p2Acts = [
+      activity({ id: "p2-warmup", phase: "Khởi động", durationMinutes: 5, teacherActions: ["- GV tổ chức trò chơi ghép thẻ số."], studentActions: ["- HS ghép thẻ \\(20 + 80 = 100\\)."] }),
+      activity({ id: "p2-explore", phase: "Khám phá", durationMinutes: 13, teacherActions: ["- GV hướng dẫn HS so sánh \\((4 + 3) + 2\\) và \\(4 + (3 + 2)\\) trên sơ đồ."], studentActions: ["- HS tính \\((4 + 3) + 2 = 7 + 2 = 9\\) và \\(4 + (3 + 2) = 4 + 5 = 9\\)."] }),
+      activity({ id: "p2-practice", phase: "Luyện tập", durationMinutes: 12, teacherActions: ["- GV giao Bài 2: \\(92 + 74 + 26 = 192\\) và Bài 3 : \\(68 + 207 + 3 = 278\\)."], studentActions: ["- HS nhóm các số hạng có tổng tròn chục, tròn trăm: \\(92 + (74 + 26) = 92 + 100 = 192\\) rồi kiểm tra ngược."] }),
+      activity({ id: "p2-apply", phase: "Vận dụng", durationMinutes: 5, teacherActions: ["- GV nêu bài toán thực tế cân nặng thùng hàng ở trường học."], studentActions: ["- HS tính tổng cân nặng: \\((45 + 55) + 38 = 138\\) kg."] }),
+    ];
+    const p3Acts = [
+      activity({ id: "p3-warmup", phase: "Khởi động", durationMinutes: 5, teacherActions: ["- GV cho HS đố vui tính nhẩm."], studentActions: ["- HS trả lời \\(35 + 65 = 100\\)."] }),
+      activity({ id: "p3-explore", phase: "Khám phá", durationMinutes: 13, teacherActions: ["- GV hướng dẫn phân tích dữ kiện bài toán có lời văn bằng sơ đồ tóm tắt."], studentActions: ["- HS tóm tắt dữ kiện và nêu phép tính \\(182 + 75 + 218 = (182 + 218) + 75 = 475\\)."] }),
+      activity({ id: "p3-practice", phase: "Luyện tập", durationMinutes: 12, teacherActions: ["- GV tổ chức làm phiếu luyện tập tổng hợp."], studentActions: ["- HS tính \\((45\\,000 + 75\\,000) + 25\\,000 = 145\\,000\\) đồng và đối chiếu kết quả."] }),
+      activity({ id: "p3-apply", phase: "Vận dụng", durationMinutes: 5, teacherActions: ["- GV giao nhiệm vụ tính quãng đường thực tế ở địa phương."], studentActions: ["- HS tính tổng quãng đường \\(120 + 170 + 80 = 370\\) m."] }),
+    ];
+    const threePeriodInput: LessonInput = { ...input, lessonTitle: "Bài 24: Tính chất giao hoán và kết hợp của phép cộng", periods: 3, duration: 35 };
+    const threePeriodPlan = lesson({
+      generalInfo: { subject: "Toán", grade: "Lớp 4", lessonTitle: threePeriodInput.lessonTitle, book: "Kết nối tri thức với cuộc sống", periods: 3, duration: 35 },
+      activities: [...p1Acts, ...p2Acts, ...p3Acts],
+      periodPlans: [
+        { periodNumber: 1, focus: "Tính chất giao hoán", outcomes: lesson().outcomes, activities: p1Acts, handoff: { learned: "Tính chất giao hoán", unresolvedRisks: [], nextBridge: "Sang tiết 2" } },
+        { periodNumber: 2, focus: "Tính chất kết hợp", outcomes: lesson().outcomes, activities: p2Acts, handoff: { learned: "Tính chất kết hợp", unresolvedRisks: [], nextBridge: "Sang tiết 3" } },
+        { periodNumber: 3, focus: "Luyện tập tổng hợp", outcomes: lesson().outcomes, activities: p3Acts, handoff: { learned: "Vận dụng tính thuận tiện", unresolvedRisks: [], nextBridge: "Bài tiếp theo" } },
+      ],
+    });
+    const audit = buildPedagogyAudit(threePeriodPlan, threePeriodInput, false);
+    const blockingErrors = (audit.findings || []).filter((f) => f.severity === "error");
+    expect(blockingErrors).toEqual([]);
+  });
 });

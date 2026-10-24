@@ -115,17 +115,27 @@ const chainedEquationRunPattern = new RegExp(
 
 export function findSimpleArithmeticMismatch(value: string) {
   const rawCleaned = repairOverEscapedMathSource(String(value || ""));
-  // Replace colon labels like "Bài 2: 92 + 74" or "Cách 1 : 68 + 207" with ";" before scanning so "2:" isn't parsed as division "2 : 92"
+  // Replace colon labels like "Bài 2: 92 + 74" or "Cách 1 : 68 + 207" and LaTeX blank placeholders before scanning
   const cleaned = rawCleaned
     .replace(/\\\(|\\\)|\\\[|\\\]/g, " ")
+    .replace(/(\d)(?:\{,\}|\\\\[,;:!]|\\[,;:!])(\d{3}\b)/g, "$1$2")
+    .replace(/(\d)(?:\{,\}|\\\\[,;:!]|\\[,;:!])(\d{3}\b)/g, "$1$2")
+    .replace(/\\(?:dots|ldots|cdots|square|Box|text\s*\{\s*\?\s*\})|\[\s*\?\s*\]|\(\s*\?\s*\)|\.{3,}|_{2,}|…/gu, " ? ")
     .replace(
-      /(?:bài|câu|ý|phần|nhiệm vụ|nhóm|tổ|cách|bước|mẫu|ví dụ|phiếu|hình|tiết|đợt|lần)\s*\d+\s*:/giu,
+      /(?:bài|câu|ý|phần|nhiệm vụ|nhóm|tổ|cách|bước|mẫu|ví dụ|phiếu|hình|tiết|đợt|lần|tỉ lệ|tỉ số)\s*\d+\s*:/giu,
       "; ",
     )
     .replace(/(?:^|[.;(\n\r[-])\s*\d+\s*:\s+/gu, "; ");
   for (const match of cleaned.matchAll(chainedEquationRunPattern)) {
-    const fullRun = match[0].replace(/[.,;]+$/g, "").trim();
     const startIdx = match.index ?? 0;
+    const endIdx = startIdx + match[0].length;
+    const beforeSlice = cleaned.slice(Math.max(0, startIdx - 40), startIdx);
+    const afterSlice = cleaned.slice(endIdx, Math.min(cleaned.length, endIdx + 40));
+    // Skip partial matches that are adjacent to another arithmetic operator, =, ?, or variable
+    if (/(?:\\times|\\div|[+×÷:=?]|[−–—-])\s*$/u.test(beforeSlice) || /^\s*(?:\\times|\\div|[+×÷:=?]|[−–—-])/u.test(afterSlice)) {
+      continue;
+    }
+    const fullRun = match[0].replace(/[.,;]+$/g, "").trim();
     const prefixContext = cleaned.slice(Math.max(0, startIdx - 70), startIdx).trim();
     if (negatedEquationContextPattern.test(prefixContext)) {
       continue;

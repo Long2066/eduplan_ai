@@ -368,6 +368,73 @@ function buildCompactBlueprint(
   } as MathLessonBlueprint;
 }
 
+function populateOutcomeEvidence(
+  outcomes: LessonOutcomes | undefined,
+  activities: LessonActivity[],
+): LessonOutcomes | undefined {
+  if (!outcomes?.objectiveMetadata?.length || !activities.length) return outcomes;
+  const fallbackAct = activities[Math.min(1, activities.length - 1)] || activities[0]!;
+  return {
+    ...outcomes,
+    objectiveMetadata: outcomes.objectiveMetadata.map((meta) => {
+      const matchedActs = activities.filter(
+        (act) => Array.isArray(act.objectiveIds) && act.objectiveIds.includes(meta.id),
+      );
+      const effectiveActs = matchedActs.length > 0 ? matchedActs : [fallbackAct];
+      const activityIds = uniqueStrings([
+        ...(meta.evidence?.activityIds || []),
+        ...effectiveActs.map((act) => act.id || "").filter(Boolean),
+      ]);
+      const learningProducts = uniqueStrings([
+        ...(meta.evidence?.learningProducts || []),
+        ...effectiveActs.flatMap((act) => act.learningProducts || []),
+      ]);
+      const successCriteria = uniqueStrings([
+        ...(meta.evidence?.successCriteria || []),
+        ...effectiveActs.flatMap((act) => act.successCriteria || []),
+      ]);
+      return {
+        ...meta,
+        evidence: {
+          activityIds: activityIds.length ? activityIds : [fallbackAct.id || "p1-explore"],
+          learningProducts: learningProducts.length ? learningProducts : ["Sản phẩm học tập của học sinh"],
+          successCriteria: successCriteria.length ? successCriteria : ["Hoàn thành đúng yêu cầu học tập"],
+        },
+      };
+    }),
+  };
+}
+
+function normalizePeriodActivityDurations(
+  activities: LessonActivity[],
+  expectedDuration: number,
+): LessonActivity[] {
+  if (!activities.length) return activities;
+  const target = Math.max(20, Number(expectedDuration) || 35);
+  const currentTotal = activities.reduce((sum, act) => sum + (Number(act.durationMinutes) || 0), 0);
+  if (currentTotal === target) return activities;
+  const cloned = activities.map((act, idx) => ({
+    ...act,
+    durationMinutes: Number(act.durationMinutes) > 0
+      ? Math.round(Number(act.durationMinutes))
+      : idx === 1 ? 13 : idx === 2 ? 12 : 5,
+  }));
+  let delta = target - cloned.reduce((sum, act) => sum + act.durationMinutes, 0);
+  const order = [2, 1, 3, 0].filter((i) => i < cloned.length);
+  for (const idx of order) {
+    if (delta === 0) break;
+    const minAllowed = idx === 1 || idx === 2 ? 6 : 3;
+    const act = cloned[idx]!;
+    const nextVal = Math.max(minAllowed, act.durationMinutes + delta);
+    delta -= (nextVal - act.durationMinutes);
+    act.durationMinutes = nextVal;
+    if (act.timeBreakdown) {
+      delete act.timeBreakdown;
+    }
+  }
+  return cloned;
+}
+
 export async function assembleStagedSections(
   options: AssembleStagedSectionsOptions,
 ): Promise<StagedSectionsAssembly> {
@@ -482,24 +549,55 @@ export async function assembleStagedSections(
       );
     }
 
+    // Normalize period activity durations to exact input.duration (default 35 min)
+    const targetDuration = positiveInteger(input.duration, 35);
+    let normalizedPeriodActivities = normalizePeriodActivityDurations(processedActivities, targetDuration);
+
+    // Ensure continuityPlan clusters & units assigned to this period are referenced by period activities
+    const periodClusters = (lessonMap.lessonMap.continuityPlan?.clusters || []).filter(
+      (c) => (c.periodNumber || 1) === pNum,
+    );
+    const periodUnits = (lessonMap.lessonMap.continuityPlan?.sourceUnits || []).filter(
+      (u) => (u.preferredPeriodNumber || 1) === pNum,
+    );
+    if (normalizedPeriodActivities.length > 0) {
+      const targetAct = normalizedPeriodActivities[Math.min(1, normalizedPeriodActivities.length - 1)]!;
+      const usedClusters = new Set(normalizedPeriodActivities.flatMap((a) => a.sourceClusterIds || []));
+      const missingClusters = periodClusters.map((c) => c.clusterId).filter((id) => id && !usedClusters.has(id));
+      if (missingClusters.length > 0) {
+        targetAct.sourceClusterIds = uniqueStrings([...(targetAct.sourceClusterIds || []), ...missingClusters]);
+      }
+      const usedUnits = new Set(normalizedPeriodActivities.flatMap((a) => a.sourceUnitIds || []));
+      const missingUnits = uniqueStrings([
+        ...periodUnits.map((u) => u.unitId),
+        ...periodClusters.flatMap((c) => c.sourceUnitIds || []),
+      ]).filter((id) => id && !usedUnits.has(id));
+      if (missingUnits.length > 0) {
+        targetAct.sourceUnitIds = uniqueStrings([...(targetAct.sourceUnitIds || []), ...missingUnits]);
+      }
+    }
+
     const lastPhase = periodPhases[periodPhases.length - 1];
     const handoffLearned = lastPhase?.handoff?.knowledge?.length
       ? lastPhase.handoff.knowledge.join("; ")
-      : pBpArt.periodBlueprint.targetKnowledge || "";
+      : pBpArt.periodBlueprint.targetKnowledge || `Hoàn thành nội dung trọng tâm Tiết ${pNum}`;
 
     const handoff = {
-      learned: handoffLearned,
+      learned: handoffLearned || `Hoàn thành nội dung trọng tâm Tiết ${pNum}`,
       unresolvedRisks: [...(lastPhase?.handoff?.pending || [])],
-      nextBridge: lastPhase?.handoff?.bridge || pBpArt.periodBlueprint.continuityOut || "",
+      nextBridge: lastPhase?.handoff?.bridge || pBpArt.periodBlueprint.continuityOut || `Chuyển tiếp sang hoạt động tiếp theo sau Tiết ${pNum}`,
     };
 
-    const periodOutcomes = buildPeriodOutcomes(outcomes.outcomes, pBpArt);
+    const periodOutcomes = populateOutcomeEvidence(
+      buildPeriodOutcomes(outcomes.outcomes, pBpArt),
+      normalizedPeriodActivities,
+    )!;
 
     const periodPlan: PeriodPlan = {
       periodNumber: pNum,
       focus: pBpArt.periodBlueprint.focus,
       outcomes: periodOutcomes,
-      activities: processedActivities,
+      activities: normalizedPeriodActivities,
       handoff,
     };
     periodPlans.push(periodPlan);
@@ -556,8 +654,37 @@ export async function assembleStagedSections(
   const continuityPlan = lessonMap.lessonMap.continuityPlan
     ? structuredClone(lessonMap.lessonMap.continuityPlan)
     : undefined;
+  if (continuityPlan) {
+    if (Array.isArray(continuityPlan.sourceUnits)) {
+      continuityPlan.sourceUnits = continuityPlan.sourceUnits.map((u) => ({
+        ...u,
+        allowReuse: u.allowReuse === true || expectedPeriods > 1,
+      }));
+    }
+    if (Array.isArray(continuityPlan.clusters)) {
+      continuityPlan.clusters = continuityPlan.clusters.map((c) => {
+        const pNum = Math.min(expectedPeriods, Math.max(1, Number(c.periodNumber) || 1));
+        const usedInPeriods = new Set<number>();
+        periodPlans.forEach((pp) => {
+          const hasCluster = (pp.activities || []).some((a) => (a.sourceClusterIds || []).includes(c.clusterId));
+          if (hasCluster) usedInPeriods.add(pp.periodNumber);
+        });
+        return {
+          ...c,
+          periodNumber: usedInPeriods.size === 1 ? [...usedInPeriods][0] : pNum,
+          mustStayTogether: usedInPeriods.size > 1 ? false : c.mustStayTogether,
+          estimatedMinutes: Math.min(15, Number(c.estimatedMinutes) || 12),
+        };
+      });
+    }
+  }
 
   // 8. Assemble full LessonPlan conforming to schema
+  const allPeriodActivities = periodPlans.flatMap((period) => period.activities);
+  const topOutcomes = populateOutcomeEvidence(
+    ensureNonEmptyOutcomes(cloneOutcomes(outcomes.outcomes), title),
+    allPeriodActivities,
+  )!;
   const lesson: LessonPlan = {
     generalInfo: {
       subject: input.subject,
@@ -567,9 +694,9 @@ export async function assembleStagedSections(
       periods: expectedPeriods,
       duration: positiveInteger(input.duration, 35),
     },
-    outcomes: ensureNonEmptyOutcomes(cloneOutcomes(outcomes.outcomes), title),
+    outcomes: topOutcomes,
     materials: sanitizeMaterials(materials.materials),
-    activities: periodPlans.flatMap((period) => period.activities),
+    activities: allPeriodActivities,
     periodPlans,
     assessment: {
       criteria: [...assessment.assessment.criteria],
@@ -612,13 +739,22 @@ export async function assembleStagedSections(
   const digitalEnriched = sanitizeStigmatizingLabelsDeep(ensureLessonDigitalCompetencies(input, lesson));
   const phaseNames: StagedPhaseName[] = ["warmup", "explore", "practice", "apply"];
   if (Array.isArray(digitalEnriched.periodPlans) && digitalEnriched.periodPlans.length > 0) {
-    digitalEnriched.periodPlans = digitalEnriched.periodPlans.map((pp) => ({
-      ...pp,
-      activities: (pp.activities || []).map((act, idx) =>
-        balanceAndNormalizePhaseActivity(act, phaseNames[idx] || "practice", subjectKind),
-      ),
-    }));
+    const targetDuration = positiveInteger(input.duration, 35);
+    digitalEnriched.periodPlans = digitalEnriched.periodPlans.map((pp) => {
+      const normalizedActs = normalizePeriodActivityDurations(
+        (pp.activities || []).map((act, idx) =>
+          balanceAndNormalizePhaseActivity(act, phaseNames[idx] || "practice", subjectKind),
+        ),
+        targetDuration,
+      );
+      return {
+        ...pp,
+        outcomes: populateOutcomeEvidence(pp.outcomes, normalizedActs) || pp.outcomes,
+        activities: normalizedActs,
+      };
+    });
     digitalEnriched.activities = digitalEnriched.periodPlans.flatMap((pp) => pp.activities);
+    digitalEnriched.outcomes = populateOutcomeEvidence(digitalEnriched.outcomes, digitalEnriched.activities) || digitalEnriched.outcomes;
   } else if (Array.isArray(digitalEnriched.activities)) {
     digitalEnriched.activities = digitalEnriched.activities.map((act, idx) =>
       balanceAndNormalizePhaseActivity(act, phaseNames[idx % 4] || "practice", subjectKind),
