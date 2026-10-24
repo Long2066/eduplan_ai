@@ -65,6 +65,10 @@ describe("math-content", () => {
     expect(findSimpleArithmeticMismatch(String.raw`\(746 + 487 = 487 + 746 = 1\,233\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(7{,}142 + 462 = 7{,}604\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(56 + 4{,}763 = 4{,}763 + 56 = 4{,}819\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(? + 304 = 304 + 1\,975\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`\(746 + ? = 487 + 746\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`Bài 2: \(92 + 74 + 26 = 192\)`)).toBeNull();
+    expect(findSimpleArithmeticMismatch(String.raw`Bài 3 : \(68 + 207 + 3 = 68 + (207 + 3) = 278\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\(182 + 75 + 218 = 182 + 218 + 75 = 475\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`\((45\,000 + 75\,000) + 25\,000 = 45\,000 + (75\,000 + 25\,000) = 145\,000\)`)).toBeNull();
     expect(findSimpleArithmeticMismatch(String.raw`Kết quả đúng là \(746 + 487 = 1\,233\), không phải \(746 + 487 = 487\).`)).toBeNull();

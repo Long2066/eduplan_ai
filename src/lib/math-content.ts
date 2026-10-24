@@ -109,13 +109,20 @@ function computeArithmeticExpression(expression: string): number | null {
 
 const chainedEquationSideChunk = String.raw`(?:(?:\(\s*)*${arithmeticNumberChunk}(?:\s*\))*(?:\s*(?:${arithmeticOperatorChunk})\s*(?:\(\s*)*${arithmeticNumberChunk}(?:\s*\))*)*)`;
 const chainedEquationRunPattern = new RegExp(
-  String.raw`${chainedEquationSideChunk}(?:\s*=\s*${chainedEquationSideChunk})+`,
+  String.raw`(?<![?:A-Za-z_…\d])(?<![?:A-Za-z_…]+\s*(?:\\times|\\div|[+×÷:]|[−–—-])\s*)${chainedEquationSideChunk}(?:\s*=\s*${chainedEquationSideChunk})+(?![?:A-Za-z_…\d])(?!\s*(?:\\times|\\div|[+×÷:]|[−–—-])\s*[?:A-Za-z_…])`,
   "g",
 );
 
 export function findSimpleArithmeticMismatch(value: string) {
   const rawCleaned = repairOverEscapedMathSource(String(value || ""));
-  const cleaned = rawCleaned.replace(/\\\(|\\\)|\\\[|\\\]/g, " ");
+  // Replace colon labels like "Bài 2: 92 + 74" or "Cách 1 : 68 + 207" with ";" before scanning so "2:" isn't parsed as division "2 : 92"
+  const cleaned = rawCleaned
+    .replace(/\\\(|\\\)|\\\[|\\\]/g, " ")
+    .replace(
+      /(?:bài|câu|ý|phần|nhiệm vụ|nhóm|tổ|cách|bước|mẫu|ví dụ|phiếu|hình|tiết|đợt|lần)\s*\d+\s*:/giu,
+      "; ",
+    )
+    .replace(/(?:^|[.;(\n\r[-])\s*\d+\s*:\s+/gu, "; ");
   for (const match of cleaned.matchAll(chainedEquationRunPattern)) {
     const fullRun = match[0].replace(/[.,;]+$/g, "").trim();
     const startIdx = match.index ?? 0;

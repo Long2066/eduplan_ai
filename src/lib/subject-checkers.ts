@@ -69,9 +69,9 @@ export function hasDetailedOutcomeGroup(outcomes?: Partial<LessonOutcomes>) {
     outcomes?.specificCompetencies || [],
     outcomes?.qualities || [],
   ];
-  const observableOutcomePattern = /:|biết|nhận biết|thực hiện|trình bày|trao đổi|vận dụng|đề xuất|quan sát|hoàn thành|đọc|viết|nêu|tìm|xác định|chỉ|mô tả|lựa chọn|phân loại|so sánh|giải thích/i;
+  const observableOutcomePattern = /:|biết|nhận biết|thực hiện|trình bày|trao đổi|vận dụng|đề xuất|quan sát|hoàn thành|đọc|viết|nêu|tìm|xác định|chỉ|mô tả|lựa chọn|phân loại|so sánh|giải thích|tính|giải|ước lượng|đo|vẽ|lập|nhóm|ghép|đổi chỗ|kiểm tra|nhận xét|chăm chỉ|trung thực|trách nhiệm|tự chủ|hợp tác|giao tiếp|sáng tạo|tư duy/i;
   return groups.every((items) => items.length > 0 && items.every(
-    (item) => item.trim().length >= 34 && observableOutcomePattern.test(item),
+    (item) => item.trim().length >= 24 && observableOutcomePattern.test(item),
   ));
 }
 
