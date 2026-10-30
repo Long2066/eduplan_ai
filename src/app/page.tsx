@@ -53,7 +53,8 @@ function generationUsageLabel(user: AppUser) {
   const planName = activePlan === "plus" ? "Trả phí" : "Miễn phí";
 
   if (activePlan === "free") {
-    return `Miễn phí · dùng 1 lượt (còn ${free.remaining} hôm nay)`;
+    const engineLabel = user.subscription.freeEngine === "gpt" ? "GPT" : "Gemini";
+    return `Miễn phí (${engineLabel}) · dùng 1 lượt (còn ${free.remaining} hôm nay)`;
   }
 
   if (planStatus === "trial") {
@@ -440,7 +441,15 @@ export default function Home() {
       const requestId = typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `generate-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const { payload, bytes: payloadBytes } = serializeGenerationInput(input);
+      const effectiveFreeEngine = user?.subscription?.freeEngine
+        || (typeof window !== "undefined" ? (window.localStorage.getItem("eduplan-ai.free-engine") as "gemini" | "gpt") : null)
+        || input.freeEngine
+        || "gemini";
+      const generationInput: LessonInput = {
+        ...input,
+        freeEngine: effectiveFreeEngine,
+      };
+      const { payload, bytes: payloadBytes } = serializeGenerationInput(generationInput);
       if (payloadBytes > MAX_GENERATION_REQUEST_BYTES) {
         throw new Error("Tổng dung lượng ảnh SGK vẫn quá lớn. Vui lòng xóa bớt ảnh hoặc chụp gần phần nội dung bài học hơn.");
       }

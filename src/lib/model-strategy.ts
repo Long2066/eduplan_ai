@@ -2,7 +2,8 @@ import "server-only";
 
 export type SubscriptionPlan = "free" | "plus";
 export type LegacySubscriptionPlan = SubscriptionPlan | "pro";
-export type AiProvider = "openai" | "openrouter";
+export type AiProvider = "openai" | "openrouter" | "ninerouter";
+export type FreeEngine = "gemini" | "gpt";
 export type AiStage = "blueprint" | "detail" | "repair";
 export type OpenAiReasoningEffort = "minimal" | "low" | "medium" | "high";
 
@@ -37,6 +38,10 @@ export type PlanModelStrategy = {
 
 export function normalizeSubscriptionPlan(value: unknown): SubscriptionPlan {
   return value === "plus" || value === "pro" ? "plus" : "free";
+}
+
+export function normalizeFreeEngine(value: unknown): FreeEngine {
+  return value === "gemini" ? "gemini" : "gpt";
 }
 
 function reasoningEffort(value: string | undefined, fallback: OpenAiReasoningEffort): OpenAiReasoningEffort {
@@ -76,13 +81,10 @@ function openAiStage(
   };
 }
 
-export function getPlanModelStrategy(planValue: unknown): PlanModelStrategy {
+export function getPlanModelStrategy(planValue: unknown, freeEngineOption?: unknown): PlanModelStrategy {
   const plan = normalizeSubscriptionPlan(planValue);
   if (plan === "free") {
-    const model = (process.env.FREE_OPENAI_MODEL || "gpt-5.4-mini").trim();
-    const fallbackModel = (process.env.FREE_OPENAI_FALLBACK_MODEL || process.env.OPENAI_FALLBACK_MODEL || "").trim() || undefined;
-    const safeFallbackModel = fallbackModel && fallbackModel !== model ? fallbackModel : undefined;
-    const generationEffort = reasoningEffort(process.env.FREE_OPENAI_REASONING_EFFORT, "low");
+    const freeEngine = normalizeFreeEngine(freeEngineOption);
     const repairModel = (process.env.FREE_REPAIR_MODEL || "gpt-5.6-terra").trim();
     const configuredRepairFallback = (process.env.FREE_REPAIR_FALLBACK_MODEL || "gpt-5.4-mini").trim();
     const repairFallbackModel = configuredRepairFallback && configuredRepairFallback !== repairModel
@@ -91,6 +93,51 @@ export function getPlanModelStrategy(planValue: unknown): PlanModelStrategy {
     const repairEffort = reasoningEffort(process.env.FREE_REPAIR_REASONING_EFFORT, "medium");
     const repairTimeoutMs = positiveInteger(process.env.FREE_REPAIR_TIMEOUT_MS, 60_000);
     const repairMaxOutputTokens = positiveInteger(process.env.FREE_REPAIR_MAX_OUTPUT_TOKENS, 12_000);
+
+    if (freeEngine === "gemini") {
+      const geminiModel = (process.env.FREE_GEMINI_MODEL || "ag/gemini-3.8-flash-high").trim();
+      const fallbackModel = (process.env.FREE_OPENAI_FALLBACK_MODEL || process.env.FREE_OPENAI_MODEL || "gpt-5.4-mini").trim();
+      return {
+        plan,
+        blueprint: {
+          stage: "blueprint",
+          provider: "ninerouter",
+          model: geminiModel,
+          fallbackProvider: "openai",
+          fallbackModel,
+          temperature: 0.35,
+          timeoutMs: 90_000,
+          maxOutputTokens: 12_000,
+        },
+        detail: {
+          stage: "detail",
+          provider: "ninerouter",
+          model: geminiModel,
+          fallbackProvider: "openai",
+          fallbackModel,
+          temperature: 0.6,
+          timeoutMs: 90_000,
+          maxOutputTokens: 16_000,
+        },
+        repair: openAiStage(
+          "repair",
+          repairModel,
+          0.35,
+          repairFallbackModel,
+          repairEffort,
+          repairTimeoutMs,
+          repairMaxOutputTokens,
+          "low",
+          60_000,
+          12_000,
+        ),
+      };
+    }
+
+    const model = (process.env.FREE_OPENAI_MODEL || "gpt-5.4-mini").trim();
+    const fallbackModel = (process.env.FREE_OPENAI_FALLBACK_MODEL || process.env.OPENAI_FALLBACK_MODEL || "").trim() || undefined;
+    const safeFallbackModel = fallbackModel && fallbackModel !== model ? fallbackModel : undefined;
+    const generationEffort = reasoningEffort(process.env.FREE_OPENAI_REASONING_EFFORT, "low");
     return {
       plan,
       blueprint: openAiStage("blueprint", model, 0.35, safeFallbackModel, generationEffort),

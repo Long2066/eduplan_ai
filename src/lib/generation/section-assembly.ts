@@ -1,4 +1,5 @@
-import "server-only";
+﻿import "server-only";
+import type { AiProvider } from "@/lib/model-strategy";
 import type { StagedAssemblyArtifact } from "@/lib/generation/assembly";
 import type { StagedBlueprintArtifact } from "@/lib/generation/blueprint";
 import type { StagedPeriodArtifact } from "@/lib/generation/period-generation";
@@ -635,7 +636,7 @@ export async function assembleStagedSections(
   const providers = uniqueValues(
     allSectionArtifacts
       .map((art) => art.provider)
-      .filter((p): p is "openai" | "openrouter" => Boolean(p)),
+      .filter((p): p is AiProvider => Boolean(p)),
   );
 
   const fallbackUsed = allSectionArtifacts.some((art) => art.fallbackUsed);

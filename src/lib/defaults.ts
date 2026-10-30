@@ -29,6 +29,7 @@ export const defaultLessonInput: LessonInput = {
   specialRequest: "",
   allowAiInference: true,
   enableDigitalCompetency: false,
+  freeEngine: "gemini",
   uploadedAssets: [],
 };
 

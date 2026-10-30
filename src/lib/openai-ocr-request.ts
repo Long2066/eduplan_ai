@@ -45,6 +45,7 @@ export function buildOpenAiOcrRequest(options: {
     useResponsesApi,
     body: {
       model,
+      stream: false,
       messages: [{
         role: "user",
         content: [

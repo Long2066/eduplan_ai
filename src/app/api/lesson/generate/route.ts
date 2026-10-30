@@ -518,7 +518,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
   throw new Error(models.length > 1 ? `OCR chính: ${primaryMessage}; OCR dự phòng: ${lastMessage}` : lastMessage);
 }
 
-async function runOpenAiOcr(input: LessonInput) {
+async function runOpenAiOcr(input: LessonInput, options?: { freeEngine?: "gemini" | "gpt" | string }) {
   const assets = sortAssetsByFileSequence(input.uploadedAssets.filter((asset) => asset.dataUrl && parseDataUrl(asset.dataUrl)));
   if (!assets.length) return { text: "", sourceHashes: [] as string[], cacheHitCount: 0, cacheMissCount: 0 };
 
@@ -3446,11 +3446,11 @@ export async function POST(request: Request) {
       subject: input.subject,
       security,
     });
-    const selectedStrategy = getPlanModelStrategy(reservation.plan);
+    const selectedStrategy = getPlanModelStrategy(reservation.plan, input.freeEngine);
     strategy = selectedStrategy;
     const { lesson, pedagogyAudit, ocrTextLength } = await withGenerationDeadline(requestId, async () => {
       requestState.stage = "ocr";
-      const ocrResult = await runOpenAiOcr(input);
+      const ocrResult = await runOpenAiOcr(input, { freeEngine: input.freeEngine });
       ocrStats = {
         textLength: ocrResult.text.length,
         cacheHitCount: ocrResult.cacheHitCount,

@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   assembleStagedLesson,
@@ -224,7 +224,7 @@ async function executeOcrStep(job: GenerationJob, owner: string, submittedAsset?
     );
     if (!existing) {
       const asset = assertExpectedOcrAsset(orderedAssets[position], submittedAsset, sequence, total);
-      const result = await runOpenAiOcrAsset(asset, position, total);
+      const result = await runOpenAiOcrAsset(asset, position, total, { freeEngine: persistedInput.freeEngine });
       await writeGenerationJobArtifact(job.id, { kind: "ocr-page", sequence }, {
         index: sequence,
         assetId: asset.id,
@@ -283,7 +283,7 @@ async function executeBlueprintStep(job: GenerationJob, owner: string) {
   const input = lessonInputFromPersisted(persistedInput);
   const ocr = await requiredOcrArtifact(job.id);
   const sourceContext = await requiredSourceContext(job.id);
-  const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+  const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
   const blueprint = await generateStagedBlueprint(input, ocr.text, sourceContext, strategy);
   await writeGenerationJobArtifact(job.id, { kind: "blueprint" }, blueprint);
   await updateWithLeaseOrThrow(job.id, job.uid, owner, {
@@ -333,7 +333,7 @@ async function executePeriodGenerationStep(job: GenerationJob, owner: string) {
     if (sequence > 1 && !previous) {
       throw new Error(`Không tìm thấy kết quả tiết ${sequence - 1} để giữ mạch sang tiết ${sequence}.`);
     }
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     const generated = await generateStagedPeriod(
       input,
       ocr.text,
@@ -560,7 +560,7 @@ async function executeRepairStep(job: GenerationJob, owner: string) {
       && (finding.periodNumber === undefined || finding.periodNumber === target.periodNumber),
     );
     if (!findings.length) throw new Error(`Không tìm thấy chi tiết lỗi cần sửa cho tiết ${target.periodNumber}.`);
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     const repaired = await repairStagedPeriod(
       input,
       ocr.text,

@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import { extractAiJsonValue } from "@/lib/ai-json";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
 import { generationSubjectKind } from "@/lib/generation/subject-routing";
@@ -38,7 +38,7 @@ export type StagedBlueprintArtifact = {
   subjectKind: ReturnType<typeof generationSubjectKind>;
   mode: "chunked" | "direct-generation";
   model: string | null;
-  provider: "openai" | "openrouter" | null;
+  provider: AiProvider | null;
   fallbackUsed: boolean;
   promptSource: "ocr" | "ocr-and-cache" | "input-only";
   sourceTruth?: SourceTruth;

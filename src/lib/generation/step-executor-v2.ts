@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 import { randomUUID } from "node:crypto";
 import { finalizeStagedLesson, type StagedFinalArtifact } from "@/lib/generation/final-validation";
 import {
@@ -669,7 +669,7 @@ async function executeOcrStepV2(ctx: ExecutionContext): Promise<void> {
       pagePayload = existing.payload;
     } else {
       const asset = assertExpectedOcrAsset(orderedAssets[position], submittedAsset, sequence, total);
-      const result = await runOpenAiOcrAsset(asset, position, total);
+      const result = await runOpenAiOcrAsset(asset, position, total, { freeEngine: persistedInput.freeEngine });
       pagePayload = {
         index: sequence,
         assetId: asset.id,
@@ -793,7 +793,7 @@ async function executeSourceFactsStepV2(ctx: ExecutionContext): Promise<void> {
   } else {
     const ocr = await requiredOcrArtifact(job.id);
     const sourceContext = await requiredSourceContext(job.id);
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     sourceFacts = await generateStagedSourceFacts({
       input,
       ocrText: ocr.text,
@@ -833,7 +833,7 @@ async function executeSectionOutcomesStepV2(ctx: ExecutionContext): Promise<void
   if (existing) {
     outcomes = existing.payload;
   } else {
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     outcomes = await generateStagedOutcomes({
       input,
       sourceFacts,
@@ -874,7 +874,7 @@ async function executeLessonMapStepV2(ctx: ExecutionContext): Promise<void> {
   if (existing) {
     lessonMap = existing.payload;
   } else {
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     lessonMap = await generateStagedLessonMap({
       input,
       sourceFacts,
@@ -930,7 +930,7 @@ async function executePeriodBlueprintStepV2(ctx: ExecutionContext): Promise<void
   if (existing) {
     periodBp = existing.payload;
   } else {
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     periodBp = await generateStagedPeriodBlueprint({
       input,
       sourceFacts,
@@ -994,7 +994,7 @@ async function executeSectionMaterialsStepV2(ctx: ExecutionContext): Promise<voi
   if (existing) {
     materials = existing.payload;
   } else {
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     materials = await generateStagedMaterials({
       input,
       sourceFacts,
@@ -1068,7 +1068,7 @@ async function executePeriodPhaseStepV2(ctx: ExecutionContext): Promise<void> {
   if (existing) {
     currentPhaseArt = existing.payload;
   } else {
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     currentPhaseArt = await generateStagedPhase({
       input,
       sourceFacts,
@@ -1147,7 +1147,7 @@ async function executeSectionAssessmentStepV2(ctx: ExecutionContext): Promise<vo
   if (existing) {
     assessment = existing.payload;
   } else {
-    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+    const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
     assessment = await generateStagedAssessment({
       input,
       sourceFacts,
@@ -1543,7 +1543,7 @@ async function executePhaseRepairStepV2(ctx: ExecutionContext): Promise<void> {
     throw new Error(`Không tìm thấy dữ liệu pha ${targetPhase} Tiết ${targetPeriod} để sửa.`);
   }
 
-  const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free");
+  const strategy = getPlanModelStrategy(job.quotaReservation?.plan || "free", persistedInput.freeEngine);
   const repairResult = await repairStagedPhase({
     input,
     sourceFacts,

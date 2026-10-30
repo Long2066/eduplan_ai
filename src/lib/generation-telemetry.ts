@@ -2,7 +2,7 @@ import "server-only";
 
 export type GenerationCallMetric = {
   scope: "ocr" | "blueprint" | "detail" | "repair";
-  provider: "openai" | "openrouter";
+  provider: "openai" | "openrouter" | "ninerouter";
   model: string;
   fallbackUsed: boolean;
   outcome: "success" | "http_error" | "network_error" | "timeout" | "invalid_output";
