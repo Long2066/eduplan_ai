@@ -125,6 +125,7 @@ function migrateDraft(raw: unknown): LessonInput {
     specialRequest: parsed.specialRequest || "",
     allowAiInference: parsed.allowAiInference ?? defaultLessonInput.allowAiInference,
     enableDigitalCompetency: parsed.enableDigitalCompetency ?? defaultLessonInput.enableDigitalCompetency,
+    freeEngine: (parsed.freeEngine === "gpt" || parsed.freeEngine === "gemini") ? parsed.freeEngine : defaultLessonInput.freeEngine,
     uploadedAssets: parsed.uploadedAssets || [],
   };
 }
@@ -147,6 +148,7 @@ function serializableDraft(input: LessonInput): LessonInput {
     specialRequest: input.specialRequest,
     allowAiInference: input.allowAiInference,
     enableDigitalCompetency: input.enableDigitalCompetency,
+    freeEngine: input.freeEngine || "gemini",
     uploadedAssets: [],
   };
 }
@@ -185,10 +187,50 @@ export default function Home() {
       const result = (await response.json()) as { user?: AppUser | null; error?: string };
       if (!response.ok) throw new Error(result.error || "Không thể đồng bộ tài khoản.");
       setUser(result.user ?? null);
+      if (result.user?.subscription.freeEngine) {
+        setInput((prev) => ({ ...prev, freeEngine: result.user?.subscription.freeEngine }));
+      }
     } finally {
       setAuthLoaded(true);
     }
   }
+
+  function handleFreeEngineChange(engine: "gemini" | "gpt") {
+    setInput((prev) => ({ ...prev, freeEngine: engine }));
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("eduplan-ai.free-engine", engine);
+    }
+    if (user && user.subscription.activePlan === "free") {
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              subscription: {
+                ...prev.subscription,
+                freeEngine: engine,
+              },
+            }
+          : prev,
+      );
+      fetch("/api/subscription/activate", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "free", freeEngine: engine }),
+      }).catch(() => undefined);
+    }
+  }
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent<"gemini" | "gpt">;
+      if (custom.detail === "gemini" || custom.detail === "gpt") {
+        setInput((prev) => ({ ...prev, freeEngine: custom.detail }));
+      }
+    };
+    window.addEventListener("eduplan-free-engine-changed", handler);
+    return () => window.removeEventListener("eduplan-free-engine-changed", handler);
+  }, []);
 
   useEffect(() => {
     loadCurrentUser().catch(() => setAuthLoaded(true));
@@ -800,6 +842,8 @@ export default function Home() {
               errors={errors}
               isGenerating={isGenerating}
               generationUsageLabel={generationUsageLabel(user)}
+              isFreePlan={!user || user.subscription.activePlan === "free"}
+              onFreeEngineChange={handleFreeEngineChange}
               onChange={handleChange}
               onGenerate={handleGenerate}
             />

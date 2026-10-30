@@ -277,7 +277,7 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
                       type="button"
                       id="free-engine-gemini"
                       onClick={() => void handleSwitchFreeEngine("gemini")}
-                      className={`flex min-h-[38px] items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
+                      className={`flex min-h-[44px] items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
                         freeEngine === "gemini"
                           ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5"
                           : "text-slate-600 hover:text-slate-900"
@@ -289,7 +289,7 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
                       type="button"
                       id="free-engine-gpt"
                       onClick={() => void handleSwitchFreeEngine("gpt")}
-                      className={`flex min-h-[38px] items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
+                      className={`flex min-h-[44px] items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
                         freeEngine === "gpt"
                           ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5"
                           : "text-slate-600 hover:text-slate-900"
