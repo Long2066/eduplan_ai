@@ -11,7 +11,7 @@ import { bookContext } from "@/lib/subject-prompts";
 import { attachHandwritingVisualsToActivities } from "@/lib/vietnamese-handwriting";
 import { attachSgkCropsToActivities } from "@/lib/generation/sgk-crop";
 import { ensureLessonDigitalCompetencies } from "@/lib/digital-competency";
-import type { AiProvider, SubscriptionPlan } from "@/lib/model-strategy";
+import type { SubscriptionPlan } from "@/lib/model-strategy";
 import type {
   LessonActivity,
   LessonInput,
@@ -27,7 +27,7 @@ export type StagedAssemblyArtifact = {
   periodCount: number;
   repairApplied: boolean;
   models: string[];
-  providers: Array<AiProvider>;
+  providers: Array<"openai" | "openrouter">;
   fallbackUsed: boolean;
   lesson: LessonPlan;
 };

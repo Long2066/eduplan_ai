@@ -203,31 +203,17 @@ describe("getPlanModelStrategy", () => {
     });
   });
 
-  it("routes Free plan to 9router Gemini with OpenAI fallback when freeEngine is gemini", () => {
+  it("allows dedicated Plus detail, blueprint, and repair model overrides", () => {
     for (const key of MANAGED_KEYS) delete process.env[key];
-    const strategy = getPlanModelStrategy("free", "gemini");
+    process.env.PLUS_MODEL = "gpt-5.6-terra";
+    process.env.PLUS_DETAIL_MODEL = "gpt-5.6-luna";
 
-    expect(strategy.plan).toBe("free");
-    expect(strategy.blueprint.provider).toBe("ninerouter");
-    expect(strategy.blueprint.model).toBe("ag/gemini-3.8-flash-high");
-    expect(strategy.blueprint.fallbackProvider).toBe("openai");
-    expect(strategy.blueprint.fallbackModel).toBe("gpt-5.4-mini");
+    const strategy = getPlanModelStrategy("plus");
 
-    expect(strategy.detail.provider).toBe("ninerouter");
-    expect(strategy.detail.model).toBe("ag/gemini-3.8-flash-high");
-    expect(strategy.detail.fallbackProvider).toBe("openai");
-
-    expect(strategy.repair.provider).toBe("openai");
+    expect(strategy.blueprint.model).toBe("gpt-5.6-terra");
+    expect(strategy.detail.model).toBe("gpt-5.6-luna");
     expect(strategy.repair.model).toBe("gpt-5.6-terra");
-  });
-
-  it("routes Free plan to OpenAI when freeEngine is gpt", () => {
-    for (const key of MANAGED_KEYS) delete process.env[key];
-    const strategy = getPlanModelStrategy("free", "gpt");
-
-    expect(strategy.plan).toBe("free");
-    expect(strategy.blueprint.provider).toBe("openai");
-    expect(strategy.blueprint.model).toBe("gpt-5.4-mini");
+    expect(strategy.detail.fallbackModel).toBe("gpt-5.4-mini");
   });
 });
 

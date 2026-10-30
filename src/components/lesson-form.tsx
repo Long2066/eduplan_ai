@@ -25,8 +25,6 @@ type LessonFormProps = {
   errors: FormErrors;
   isGenerating: boolean;
   generationUsageLabel: string;
-  isFreePlan?: boolean;
-  onFreeEngineChange?: (engine: "gemini" | "gpt") => void;
   onChange: (next: LessonInput) => void;
   onGenerate: () => void;
 };
@@ -61,16 +59,7 @@ function FormGroup({ step, title, description, children }: { step: string; title
   );
 }
 
-export function LessonForm({
-  input,
-  errors,
-  isGenerating,
-  generationUsageLabel,
-  isFreePlan = true,
-  onFreeEngineChange,
-  onChange,
-  onGenerate,
-}: LessonFormProps) {
+export function LessonForm({ input, errors, isGenerating, generationUsageLabel, onChange, onGenerate }: LessonFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedDraft, setAdvancedDraft] = useState<LessonInput | null>(null);
   const [uploadError, setUploadError] = useState("");
@@ -599,60 +588,7 @@ export function LessonForm({
       </div>
 
       {/* ── CTA Button ── */}
-      <div className="shrink-0 space-y-2.5 px-4 pb-4 pt-3">
-        {isFreePlan ? (
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-xs ring-1 ring-slate-900/5">
-            <div className="flex items-center gap-1.5 pl-1.5">
-              <span className="text-sm">🤖</span>
-              <span className="text-xs font-bold text-slate-700">Mô hình AI:</span>
-            </div>
-            <div className="flex rounded-xl bg-slate-100 p-1">
-              <button
-                type="button"
-                id="tool-engine-gemini"
-                onClick={() => {
-                  patch({ freeEngine: "gemini" });
-                  onFreeEngineChange?.("gemini");
-                }}
-                className={`flex min-h-[44px] items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-150 ${
-                  (input.freeEngine || "gemini") === "gemini"
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5 font-extrabold"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <span>✨</span>
-                <span>Gemini</span>
-              </button>
-              <button
-                type="button"
-                id="tool-engine-gpt"
-                onClick={() => {
-                  patch({ freeEngine: "gpt" });
-                  onFreeEngineChange?.("gpt");
-                }}
-                className={`flex min-h-[44px] items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all duration-150 ${
-                  input.freeEngine === "gpt"
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5 font-extrabold"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <span>⚡</span>
-                <span>GPT</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-amber-200/70 bg-amber-50/50 p-2 shadow-xs ring-1 ring-amber-500/10">
-            <div className="flex items-center gap-1.5 pl-1.5">
-              <span className="text-sm">✦</span>
-              <span className="text-xs font-bold text-amber-900">Mô hình AI:</span>
-            </div>
-            <div className="flex items-center gap-1.5 rounded-lg bg-amber-100/70 px-3 py-1.5 text-xs font-bold text-amber-900">
-              <span>👑 GPT-5.6 Cao cấp</span>
-            </div>
-          </div>
-        )}
-
+      <div className="shrink-0 px-4 pb-4 pt-3">
         <button
           type="button"
           onClick={onGenerate}

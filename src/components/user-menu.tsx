@@ -12,7 +12,7 @@ import type { LessonPlan } from "@/types/lesson";
 
 export type PlanId = "free" | "plus";
 type PlanCard = { id: PlanId; name: string; badge: string; title: string; priceVnd: number; listPriceVnd: number; includedCredits: number; generationCost: number; dailyLimit?: number; trialGenerations: number; description: string; benefits: string[]; cta: string; hint?: string; state: string; selectable: boolean; active: boolean; reason: string; remaining: number; expiresAt: string | null; paid: boolean };
-type SubscriptionStatus = { activePlan: PlanId; planStatus: string; freeEngine?: "gemini" | "gpt"; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
+type SubscriptionStatus = { activePlan: PlanId; planStatus: string; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
 
 export type AppUser = { uid: string; email: string; phoneNumber?: string; displayName: string; photoURL: string; emailVerified: boolean; disabled: boolean; blockedReason: string; blockedReasonDetail: string; role: "user" | "admin"; plan: string; freeLimit: number; usedGenerations: number; remainingGenerations: number; subscription: SubscriptionStatus };
 type LessonHistoryItem = { id: string; title: string; subject: string; grade: string; periods: number; validationStatus?: "passed" | "needs_adjustment"; validationLabel?: string; freeDraft?: boolean; updatedAt: string; expiresAt: string };
@@ -34,13 +34,6 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
   const [newPassword, setNewPassword] = useState("");
   const [lessons, setLessons] = useState<LessonHistoryItem[]>([]);
   const [subscription, setSubscription] = useState(user.subscription);
-  const [freeEngine, setFreeEngine] = useState<"gemini" | "gpt">(() => {
-    if (typeof window !== "undefined") {
-      const cached = window.localStorage.getItem("eduplan-ai.free-engine");
-      if (cached === "gpt" || cached === "gemini") return cached;
-    }
-    return user.subscription.freeEngine || "gemini";
-  });
   const [topupAmount, setTopupAmount] = useState(25_000);
   const [payment, setPayment] = useState<Payment | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -55,16 +48,7 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const subscriptionRequestRef = useRef(0);
 
-  useEffect(() => {
-    setDisplayName(user.displayName);
-    setSubscription(user.subscription);
-    if (user.subscription.freeEngine) {
-      setFreeEngine(user.subscription.freeEngine);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("eduplan-ai.free-engine", user.subscription.freeEngine);
-      }
-    }
-  }, [user]);
+  useEffect(() => { setDisplayName(user.displayName); setSubscription(user.subscription); }, [user]);
   useEffect(() => { if (!avatar) { setAvatarPreview(""); return; } const url = URL.createObjectURL(avatar); setAvatarPreview(url); return () => URL.revokeObjectURL(url); }, [avatar]);
   useEffect(() => {
     if (!open) return;
@@ -170,39 +154,11 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
   }
   async function handleChangePassword() { begin("password"); try { if (newPassword.length < 6) throw new Error("Mật khẩu mới cần tối thiểu 6 ký tự."); const current = getFirebaseClientAuth().currentUser; if (!current) throw new Error("Vui lòng đăng nhập lại."); await updatePassword(current, newPassword); setNewPassword(""); setMessage("Đã đổi mật khẩu."); } catch (e) { showError(e); } finally { setBusy(""); } }
   async function handleSendVerification() { begin("verification"); try { const current = getFirebaseClientAuth().currentUser; if (!current) throw new Error("Vui lòng đăng nhập lại."); await sendEmailVerification(current, getEmailActionSettings()); setMessage("Đã gửi lại email xác minh."); } catch (e) { showError(e); } finally { setBusy(""); } }
-  async function handleSwitchFreeEngine(engine: "gemini" | "gpt") {
-    setFreeEngine(engine);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("eduplan-ai.free-engine", engine);
-      window.dispatchEvent(new CustomEvent("eduplan-free-engine-changed", { detail: engine }));
-    }
-    if (activePlan === "free") {
-      try {
-        await fetch("/api/subscription/activate", {
-          method: "POST",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan: "free", freeEngine: engine }),
-        });
-        await onUserChange();
-      } catch {
-        // Preference is stored locally
-      }
-    }
-  }
-
   async function selectPlan(plan: PlanId) {
     const requestId = ++subscriptionRequestRef.current;
     begin(`select-${plan}`);
     try {
-      const result = await parse<{ subscription: SubscriptionStatus }>(
-        await fetch("/api/subscription/activate", {
-          method: "POST",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan, ...(plan === "free" ? { freeEngine } : {}) }),
-        })
-      );
+      const result = await parse<{ subscription: SubscriptionStatus }>(await fetch("/api/subscription/activate", { method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) }));
       if (requestId !== subscriptionRequestRef.current) return;
       setSubscription(result.subscription);
       setMessage(`Đã chọn gói ${planLabel(plan)} làm gói hiện tại.`);
@@ -256,7 +212,7 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
           {error ? <div className="account-alert error">{error}</div> : null}{message ? <div className="account-alert success">{message}</div> : null}
           {tab === "profile" ? <section className="account-profile-grid">
             <article className="account-panel"><p className="account-section-label">Ảnh đại diện</p><div className="avatar-editor"><span className={`${avatarClass} avatar-editor-preview`}>{avatarUrl ? <img src={avatarUrl} alt="Xem trước ảnh đại diện" /> : (user.displayName || user.phoneNumber || "U").slice(0, 1).toUpperCase()}</span><div><label className="avatar-file-label" htmlFor="profile-avatar">Chọn ảnh mới</label><input id="profile-avatar" className="avatar-file-input" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy === "avatar-optimize"} onChange={(e) => { void handleAvatarSelect(e.target.files?.[0] || null); e.target.value = ""; }} /><p>JPG, PNG hoặc WebP · tối đa 5 MB</p><button id="upload-avatar" className="btn-primary mt-3" disabled={!avatar || Boolean(busy)} onClick={handleAvatarUpload}>{busy === "avatar-optimize" ? "Đang tối ưu ảnh..." : busy === "avatar" ? "Đang tải ảnh..." : "Đổi ảnh đại diện"}</button></div></div></article>
-            <article className="account-panel"><p className="account-section-label">Thông tin cá nhân</p><label className="account-label">Họ và tên<input id="profile-display-name" className="input-field mt-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label><div className="account-facts"><span>{user.email ? "Email" : "Số điện thoại"}</span><strong>{user.email || user.phoneNumber || "Chưa cập nhật"}</strong><span>Xác minh</span>{user.email ? <strong className={user.emailVerified ? "text-emerald-600" : "text-amber-600"}>{user.emailVerified ? "Đã xác minh" : "Chưa xác minh"}</strong> : <strong className="text-emerald-600">Đã xác minh qua SĐT</strong>}<span>Gói AI mặc định</span><strong>{planLabel(activePlan)}{activePlan === "free" ? ` (${freeEngine === "gemini" ? "Gemini" : "GPT"})` : ""}</strong></div><div className="mt-5 flex flex-wrap gap-2"><button id="save-profile" className="btn-primary" disabled={busy === "profile"} onClick={handleSaveProfile}>Lưu hồ sơ</button>{user.email && !user.emailVerified ? <button id="verify-email" className="btn-secondary" onClick={handleSendVerification}>Gửi xác minh</button> : null}</div></article>
+            <article className="account-panel"><p className="account-section-label">Thông tin cá nhân</p><label className="account-label">Họ và tên<input id="profile-display-name" className="input-field mt-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label><div className="account-facts"><span>{user.email ? "Email" : "Số điện thoại"}</span><strong>{user.email || user.phoneNumber || "Chưa cập nhật"}</strong><span>Xác minh</span>{user.email ? <strong className={user.emailVerified ? "text-emerald-600" : "text-amber-600"}>{user.emailVerified ? "Đã xác minh" : "Chưa xác minh"}</strong> : <strong className="text-emerald-600">Đã xác minh qua SĐT</strong>}<span>Gói AI mặc định</span><strong>{planLabel(activePlan)}</strong></div><div className="mt-5 flex flex-wrap gap-2"><button id="save-profile" className="btn-primary" disabled={busy === "profile"} onClick={handleSaveProfile}>Lưu hồ sơ</button>{user.email && !user.emailVerified ? <button id="verify-email" className="btn-secondary" onClick={handleSendVerification}>Gửi xác minh</button> : null}</div></article>
             <article className="account-panel account-membership-panel"><p className="account-section-label">Quyền lợi hiện tại</p><div className="membership-orb">{planIcon[activePlan]}</div><h3 className="mt-4 text-2xl font-black text-slate-900">{planLabel(activePlan)}</h3><p className="mt-1 text-sm text-slate-500">{activeCard?.reason}</p><div className="membership-meter"><span style={{ width: `${Math.min(100, activePlan === 'free' ? subscription.free.used / Math.max(1, subscription.free.limit) * 100 : 100)}%` }} /></div><button id="go-to-plans" className="btn-secondary mt-5 w-full" onClick={() => setTab("plans")}>Quản lý gói</button></article>
             <article className="account-panel account-password"><p className="account-section-label">Bảo mật</p><div className="flex gap-3"><input id="new-password" className="input-field" type="password" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /><button id="change-password" className="btn-secondary shrink-0" disabled={busy === "password"} onClick={handleChangePassword}>Đổi mật khẩu</button></div></article>
           </section> : null}
@@ -266,40 +222,6 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
             <div className="plan-summary-strip"><div><span>Gói đang dùng</span><strong>{planLabel(activePlan)}{subscription.planStatus === "trial" ? " · Trải nghiệm" : ""}</strong></div><div><span>{subscription.planStatus === "trial" ? "Tín dụng trải nghiệm hôm nay" : "Tín dụng hiện có"}</span><strong>{subscription.planStatus === "trial" ? subscription.trials.plusRemaining : subscription.credits.total}</strong></div></div>
             <div className="plan-grid">{subscription.cards.map((card) => <article key={card.id} className={`plan-card plan-${card.id} ${card.active ? 'is-active' : ''}`}>
               <div className="plan-card-glow" /><div className="plan-card-shine" aria-hidden="true" /><div className="plan-card-top"><span className="plan-gem">{planIcon[card.id]}</span><span className={`plan-badge badge-${card.id}`}>{card.badge}</span><span className={`plan-state ${card.active ? 'active' : ''}`}>{PAYMENT_UI_COMING_SOON && card.id === "plus" && !card.paid && !card.active && card.state !== "trial_available" ? "COMING SOON" : statusLabel(card.state)}</span></div><h3 className="plan-name">{card.title}</h3>{PAYMENT_UI_COMING_SOON && card.id === "plus" ? <div className="plan-price plan-price-coming-soon"><strong>Coming soon</strong></div> : <div className="plan-price">{card.listPriceVnd ? <del>{money(card.listPriceVnd)}</del> : null}<strong>{card.priceVnd ? money(card.priceVnd) : "0đ"}</strong><span>{card.id === "free" ? "· Không giới hạn thời gian" : "/ 30 ngày"}</span></div>}<p className="plan-description">{card.description}</p><p className="plan-reason">{card.reason}</p><ul>{card.benefits.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>{card.hint ? <p className="plan-hint">{card.hint}</p> : null}
-              {card.id === "free" ? (
-                <div className="my-3.5 rounded-xl bg-slate-50 p-2.5 ring-1 ring-slate-900/5">
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-800">Mô hình AI</span>
-                    <span className="text-[11px] font-medium text-slate-400">Gói Miễn phí</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-slate-200/60 p-1">
-                    <button
-                      type="button"
-                      id="free-engine-gemini"
-                      onClick={() => void handleSwitchFreeEngine("gemini")}
-                      className={`flex min-h-[44px] items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
-                        freeEngine === "gemini"
-                          ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      Gemini
-                    </button>
-                    <button
-                      type="button"
-                      id="free-engine-gpt"
-                      onClick={() => void handleSwitchFreeEngine("gpt")}
-                      className={`flex min-h-[44px] items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold transition-all duration-150 ${
-                        freeEngine === "gpt"
-                          ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/5"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      GPT
-                    </button>
-                  </div>
-                </div>
-              ) : null}
               {card.active
                 ? <button id={`select-plan-${card.id}`} className="plan-action selected" disabled>Gói hiện tại</button>
                 : card.id === "free"

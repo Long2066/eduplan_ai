@@ -1,4 +1,4 @@
-﻿import "server-only";
+import "server-only";
 import { extractAiJsonValue } from "@/lib/ai-json";
 import type { StagedBlueprintArtifact } from "@/lib/generation/blueprint";
 import { fetchAiJsonContent } from "@/lib/generation/ai-json-client";
@@ -10,7 +10,7 @@ import {
   buildSubjectSystemRole,
   buildVietnamesePeriodPrompt,
 } from "@/lib/subject-prompts";
-import type { PlanModelStrategy, AiProvider } from "@/lib/model-strategy";
+import type { PlanModelStrategy } from "@/lib/model-strategy";
 import type {
   LessonInput,
   LessonPlan,
@@ -29,7 +29,7 @@ export type StagedPeriodArtifact = {
   subjectKind: StagedBlueprintArtifact["subjectKind"];
   periodNumber: number;
   model: string;
-  provider: AiProvider;
+  provider: "openai" | "openrouter";
   fallbackUsed: boolean;
   period: PeriodPlan;
   handoff: PeriodPlan["handoff"] | null;

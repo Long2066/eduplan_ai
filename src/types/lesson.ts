@@ -19,7 +19,6 @@ export type LessonInput = {
   specialRequest: string;
   allowAiInference: boolean;
   enableDigitalCompetency: boolean;
-  freeEngine?: "gemini" | "gpt";
   uploadedAssets: UploadedAsset[];
 };
 

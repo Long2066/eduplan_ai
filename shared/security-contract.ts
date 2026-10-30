@@ -1,4 +1,4 @@
-export const SECURITY_SCHEMA_VERSION = 1 as const;
+﻿export const SECURITY_SCHEMA_VERSION = 1 as const;
 export const SECURITY_HASH_HEX_LENGTH = 64;
 export const SECURITY_HASH_PREVIEW_LENGTH = 12;
 export const MAX_SECURITY_EVENT_NOTE_LENGTH = 500;
@@ -38,7 +38,7 @@ export type GenerationSecurityContext = {
 
 export type SecurityGenerationCallMetric = {
   scope: "ocr" | "blueprint" | "detail" | "repair";
-  provider: "openai" | "openrouter" | "ninerouter";
+  provider: "openai" | "openrouter";
   model: string;
   fallbackUsed: boolean;
   outcome: "success" | "http_error" | "network_error" | "timeout" | "invalid_output";
@@ -126,7 +126,7 @@ export function normalizeSecurityGenerationCall(value: unknown): SecurityGenerat
   const scope = ["ocr", "blueprint", "detail", "repair"].includes(String(value.scope))
     ? String(value.scope) as SecurityGenerationCallMetric["scope"]
     : null;
-  const provider = ["openai", "openrouter", "ninerouter"].includes(String(value.provider))
+  const provider = ["openai", "openrouter"].includes(String(value.provider))
     ? String(value.provider) as SecurityGenerationCallMetric["provider"]
     : null;
   const outcome = ["success", "http_error", "network_error", "timeout", "invalid_output"].includes(String(value.outcome))

@@ -86,80 +86,30 @@ function imageLabel(asset: UploadedAsset, index: number) {
   return asset.name || `ảnh ${index + 1}`;
 }
 
-async function ocrImagesWithOpenAi(
-  assets: UploadedAsset[],
-  apiKey: string,
-  batchLabel: string,
-  options?: { freeEngine?: "gemini" | "gpt" | string },
-) {
+async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batchLabel: string) {
   const imageDataUrls = assets.flatMap((asset) => asset.dataUrl && parseDataUrl(asset.dataUrl) ? [asset.dataUrl] : []);
   if (!imageDataUrls.length) return { text: "", model: OPENAI_OCR_MODEL, fallbackUsed: false };
 
-  const isGeminiFree = options?.freeEngine === "gemini";
-  type OcrCandidate = {
-    model: string;
-    provider: "openai" | "ninerouter";
-    apiKey: string;
-    endpoint: string;
-    reasoningEffort: string;
-  };
-
-  const candidates: OcrCandidate[] = [];
-  if (isGeminiFree) {
-    const ninerouterKey = (process.env.NINEROUTER_API_KEY || "sk-30291fde1e5baa54-rmony8-33298b25").trim();
-    const ninerouterBaseUrl = (process.env.NINEROUTER_API_BASE_URL || "http://158.178.235.87:20128/v1").replace(/\/+$/, "");
-    const geminiModel = (process.env.GEMINI_OCR_MODEL || process.env.FREE_GEMINI_MODEL || "ag/gemini-3.8-flash-high").trim();
-    candidates.push({
-      model: geminiModel,
-      provider: "ninerouter",
-      apiKey: ninerouterKey,
-      endpoint: `${ninerouterBaseUrl}/chat/completions`,
-      reasoningEffort: "none",
-    });
-    if (apiKey) {
-      candidates.push({
-        model: OPENAI_OCR_MODEL,
-        provider: "openai",
-        apiKey,
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        reasoningEffort: OPENAI_OCR_REASONING_EFFORT,
-      });
-    }
-  } else {
-    candidates.push({
-      model: OPENAI_OCR_MODEL,
-      provider: "openai",
-      apiKey,
-      endpoint: "https://api.openai.com/v1/chat/completions",
-      reasoningEffort: OPENAI_OCR_REASONING_EFFORT,
-    });
-    if (OPENAI_OCR_FALLBACK_MODEL && OPENAI_OCR_FALLBACK_MODEL !== OPENAI_OCR_MODEL) {
-      candidates.push({
-        model: OPENAI_OCR_FALLBACK_MODEL,
-        provider: "openai",
-        apiKey,
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        reasoningEffort: "none",
-      });
-    }
+  const models = [OPENAI_OCR_MODEL];
+  if (OPENAI_OCR_FALLBACK_MODEL && OPENAI_OCR_FALLBACK_MODEL !== OPENAI_OCR_MODEL) {
+    models.push(OPENAI_OCR_FALLBACK_MODEL);
   }
-
   const policy = currentGenerationContext()?.aiPolicy;
-  const selectedCandidates = policy?.singleAttempt
-    ? [policy.useFallback && candidates.length > 1 ? candidates[1] : candidates[0]]
-    : candidates;
-  let primaryMessage = "OCR không phản hồi.";
+  const selectedModels = policy?.singleAttempt
+    ? [policy.useFallback && models.length > 1 ? models[1] : models[0]]
+    : models;
+  let primaryMessage = "OpenAI OCR không phản hồi.";
   let lastMessage = primaryMessage;
 
-  for (const [candidateIndex, candidate] of selectedCandidates.entries()) {
-    const fallbackUsed = policy?.singleAttempt ? Boolean(policy.useFallback && candidates.length > 1) : candidateIndex > 0;
+  for (const [modelIndex, model] of selectedModels.entries()) {
+    const fallbackUsed = policy?.singleAttempt ? Boolean(policy.useFallback && models.length > 1) : modelIndex > 0;
     const { useResponsesApi, body } = buildOpenAiOcrRequest({
-      model: candidate.model,
+      model,
       imageDataUrls,
-      reasoningEffort: candidate.reasoningEffort,
+      reasoningEffort: model === OPENAI_OCR_MODEL ? OPENAI_OCR_REASONING_EFFORT : "none",
       maxOutputTokens: OPENAI_OCR_MAX_OUTPUT_TOKENS,
     });
-    const maxRetries = policy?.singleAttempt || candidates.length > 1 ? 0 : OPENAI_TRANSIENT_RETRIES;
+    const maxRetries = policy?.singleAttempt || models.length > 1 ? 0 : OPENAI_TRANSIENT_RETRIES;
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       const remainingForOcr = remainingGenerationMs() - GENERATION_SAVE_RESERVE_MS;
@@ -175,15 +125,15 @@ async function ocrImagesWithOpenAi(
 
       try {
         beginGenerationAiCall();
-        const endpoint = candidate.provider === "openai" && useResponsesApi
-          ? "https://api.openai.com/v1/responses"
-          : candidate.endpoint;
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${candidate.apiKey}` },
-          body: JSON.stringify(body),
-          signal: abortSignalForRequest(controller),
-        });
+        const response = await fetch(
+          useResponsesApi ? "https://api.openai.com/v1/responses" : "https://api.openai.com/v1/chat/completions",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify(body),
+            signal: abortSignalForRequest(controller),
+          },
+        );
 
         if (response.ok) {
           const data = await response.json();
@@ -193,8 +143,8 @@ async function ocrImagesWithOpenAi(
           if (completionError) {
             recordGenerationCall({
               scope: "ocr",
-              provider: candidate.provider,
-              model: candidate.model,
+              provider: "openai",
+              model,
               fallbackUsed,
               outcome: "invalid_output",
               elapsedMs: Date.now() - startedAt,
@@ -209,39 +159,38 @@ async function ocrImagesWithOpenAi(
           if (text.length >= 20) {
             recordGenerationCall({
               scope: "ocr",
-              provider: candidate.provider,
-              model: candidate.model,
+              provider: "openai",
+              model,
               fallbackUsed,
               outcome: "success",
               elapsedMs: Date.now() - startedAt,
               ...normalizeAiUsage(data),
             });
             console.info("[EduPlan AI] OCR model completed", {
-              model: candidate.model,
-              provider: candidate.provider,
+              model,
               fallbackUsed,
               batchLabel,
               textLength: text.length,
             });
-            return { text, model: candidate.model, fallbackUsed };
+            return { text, model, fallbackUsed };
           }
           recordGenerationCall({
             scope: "ocr",
-            provider: candidate.provider,
-            model: candidate.model,
+            provider: "openai",
+            model,
             fallbackUsed,
             outcome: "invalid_output",
             elapsedMs: Date.now() - startedAt,
             ...normalizeAiUsage(data),
           });
-          lastMessage = `OCR chưa đọc đủ nội dung ở ${batchLabel}. Hãy thử ảnh rõ hơn hoặc crop sát vùng SGK.`;
+          lastMessage = `OpenAI OCR chưa đọc đủ nội dung ở ${batchLabel}. Hãy thử ảnh rõ hơn hoặc crop sát vùng SGK.`;
           break;
         }
 
         recordGenerationCall({
           scope: "ocr",
-          provider: candidate.provider,
-          model: candidate.model,
+          provider: "openai",
+          model,
           fallbackUsed,
           outcome: "http_error",
           elapsedMs: Date.now() - startedAt,
@@ -260,8 +209,8 @@ async function ocrImagesWithOpenAi(
         const generationTimedOut = Boolean(currentGenerationContext()?.controller.signal.aborted);
         recordGenerationCall({
           scope: "ocr",
-          provider: candidate.provider,
-          model: candidate.model,
+          provider: "openai",
+          model,
           fallbackUsed,
           outcome: requestTimedOut || generationTimedOut ? "timeout" : "network_error",
           elapsedMs: Date.now() - startedAt,
@@ -270,7 +219,7 @@ async function ocrImagesWithOpenAi(
           totalTokens: 0,
         });
         if (generationTimedOut) throw new GenerationTimeoutError();
-        lastMessage = normalizeOpenAiFetchError(error, candidate.model, requestTimeoutMs, Boolean(policy?.singleAttempt));
+        lastMessage = normalizeOpenAiFetchError(error, model, requestTimeoutMs, Boolean(policy?.singleAttempt));
         if (attempt < maxRetries) {
           await waitForAiRetry(700 * (attempt + 1));
           continue;
@@ -280,18 +229,18 @@ async function ocrImagesWithOpenAi(
       }
     }
 
-    if (candidateIndex === 0) primaryMessage = lastMessage;
-    if (candidateIndex < selectedCandidates.length - 1) {
+    if (modelIndex === 0) primaryMessage = lastMessage;
+    if (modelIndex < models.length - 1) {
       console.warn("[EduPlan AI] OCR model fallback", {
-        failedModel: candidate.model,
-        fallbackModel: selectedCandidates[candidateIndex + 1].model,
+        failedModel: model,
+        fallbackModel: models[modelIndex + 1],
         batchLabel,
         message: lastMessage,
       });
     }
   }
 
-  if (!policy?.singleAttempt && selectedCandidates.length > 1) {
+  if (!policy?.singleAttempt && models.length > 1) {
     throw new Error(`OCR chính: ${primaryMessage}; OCR dự phòng: ${lastMessage}`);
   }
   throw new Error(lastMessage);
@@ -301,18 +250,13 @@ export async function runOpenAiOcrAsset(
   asset: UploadedAsset,
   index: number,
   totalAssets: number,
-  options?: { freeEngine?: "gemini" | "gpt" | string },
 ): Promise<OpenAiOcrAssetResult> {
-  const isGemini = options?.freeEngine === "gemini";
-  const defaultModel = isGemini
-    ? (process.env.GEMINI_OCR_MODEL || process.env.FREE_GEMINI_MODEL || "ag/gemini-3.8-flash-high").trim()
-    : OPENAI_OCR_MODEL;
   const sourceHash = hashUploadedAsset(asset);
   if (process.env.LESSON_SOURCE_CACHE_ENABLED !== "false" && sourceHash) {
     try {
       const cachedText = await readCachedOcrText(sourceHash);
       if (cachedText) {
-        return { text: cachedText, sourceHash, cacheHit: true, model: defaultModel };
+        return { text: cachedText, sourceHash, cacheHit: true, model: OPENAI_OCR_MODEL };
       }
     } catch (cacheError) {
       console.warn("[EduPlan AI] OCR cache read skipped", {
@@ -322,13 +266,12 @@ export async function runOpenAiOcrAsset(
     }
   }
 
-  const apiKey = process.env.OPENAI_API_KEY || "";
-  if (!apiKey && !isGemini) throw new Error("Thiếu OPENAI_API_KEY trong file .env.");
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("Thiếu OPENAI_API_KEY trong file .env.");
   const result = await ocrImagesWithOpenAi(
     [asset],
     apiKey,
     `ảnh ${index + 1}/${totalAssets}: ${imageLabel(asset, index)}`,
-    options,
   );
   try {
     await saveCachedOcrText(asset, result.text, result.model);
@@ -341,11 +284,7 @@ export async function runOpenAiOcrAsset(
   return { text: result.text, sourceHash, cacheHit: false, model: result.model };
 }
 
-export async function runOpenAiOcr(
-  input: LessonInput,
-  options?: { freeEngine?: "gemini" | "gpt" | string },
-): Promise<OpenAiOcrResult> {
-  const effectiveOptions = { freeEngine: options?.freeEngine || input.freeEngine };
+export async function runOpenAiOcr(input: LessonInput): Promise<OpenAiOcrResult> {
   const assets = sortGenerationOcrAssets(
     input.uploadedAssets.filter((asset) => asset.dataUrl && parseDataUrl(asset.dataUrl)),
   );
@@ -357,13 +296,13 @@ export async function runOpenAiOcr(
     const cachedOrGeneratedParts = new Array<string>(assets.length).fill("");
     let cacheHitCount = 0;
     for (const [index, asset] of assets.entries()) {
-      const result = await runOpenAiOcrAsset(asset, index, assets.length, effectiveOptions);
+      const result = await runOpenAiOcrAsset(asset, index, assets.length);
       cachedOrGeneratedParts[index] = result.text;
       if (result.cacheHit) cacheHitCount += 1;
     }
     const cachedText = cachedOrGeneratedParts.filter(Boolean).join("\n\n--- HẾT ẢNH ---\n\n").trim();
     if (cachedText.length < 40) {
-      throw new Error("OCR không đọc được đủ nội dung từ ảnh. Hãy thử ảnh rõ hơn, ít nhiễu hơn hoặc crop sát vùng SGK.");
+      throw new Error("OpenAI OCR không đọc được đủ nội dung từ ảnh. Hãy thử ảnh rõ hơn, ít nhiễu hơn hoặc crop sát vùng SGK.");
     }
     console.info("[EduPlan AI] OCR completed with cache layer", {
       model: OPENAI_OCR_MODEL,
@@ -379,12 +318,12 @@ export async function runOpenAiOcr(
     };
   }
 
-  const apiKey = process.env.OPENAI_API_KEY || "";
-  if (!apiKey && effectiveOptions.freeEngine !== "gemini") throw new Error("Thiếu OPENAI_API_KEY trong file .env.");
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("Thiếu OPENAI_API_KEY trong file .env.");
   const batches = chunkAssets(assets, OPENAI_OCR_BATCH_SIZE);
   const ocrParts: string[] = [];
-  console.info("[EduPlan AI] OCR started", {
-    model: effectiveOptions.freeEngine === "gemini" ? "ag/gemini-3.8-flash-high" : OPENAI_OCR_MODEL,
+  console.info("[EduPlan AI] OCR OpenAI started", {
+    model: OPENAI_OCR_MODEL,
     imageCount: assets.length,
     batchCount: batches.length,
     order: assets.map((asset, index) => ({
@@ -398,26 +337,26 @@ export async function runOpenAiOcr(
   for (const [batchIndex, batch] of batches.entries()) {
     const batchLabel = `batch ${batchIndex + 1}/${batches.length}`;
     try {
-      console.info("[EduPlan AI] OCR batch started", {
-        model: effectiveOptions.freeEngine === "gemini" ? "ag/gemini-3.8-flash-high" : OPENAI_OCR_MODEL,
+      console.info("[EduPlan AI] OCR OpenAI batch started", {
+        model: OPENAI_OCR_MODEL,
         imageCount: batch.length,
         batchLabel,
       });
-      ocrParts.push((await ocrImagesWithOpenAi(batch, apiKey, batchLabel, effectiveOptions)).text);
+      ocrParts.push((await ocrImagesWithOpenAi(batch, apiKey, batchLabel)).text);
     } catch (error) {
       if (batch.length > 1) {
-        console.warn("[EduPlan AI] OCR batch failed; retrying as single images", {
+        console.warn("[EduPlan AI] OCR OpenAI batch failed; retrying as single images", {
           batchLabel,
           imageCount: batch.length,
         });
         for (const [imageIndex, asset] of batch.entries()) {
           const singleLabel = `${batchLabel} / ${imageLabel(asset, imageIndex)}`;
           try {
-            ocrParts.push((await ocrImagesWithOpenAi([asset], apiKey, singleLabel, effectiveOptions)).text);
+            ocrParts.push((await ocrImagesWithOpenAi([asset], apiKey, singleLabel)).text);
           } catch (singleError) {
             const message = singleError instanceof Error
               ? singleError.message
-              : "OCR thất bại với một ảnh.";
+              : "OpenAI OCR thất bại với một ảnh.";
             throw new Error(`${message} Ảnh nghi ngờ: ${imageLabel(asset, imageIndex)}.`);
           }
         }
@@ -429,10 +368,10 @@ export async function runOpenAiOcr(
 
   const text = ocrParts.filter(Boolean).join("\n\n--- HẾT BATCH ẢNH ---\n\n").trim();
   if (text.length < 40) {
-    throw new Error("OCR không đọc được đủ nội dung từ ảnh. Hãy thử ảnh rõ hơn, ít nhiễu hơn hoặc crop sát vùng SGK.");
+    throw new Error("OpenAI OCR không đọc được đủ nội dung từ ảnh. Hãy thử ảnh rõ hơn, ít nhiễu hơn hoặc crop sát vùng SGK.");
   }
-  console.info("[EduPlan AI] OCR completed", {
-    model: effectiveOptions.freeEngine === "gemini" ? "ag/gemini-3.8-flash-high" : OPENAI_OCR_MODEL,
+  console.info("[EduPlan AI] OCR OpenAI completed", {
+    model: OPENAI_OCR_MODEL,
     textLength: text.length,
     batchCount: batches.length,
   });

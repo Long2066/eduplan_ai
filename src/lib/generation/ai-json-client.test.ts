@@ -260,45 +260,4 @@ describe("shared AI JSON client", () => {
     expect(caughtMessage).not.toContain("App đã thử lại tự động");
     expect(caughtMessage).toContain("Vui lòng thử lại ở yêu cầu kế tiếp");
   });
-
-  it("routes to 9router with configured base URL, stream=false, and API key for ninerouter provider", async () => {
-    process.env.NINEROUTER_API_KEY = "test-9router-key";
-    process.env.NINEROUTER_API_BASE_URL = "http://158.178.235.87:20128/v1";
-    let capturedUrl = "";
-    let capturedBody: { stream?: boolean; model?: string } = {};
-    let capturedAuth = "";
-    vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      capturedUrl = url;
-      capturedAuth = (init?.headers as Record<string, string>)?.["Authorization"] || "";
-      capturedBody = JSON.parse(String(init?.body || "{}"));
-      return {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '{"status":"ok"}' }, finish_reason: "stop" }],
-          usage: { prompt_tokens: 15, completion_tokens: 5, total_tokens: 20 },
-        }),
-      };
-    }));
-
-    const strategy: AiStageStrategy = {
-      stage: "blueprint",
-      provider: "ninerouter",
-      model: "ag/gemini-3.8-flash-high",
-      temperature: 0.35,
-      timeoutMs: 5_000,
-    };
-
-    const result = await withGenerationDeadline(
-      "ninerouter-test",
-      () => fetchAiJsonContent(strategy, [{ role: "user", content: "Test" }]),
-      undefined,
-      30_000,
-    );
-
-    expect(result.provider).toBe("ninerouter");
-    expect(result.model).toBe("ag/gemini-3.8-flash-high");
-    expect(capturedUrl).toBe("http://158.178.235.87:20128/v1/chat/completions");
-    expect(capturedAuth).toBe("Bearer test-9router-key");
-    expect(capturedBody.stream).toBe(false);
-  });
 });

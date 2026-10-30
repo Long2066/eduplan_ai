@@ -30,8 +30,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await requireUser();
-    const body = (await request.json()) as { plan?: unknown; freeEngine?: unknown };
-    const subscription = await activatePlan(user.uid, body.plan, body.freeEngine);
+    const body = (await request.json()) as { plan?: unknown };
+    const subscription = await activatePlan(user.uid, body.plan);
     return NextResponse.json({ ok: true, subscription }, { headers: noStoreHeaders });
   } catch (error) {
     const known = subscriptionErrorResponse(error);

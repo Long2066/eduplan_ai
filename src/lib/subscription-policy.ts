@@ -88,7 +88,7 @@ export const PLAN_CATALOG: Record<SubscriptionPlan, PlanCatalogItem> = {
 };
 
 export type PlanCard = PlanCatalogItem & { state: PlanCardState; selectable: boolean; active: boolean; reason: string; remaining: number; expiresAt: string | null; paid: boolean };
-export type SubscriptionStatus = { activePlan: SubscriptionPlan; planStatus: PlanStatus; freeEngine?: "gemini" | "gpt"; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; dayKey: string; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
+export type SubscriptionStatus = { activePlan: SubscriptionPlan; planStatus: PlanStatus; cards: PlanCard[]; free: { used: number; limit: number; remaining: number; dayKey: string; resetAt: string }; credits: { package: number; topup: number; total: number; expiresAt: string | null }; trials: { plusRemaining: number; plusUsed: number; plusLimit: number; resetAt: string; proRemaining: number } };
 export type UsageReservation = { operationId: string; uid: string; plan: SubscriptionPlan; kind: UsageKind; source: "free" | "trial" | "paid"; amount: number };
 export type UsageMetadata = {
   userEmail?: string;
@@ -192,8 +192,7 @@ export function buildSubscriptionStatus(data: DocumentData, now = new Date(), se
     }
     return { ...catalog, active: false, paid: false, remaining: 0, expiresAt: snapshot.expiresAt?.toISOString() || null, selectable: false, state: "purchase_required", reason: "Nâng cấp để mở khóa model AI cao cấp" };
   });
-  const freeEngine: "gemini" | "gpt" = data.freeEngine === "gpt" ? "gpt" : "gemini";
-  return { activePlan: snapshot.activePlan, planStatus: snapshot.planStatus, freeEngine, cards, free: { used: freeUsed, limit: snapshot.freeLimit, remaining: freeRemaining, dayKey: today, resetAt }, credits: { package: packageCredits, topup: topupCredits, total: totalCredits, expiresAt: snapshot.expiresAt?.toISOString() || null }, trials: { plusRemaining: snapshot.paidTrialRemaining, plusUsed: snapshot.paidTrialUsed, plusLimit: snapshot.paidTrialLimit, resetAt, proRemaining: 0 } };
+  return { activePlan: snapshot.activePlan, planStatus: snapshot.planStatus, cards, free: { used: freeUsed, limit: snapshot.freeLimit, remaining: freeRemaining, dayKey: today, resetAt }, credits: { package: packageCredits, topup: topupCredits, total: totalCredits, expiresAt: snapshot.expiresAt?.toISOString() || null }, trials: { plusRemaining: snapshot.paidTrialRemaining, plusUsed: snapshot.paidTrialUsed, plusLimit: snapshot.paidTrialLimit, resetAt, proRemaining: 0 } };
 }
 export async function getSubscriptionStatus(uid: string) { const db = getFirebaseDb(); const [snapshot, settings] = await Promise.all([db.collection("users").doc(uid).get(), getSubscriptionSettings()]); return buildSubscriptionStatus(snapshot.data() || initialSubscriptionFields(false), new Date(), settings); }
 function operationDocId(uid: string, key: string, kind: UsageKind) { return createHash("sha256").update(`${uid}:${kind}:${key}`).digest("hex"); }
@@ -269,14 +268,13 @@ export async function releaseUsage(reservation: UsageReservation, reason = "oper
   const db = getFirebaseDb(); const operationRef = db.collection("generationOperations").doc(reservation.operationId); const userRef = db.collection("users").doc(reservation.uid);
   await db.runTransaction(async (tx) => { const operationSnapshot = await tx.get(operationRef); if (!operationSnapshot.exists || operationSnapshot.get("status") !== "reserved") return; const userSnapshot = await tx.get(userRef); if (!userSnapshot.exists) return; const update: DocumentData = { updatedAt: new Date() }; applyReservationRefund(update, userSnapshot.data() || {}, operationSnapshot.data() || {}); const now = new Date(); tx.update(userRef, update); tx.update(operationRef, { status: "released", releasedAt: now, releaseReason: reason, telemetry }); tx.create(ledgerRef(reservation.operationId, "release"), { ...reservation, type: "release", actor: "system", reason, createdAt: now }); });
 }
-export async function activatePlan(uid: string, requestedPlan: unknown, requestedFreeEngine?: unknown) {
+export async function activatePlan(uid: string, requestedPlan: unknown) {
   const plan = normalizeSubscriptionPlan(requestedPlan); const db = getFirebaseDb(); const userRef = db.collection("users").doc(uid);
-  const freeEngine = requestedFreeEngine === "gpt" || requestedFreeEngine === "gemini" ? requestedFreeEngine : undefined;
   await db.runTransaction(async (tx) => { const snapshot = await tx.get(userRef); if (!snapshot.exists) throw new SubscriptionPolicyError("Không tìm thấy hồ sơ người dùng.", "PROFILE_NOT_FOUND", 404); const settingsSnapshot = await tx.get(db.collection("app_settings").doc("system")); const status = buildSubscriptionStatus(snapshot.data() || {}, new Date(), normalizeSubscriptionSettings(settingsSnapshot.data() || {})); const card = status.cards.find((item) => item.id === plan); if (!card?.selectable) throw new SubscriptionPolicyError(card?.reason || "Gói này chưa khả dụng.", "PLAN_NOT_AVAILABLE"); const planStatus: PlanStatus = plan === "free" ? "free" : card.paid ? "paid" : "trial"; const now = new Date();
     // Selecting a model is intentionally isolated from paidPlan, credits and
     // expiry fields. Those entitlement fields may only change in grant,
     // purchase, explicit admin revoke, or credit accounting transactions.
-    tx.update(userRef, { activePlan: plan, plan, planStatus, ...(freeEngine ? { freeEngine } : {}), updatedAt: now }); tx.create(db.collection("entitlementLedger").doc(), { uid, type: "adjust", plan, amount: 0, actor: "system", reason: planStatus === "trial" ? "trial_activated" : "plan_selected", createdAt: now }); });
+    tx.update(userRef, { activePlan: plan, plan, planStatus, updatedAt: now }); tx.create(db.collection("entitlementLedger").doc(), { uid, type: "adjust", plan, amount: 0, actor: "system", reason: planStatus === "trial" ? "trial_activated" : "plan_selected", createdAt: now }); });
   return getSubscriptionStatus(uid);
 }
 export function subscriptionErrorResponse(error: unknown) { return error instanceof SubscriptionPolicyError ? { status: error.status, body: { error: error.message, code: error.code } } : null; }
