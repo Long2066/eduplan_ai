@@ -26,7 +26,7 @@ try {
 import { NextResponse } from "next/server";
 import { lessonExpiresAt, requireUser } from "@/lib/auth-server";
 import { getFirebaseDb } from "@/lib/firebase-admin";
-import { getPlanModelStrategy, type AiGenerationResult, type AiStageStrategy, type PlanModelStrategy } from "@/lib/model-strategy";
+import { getPlanModelStrategy, getLiveAiGatewaySettings, type AiGenerationResult, type AiStageStrategy, type PlanModelStrategy } from "@/lib/model-strategy";
 import {
   buildOpenAiResponsesJsonRequest,
   describeOpenAiResponsesEmptyOutput,
@@ -3446,6 +3446,7 @@ export async function POST(request: Request) {
       subject: input.subject,
       security,
     });
+    await getLiveAiGatewaySettings().catch(() => undefined);
     const selectedStrategy = getPlanModelStrategy(reservation.plan);
     strategy = selectedStrategy;
     const { lesson, pedagogyAudit, ocrTextLength } = await withGenerationDeadline(requestId, async () => {

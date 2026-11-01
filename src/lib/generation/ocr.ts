@@ -17,6 +17,7 @@ import {
   remainingGenerationMs,
 } from "@/lib/generation/runtime";
 import { buildOpenAiOcrRequest } from "@/lib/openai-ocr-request";
+import { getCachedAiGatewaySettings } from "@/lib/model-strategy";
 import { extractOpenAiResponsesText } from "@/lib/openai-json-request";
 import { hashUploadedAsset } from "@/lib/vietnamese-source-inventory";
 import {
@@ -90,26 +91,73 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
   const imageDataUrls = assets.flatMap((asset) => asset.dataUrl && parseDataUrl(asset.dataUrl) ? [asset.dataUrl] : []);
   if (!imageDataUrls.length) return { text: "", model: OPENAI_OCR_MODEL, fallbackUsed: false };
 
-  const models = [OPENAI_OCR_MODEL];
-  if (OPENAI_OCR_FALLBACK_MODEL && OPENAI_OCR_FALLBACK_MODEL !== OPENAI_OCR_MODEL) {
-    models.push(OPENAI_OCR_FALLBACK_MODEL);
+  const gateway = getCachedAiGatewaySettings();
+  const useGateway = gateway.enabled && Boolean(gateway.baseUrl) && gateway.routingMode !== "openai_only";
+  const isGatewayOnly = gateway.routingMode === "gateway_only";
+
+  type OcrCandidate = {
+    model: string;
+    provider: "openai" | "gateway";
+    endpoint: string;
+    apiKey: string;
+    reasoningEffort: string;
+    isGateway: boolean;
+  };
+
+  const candidates: OcrCandidate[] = [];
+
+  if (useGateway) {
+    const gatewayBaseUrl = gateway.baseUrl.replace(/\/+$/, "");
+    const gatewayOcrModel = gateway.freeOcrModel || "gemini-3.1-flash-image";
+    candidates.push({
+      model: gatewayOcrModel,
+      provider: "gateway",
+      endpoint: `${gatewayBaseUrl}/chat/completions`,
+      apiKey: gateway.apiKey || process.env.NINEROUTER_API_KEY || "sk-30291fde1e5baa54-rmony8-33298b25",
+      reasoningEffort: "low",
+      isGateway: true,
+    });
   }
+
+  if (!isGatewayOnly && (apiKey || gateway.openaiApiKey)) {
+    const directKey = gateway.openaiApiKey || apiKey;
+    candidates.push({
+      model: OPENAI_OCR_MODEL,
+      provider: "openai",
+      endpoint: "https://api.openai.com/v1/chat/completions",
+      apiKey: directKey,
+      reasoningEffort: OPENAI_OCR_REASONING_EFFORT,
+      isGateway: false,
+    });
+    if (OPENAI_OCR_FALLBACK_MODEL && OPENAI_OCR_FALLBACK_MODEL !== OPENAI_OCR_MODEL) {
+      candidates.push({
+        model: OPENAI_OCR_FALLBACK_MODEL,
+        provider: "openai",
+        endpoint: "https://api.openai.com/v1/chat/completions",
+        apiKey: directKey,
+        reasoningEffort: "none",
+        isGateway: false,
+      });
+    }
+  }
+
   const policy = currentGenerationContext()?.aiPolicy;
-  const selectedModels = policy?.singleAttempt
-    ? [policy.useFallback && models.length > 1 ? models[1] : models[0]]
-    : models;
-  let primaryMessage = "OpenAI OCR không phản hồi.";
+  const selectedCandidates = policy?.singleAttempt
+    ? [policy.useFallback && candidates.length > 1 ? candidates[1] : candidates[0]]
+    : candidates;
+  let primaryMessage = "Dịch vụ OCR không phản hồi.";
   let lastMessage = primaryMessage;
 
-  for (const [modelIndex, model] of selectedModels.entries()) {
-    const fallbackUsed = policy?.singleAttempt ? Boolean(policy.useFallback && models.length > 1) : modelIndex > 0;
+  for (const [candidateIndex, candidate] of selectedCandidates.entries()) {
+    const fallbackUsed = policy?.singleAttempt ? Boolean(policy.useFallback && candidates.length > 1) : candidateIndex > 0;
+    const model = candidate.model;
     const { useResponsesApi, body } = buildOpenAiOcrRequest({
-      model,
+      model: candidate.model,
       imageDataUrls,
-      reasoningEffort: model === OPENAI_OCR_MODEL ? OPENAI_OCR_REASONING_EFFORT : "none",
+      reasoningEffort: candidate.reasoningEffort,
       maxOutputTokens: OPENAI_OCR_MAX_OUTPUT_TOKENS,
     });
-    const maxRetries = policy?.singleAttempt || models.length > 1 ? 0 : OPENAI_TRANSIENT_RETRIES;
+    const maxRetries = policy?.singleAttempt || candidates.length > 1 ? 0 : OPENAI_TRANSIENT_RETRIES;
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
       const remainingForOcr = remainingGenerationMs() - GENERATION_SAVE_RESERVE_MS;
@@ -126,10 +174,12 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
       try {
         beginGenerationAiCall();
         const response = await fetch(
-          useResponsesApi ? "https://api.openai.com/v1/responses" : "https://api.openai.com/v1/chat/completions",
+          candidate.isGateway
+            ? candidate.endpoint
+            : (useResponsesApi ? "https://api.openai.com/v1/responses" : candidate.endpoint),
           {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${candidate.apiKey}` },
             body: JSON.stringify(body),
             signal: abortSignalForRequest(controller),
           },
@@ -143,7 +193,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
           if (completionError) {
             recordGenerationCall({
               scope: "ocr",
-              provider: "openai",
+              provider: candidate.provider,
               model,
               fallbackUsed,
               outcome: "invalid_output",
@@ -159,7 +209,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
           if (text.length >= 20) {
             recordGenerationCall({
               scope: "ocr",
-              provider: "openai",
+              provider: candidate.provider,
               model,
               fallbackUsed,
               outcome: "success",
@@ -176,7 +226,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
           }
           recordGenerationCall({
             scope: "ocr",
-            provider: "openai",
+            provider: candidate.provider,
             model,
             fallbackUsed,
             outcome: "invalid_output",
@@ -189,7 +239,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
 
         recordGenerationCall({
           scope: "ocr",
-          provider: "openai",
+          provider: candidate.provider,
           model,
           fallbackUsed,
           outcome: "http_error",
@@ -209,7 +259,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
         const generationTimedOut = Boolean(currentGenerationContext()?.controller.signal.aborted);
         recordGenerationCall({
           scope: "ocr",
-          provider: "openai",
+          provider: candidate.provider,
           model,
           fallbackUsed,
           outcome: requestTimedOut || generationTimedOut ? "timeout" : "network_error",
@@ -229,18 +279,18 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
       }
     }
 
-    if (modelIndex === 0) primaryMessage = lastMessage;
-    if (modelIndex < models.length - 1) {
+    if (candidateIndex === 0) primaryMessage = lastMessage;
+    if (candidateIndex < selectedCandidates.length - 1) {
       console.warn("[EduPlan AI] OCR model fallback", {
         failedModel: model,
-        fallbackModel: models[modelIndex + 1],
+        fallbackModel: selectedCandidates[candidateIndex + 1]?.model,
         batchLabel,
         message: lastMessage,
       });
     }
   }
 
-  if (!policy?.singleAttempt && models.length > 1) {
+  if (!policy?.singleAttempt && selectedCandidates.length > 1) {
     throw new Error(`OCR chính: ${primaryMessage}; OCR dự phòng: ${lastMessage}`);
   }
   throw new Error(lastMessage);
@@ -266,8 +316,9 @@ export async function runOpenAiOcrAsset(
     }
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("Thiếu OPENAI_API_KEY trong file .env.");
+  const gateway = getCachedAiGatewaySettings();
+  const apiKey = process.env.OPENAI_API_KEY || gateway.openaiApiKey || gateway.apiKey;
+  if (!apiKey && (!gateway.enabled || !gateway.baseUrl)) throw new Error("Thiếu OPENAI_API_KEY trong file .env hoặc cấu hình AI Gateway.");
   const result = await ocrImagesWithOpenAi(
     [asset],
     apiKey,

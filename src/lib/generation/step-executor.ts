@@ -51,7 +51,7 @@ import {
   validateStagedLesson,
   type StagedValidationArtifact,
 } from "@/lib/generation/subject-validation";
-import { getPlanModelStrategy } from "@/lib/model-strategy";
+import { getPlanModelStrategy, getLiveAiGatewaySettings } from "@/lib/model-strategy";
 import {
   LESSON_TITLE_REQUIRED_MESSAGE,
   LessonTitleResolutionError,
@@ -894,6 +894,7 @@ async function executeQuotaSettlementStep(job: GenerationJob, owner: string) {
 }
 
 export async function advanceStagedGenerationJob(uid: string, jobId: string, ocrAsset?: UploadedAsset) {
+  await getLiveAiGatewaySettings().catch(() => undefined);
   const job = await getGenerationJobForUser(jobId, uid);
   if (!job) {
     throw new GenerationJobRequestError("Không tìm thấy yêu cầu tạo giáo án.", "GENERATION_JOB_NOT_FOUND", 404);

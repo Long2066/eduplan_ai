@@ -29,9 +29,16 @@ export type PlanCatalogItem = {
 export const FREE_DAILY_LIMIT = 3;
 export const PAID_TRIAL_DAILY_CREDITS = 10;
 
+import {
+  DEFAULT_AI_GATEWAY_SETTINGS,
+  normalizeAiGatewaySettings,
+  type AiGatewaySettings,
+} from "@shared/ai-gateway-catalog";
+
 export type SubscriptionSettings = {
   freeDailyLimit: number;
   paidTrialDailyCredits: number;
+  aiGateway?: AiGatewaySettings;
 };
 
 export const DEFAULT_SUBSCRIPTION_SETTINGS: SubscriptionSettings = {
@@ -125,6 +132,7 @@ export function normalizeSubscriptionSettings(data: DocumentData = {}): Subscrip
   return {
     freeDailyLimit: boundedSetting(data.defaultFreeLimit, FREE_DAILY_LIMIT),
     paidTrialDailyCredits: boundedSetting(data.paidTrialDailyCredits, PAID_TRIAL_DAILY_CREDITS),
+    aiGateway: normalizeAiGatewaySettings(data.aiGateway),
   };
 }
 export async function getSubscriptionSettings() {

@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  DEFAULT_AI_GATEWAY_SETTINGS,
+  GATEWAY_OCR_MODELS,
+  GATEWAY_TEXT_MODELS,
+  type AiGatewaySettings,
+  type AiRoutingMode,
+} from "@shared/ai-gateway-catalog";
+
 import { useEffect, useMemo, useState } from "react";
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
 import { SecurityView } from "@/components/security-view";
@@ -115,6 +123,7 @@ type SystemSettings = {
     lessonHistory: boolean;
     exportFiles: boolean;
   };
+  aiGateway: AiGatewaySettings;
   updatedAt?: string;
 };
 
@@ -359,7 +368,117 @@ export default function AdminPage() {
     defaultFreeLimit: 3,
     paidTrialDailyCredits: 10,
     featureFlags: { feedbackWidget: true, lessonHistory: true, exportFiles: true },
+    aiGateway: { ...DEFAULT_AI_GATEWAY_SETTINGS },
   });
+  const [showGatewayKey, setShowGatewayKey] = useState(false);
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false);
+  const [gatewayTestStatus, setGatewayTestStatus] = useState<{
+    busy: boolean;
+    result?: { ok: boolean; message: string; latencyMs?: number };
+  }>({ busy: false });
+  const [openaiTestStatus, setOpenaiTestStatus] = useState<{
+    busy: boolean;
+    result?: { ok: boolean; message: string; latencyMs?: number };
+  }>({ busy: false });
+
+  function updateAiGateway(patch: Partial<AiGatewaySettings>) {
+    setSystem((prev) => ({
+      ...prev,
+      aiGateway: {
+        ...(prev.aiGateway || DEFAULT_AI_GATEWAY_SETTINGS),
+        ...patch,
+      },
+    }));
+  }
+
+  async function testGatewayConnection() {
+    setGatewayTestStatus({ busy: true });
+    try {
+      const res = await api<{ ok: boolean; error?: string; latencyMs?: number; model?: string; reply?: string }>(
+        "/api/admin/settings/test-connection",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: "gateway",
+            baseUrl: system.aiGateway.baseUrl,
+            apiKey: system.aiGateway.apiKey,
+            model: system.aiGateway.freeModel || "gemini-3.5-flash-lite",
+          }),
+        }
+      );
+      if (res.ok) {
+        setGatewayTestStatus({
+          busy: false,
+          result: {
+            ok: true,
+            message: `Kết nối thành công (${res.latencyMs}ms) · Model: ${res.model}`,
+            latencyMs: res.latencyMs,
+          },
+        });
+      } else {
+        setGatewayTestStatus({
+          busy: false,
+          result: {
+            ok: false,
+            message: res.error || "Kết nối Gateway thất bại.",
+            latencyMs: res.latencyMs,
+          },
+        });
+      }
+    } catch (e: unknown) {
+      setGatewayTestStatus({
+        busy: false,
+        result: {
+          ok: false,
+          message: e instanceof Error ? e.message : "Lỗi kiểm tra kết nối Gateway.",
+        },
+      });
+    }
+  }
+
+  async function testOpenAiConnection() {
+    setOpenaiTestStatus({ busy: true });
+    try {
+      const res = await api<{ ok: boolean; error?: string; latencyMs?: number; model?: string; reply?: string }>(
+        "/api/admin/settings/test-connection",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: "openai",
+            apiKey: system.aiGateway.openaiApiKey,
+            model: system.aiGateway.openaiModel || "gpt-5.4-mini",
+          }),
+        }
+      );
+      if (res.ok) {
+        setOpenaiTestStatus({
+          busy: false,
+          result: {
+            ok: true,
+            message: `Kết nối thành công (${res.latencyMs}ms) · Model: ${res.model}`,
+            latencyMs: res.latencyMs,
+          },
+        });
+      } else {
+        setOpenaiTestStatus({
+          busy: false,
+          result: {
+            ok: false,
+            message: res.error || "Kết nối OpenAI thất bại.",
+            latencyMs: res.latencyMs,
+          },
+        });
+      }
+    } catch (e: unknown) {
+      setOpenaiTestStatus({
+        busy: false,
+        result: {
+          ok: false,
+          message: e instanceof Error ? e.message : "Lỗi kiểm tra kết nối OpenAI.",
+        },
+      });
+    }
+  }
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [userQuery, setUserQuery] = useState("");
   const [userFilter, setUserFilter] = useState("all");
@@ -421,7 +540,13 @@ export default function AdminPage() {
 
   async function loadSystem() {
     const result = await api<{ system: SystemSettings }>("/api/admin/settings/system");
-    setSystem(result.system);
+    setSystem({
+      ...result.system,
+      aiGateway: {
+        ...DEFAULT_AI_GATEWAY_SETTINGS,
+        ...(result.system.aiGateway || {}),
+      },
+    });
   }
 
   async function loadUsers(query = userQuery, filter = userFilter, preserveState = false) {
@@ -1188,36 +1313,312 @@ export default function AdminPage() {
         ) : null}
 
         {tab === "settings" ? (
-          <div className="card form-card" style={{ marginTop: 14 }}>
-            <div className="section-title">
-              <h2>Cấu hình hệ thống</h2>
-              <p className="muted">Quota hằng ngày được app người dùng và API tạo giáo án dùng trực tiếp.</p>
+          <div style={{ display: "grid", gap: 16, marginTop: 14 }}>
+            {/* Card 1: Quota & Features */}
+            <div className="card form-card">
+              <div className="section-title">
+                <h2>Cấu hình hạn mức & Tính năng</h2>
+                <p className="muted">Quota hằng ngày và các công tắc tính năng dùng cho toàn bộ người dùng.</p>
+              </div>
+              <label>
+                <span className="label">Số lượt miễn phí mặc định (Gói Miễn phí)</span>
+                <input className="input" type="number" min={0} max={1000} value={system.defaultFreeLimit} onChange={(event) => setSystem({ ...system, defaultFreeLimit: Number(event.target.value) })} />
+              </label>
+              <label style={{ marginTop: 12 }}>
+                <span className="label">Tín dụng trải nghiệm gói Trả phí mỗi ngày</span>
+                <input className="input" type="number" min={0} max={1000} step={10} value={system.paidTrialDailyCredits} onChange={(event) => setSystem({ ...system, paidTrialDailyCredits: Number(event.target.value) })} />
+                <span className="muted">Mỗi lần tạo bằng gói Trả phí tốn 10 tín dụng. Đặt 0 để tắt trải nghiệm; quota reset lúc 00:00 Việt Nam.</span>
+              </label>
+              <div className="settings-toggles">
+                {Object.entries(system.featureFlags).map(([key, value]) => (
+                  <label key={key} className="switch-row">
+                    <input
+                      type="checkbox"
+                      checked={value}
+                      onChange={(event) => setSystem({
+                        ...system,
+                        featureFlags: { ...system.featureFlags, [key]: event.target.checked },
+                      })}
+                    />
+                    <span>{featureFlagLabel(key)}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-            <label>
-              <span className="label">Số lượt miễn phí mặc định (Gói Miễn phí)</span>
-              <input className="input" type="number" min={0} max={1000} value={system.defaultFreeLimit} onChange={(event) => setSystem({ ...system, defaultFreeLimit: Number(event.target.value) })} />
-            </label>
-            <label style={{ marginTop: 12 }}>
-              <span className="label">Tín dụng trải nghiệm gói Trả phí mỗi ngày</span>
-              <input className="input" type="number" min={0} max={1000} step={10} value={system.paidTrialDailyCredits} onChange={(event) => setSystem({ ...system, paidTrialDailyCredits: Number(event.target.value) })} />
-              <span className="muted">Mỗi lần tạo bằng gói Trả phí tốn 10 tín dụng. Đặt 0 để tắt trải nghiệm; quota reset lúc 00:00 Việt Nam.</span>
-            </label>
-            <div className="settings-toggles">
-              {Object.entries(system.featureFlags).map(([key, value]) => (
-                <label key={key} className="switch-row">
+
+            {/* Card 2: AI Gateway Configuration */}
+            <div className="card form-card">
+              <div className="section-title">
+                <h2>🌐 Cấu hình AI Gateway / Proxy (CLIProxy, VPS Router)</h2>
+                <p className="muted">Tích hợp cổng trung gian để phân phối model Gemini, Claude, GPT và tối ưu chi phí.</p>
+              </div>
+
+              <label className="switch-row" style={{ marginTop: 10, marginBottom: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={system.aiGateway.enabled}
+                  onChange={(e) => updateAiGateway({ enabled: e.target.checked })}
+                />
+                <strong style={{ fontSize: 13, color: system.aiGateway.enabled ? "#047857" : "inherit" }}>
+                  {system.aiGateway.enabled ? "✓ Đang kích hoạt kết nối AI Gateway trung gian" : "Tắt AI Gateway (Hệ thống sẽ dùng OpenAI trực tiếp)"}
+                </strong>
+              </label>
+
+              <label style={{ marginTop: 12 }}>
+                <span className="label">Chế độ điều phối (Routing Strategy)</span>
+                <select
+                  className="select"
+                  value={system.aiGateway.routingMode}
+                  onChange={(e) => updateAiGateway({ routingMode: e.target.value as AiRoutingMode })}
+                >
+                  <option value="hybrid">⚡ Song song thông minh (Ưu tiên Gateway ➔ Lỗi tự động nhảy sang OpenAI dự phòng) [Khuyên dùng]</option>
+                  <option value="gateway_only">🔒 Chỉ dùng Gateway CLIProxy (Tiết kiệm tối đa chi phí)</option>
+                  <option value="openai_only">🏢 Chỉ dùng OpenAI chính thức (Ổn định tuyệt đối)</option>
+                </select>
+                <span className="muted">Chế độ song song sẽ thử Gateway trước, nếu Gateway offline hoặc rate limit sẽ tự động chuyển sang OpenAI chính thức mà không làm gián đoạn giáo viên.</span>
+              </label>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 12 }}>
+                <label>
+                  <span className="label">Link Gateway (Base URL)</span>
                   <input
-                    type="checkbox"
-                    checked={value}
-                    onChange={(event) => setSystem({
-                      ...system,
-                      featureFlags: { ...system.featureFlags, [key]: event.target.checked },
-                    })}
+                    className="input"
+                    placeholder="http://158.178.235.87:20128/v1 hoặc link ngrok/domain riêng"
+                    value={system.aiGateway.baseUrl}
+                    onChange={(e) => updateAiGateway({ baseUrl: e.target.value })}
                   />
-                  <span>{featureFlagLabel(key)}</span>
+                  <span className="muted">Địa chỉ gốc của trạm Gateway (kết thúc bằng /v1).</span>
                 </label>
-              ))}
+
+                <label>
+                  <span className="label">Gateway API Key</span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="input"
+                      type={showGatewayKey ? "text" : "password"}
+                      placeholder="sk-..."
+                      value={system.aiGateway.apiKey}
+                      onChange={(e) => updateAiGateway({ apiKey: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ minWidth: 64, padding: "0 10px" }}
+                      onClick={() => setShowGatewayKey(!showGatewayKey)}
+                    >
+                      {showGatewayKey ? "Ẩn" : "Hiện"}
+                    </button>
+                  </div>
+                  <span className="muted">Mã API Key do trạm Gateway cấp.</span>
+                </label>
+              </div>
+
+              {/* Free Plan Models */}
+              <div style={{ marginTop: 16, padding: "14px 16px", borderRadius: 10, background: "rgba(241,245,249,0.7)", border: "1px solid rgba(226,232,240,0.8)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14 }}>🎁</span>
+                  <strong style={{ fontSize: 13, color: "#0f172a" }}>Phân bổ Model cho Gói Miễn phí (Free Plan)</strong>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
+                  <label>
+                    <span className="label">Model Soạn thảo (Text)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.freeModel}
+                      onChange={(e) => updateAiGateway({ freeModel: e.target.value })}
+                    >
+                      <optgroup label="⚡ Antigravity Models">
+                        {GATEWAY_TEXT_MODELS.filter((m) => m.provider === "ANTIGRAVITY").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🏢 OpenAI Models">
+                        {GATEWAY_TEXT_MODELS.filter((m) => m.provider === "OPENAI").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span className="label">Model OCR quét ảnh SGK (Vision)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.freeOcrModel}
+                      onChange={(e) => updateAiGateway({ freeOcrModel: e.target.value })}
+                    >
+                      <optgroup label="👁 Antigravity Vision">
+                        {GATEWAY_OCR_MODELS.filter((m) => m.provider === "ANTIGRAVITY").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="👁 OpenAI Vision">
+                        {GATEWAY_OCR_MODELS.filter((m) => m.provider === "OPENAI").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              {/* Plus Plan Models */}
+              <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 10, background: "rgba(254,243,199,0.35)", border: "1px solid rgba(251,191,36,0.3)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14 }}>✦</span>
+                  <strong style={{ fontSize: 13, color: "#92400e" }}>Phân bổ Model cho Gói Trả phí (Plus / VIP Plan)</strong>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
+                  <label>
+                    <span className="label">Model Soạn thảo (Text)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.plusModel}
+                      onChange={(e) => updateAiGateway({ plusModel: e.target.value })}
+                    >
+                      <optgroup label="🏢 OpenAI Models (Khuyên dùng)">
+                        {GATEWAY_TEXT_MODELS.filter((m) => m.provider === "OPENAI").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="⚡ Antigravity Models">
+                        {GATEWAY_TEXT_MODELS.filter((m) => m.provider === "ANTIGRAVITY").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span className="label">Model OCR quét ảnh SGK (Vision)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.plusOcrModel}
+                      onChange={(e) => updateAiGateway({ plusOcrModel: e.target.value })}
+                    >
+                      <optgroup label="👁 OpenAI Vision (Khuyên dùng)">
+                        {GATEWAY_OCR_MODELS.filter((m) => m.provider === "OPENAI").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="👁 Antigravity Vision">
+                        {GATEWAY_OCR_MODELS.filter((m) => m.provider === "ANTIGRAVITY").map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              {/* Test Gateway Action */}
+              <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ minHeight: 38 }}
+                  disabled={gatewayTestStatus.busy || !system.aiGateway.baseUrl}
+                  onClick={testGatewayConnection}
+                >
+                  {gatewayTestStatus.busy ? "Đang kiểm tra Gateway..." : "⚡ Kiểm tra kết nối Gateway (Ping)"}
+                </button>
+                {gatewayTestStatus.result ? (
+                  <span
+                    className="status-pill"
+                    style={{
+                      background: gatewayTestStatus.result.ok ? "rgba(236,253,245,0.9)" : "rgba(254,242,242,0.9)",
+                      color: gatewayTestStatus.result.ok ? "#047857" : "#b91c1c",
+                      borderColor: gatewayTestStatus.result.ok ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {gatewayTestStatus.result.message}
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <button className="button" onClick={saveSystem}>Lưu cấu hình</button>
+
+            {/* Card 3: OpenAI Direct Configuration */}
+            <div className="card form-card">
+              <div className="section-title">
+                <h2>🔑 Cổng OpenAI chính thức (Chính hãng / Dự phòng)</h2>
+                <p className="muted">Cổng gọi trực tiếp OpenAI API. Sử dụng làm kênh chính hoặc làm phao cứu sinh tự động khi Gateway lỗi.</p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 10 }}>
+                <label>
+                  <span className="label">OpenAI API Key chính thức</span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="input"
+                      type={showOpenAiKey ? "text" : "password"}
+                      placeholder="sk-proj-... (Để trống nếu dùng mặc định từ .env)"
+                      value={system.aiGateway.openaiApiKey || ""}
+                      onChange={(e) => updateAiGateway({ openaiApiKey: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className="button secondary"
+                      style={{ minWidth: 64, padding: "0 10px" }}
+                      onClick={() => setShowOpenAiKey(!showOpenAiKey)}
+                    >
+                      {showOpenAiKey ? "Ẩn" : "Hiện"}
+                    </button>
+                  </div>
+                  <span className="muted">Nếu để trống, hệ thống tự động sử dụng biến môi trường OPENAI_API_KEY.</span>
+                </label>
+
+                <label>
+                  <span className="label">Model OpenAI mặc định</span>
+                  <input
+                    className="input"
+                    placeholder="gpt-5.4-mini"
+                    value={system.aiGateway.openaiModel || "gpt-5.4-mini"}
+                    onChange={(e) => updateAiGateway({ openaiModel: e.target.value })}
+                  />
+                  <span className="muted">Model dùng cho kênh OpenAI chính thức (mặc định gpt-5.4-mini).</span>
+                </label>
+              </div>
+
+              {/* Test OpenAI Action */}
+              <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                <button
+                  type="button"
+                  className="button secondary"
+                  style={{ minHeight: 38 }}
+                  disabled={openaiTestStatus.busy}
+                  onClick={testOpenAiConnection}
+                >
+                  {openaiTestStatus.busy ? "Đang kiểm tra OpenAI..." : "⚡ Kiểm tra kết nối OpenAI"}
+                </button>
+                {openaiTestStatus.result ? (
+                  <span
+                    className="status-pill"
+                    style={{
+                      background: openaiTestStatus.result.ok ? "rgba(236,253,245,0.9)" : "rgba(254,242,242,0.9)",
+                      color: openaiTestStatus.result.ok ? "#047857" : "#b91c1c",
+                      borderColor: openaiTestStatus.result.ok ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {openaiTestStatus.result.message}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Bottom Save Action */}
+            <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 12 }}>
+              <button
+                className="button"
+                style={{ minHeight: 44, padding: "0 28px", fontSize: 14, fontWeight: 800 }}
+                onClick={saveSystem}
+              >
+                💾 Lưu toàn bộ cấu hình hệ thống
+              </button>
+            </div>
           </div>
         ) : null}
 

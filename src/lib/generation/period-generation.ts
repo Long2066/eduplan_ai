@@ -29,7 +29,7 @@ export type StagedPeriodArtifact = {
   subjectKind: StagedBlueprintArtifact["subjectKind"];
   periodNumber: number;
   model: string;
-  provider: "openai" | "openrouter";
+  provider: "openai" | "openrouter" | "gateway";
   fallbackUsed: boolean;
   period: PeriodPlan;
   handoff: PeriodPlan["handoff"] | null;

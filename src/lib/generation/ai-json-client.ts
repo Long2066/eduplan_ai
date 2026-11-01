@@ -151,7 +151,11 @@ export async function fetchAiJsonContent(
     const fallbackUsed = policy?.singleAttempt
       ? Boolean(policy.useFallback && attempts.length > 1)
       : selectedIndex > 0;
-    const apiKey = selected.provider === "openrouter" ? process.env.OPENROUTER_API_KEY : process.env.OPENAI_API_KEY;
+    const apiKey = selected.provider === "openrouter"
+      ? process.env.OPENROUTER_API_KEY
+      : selected.provider === "gateway"
+        ? (selected.gatewayApiKey || process.env.NINEROUTER_API_KEY || "sk-30291fde1e5baa54-rmony8-33298b25")
+        : process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error(selected.provider === "openrouter"
         ? "Thiếu OPENROUTER_API_KEY trong file .env."
@@ -180,11 +184,13 @@ export async function fetchAiJsonContent(
         ? buildOpenAiResponsesJsonRequest(selected, messages)
         : {
             model: selected.model,
+            stream: false,
             response_format: { type: "json_object" },
             ...(selected.provider === "openrouter" ? {
               max_tokens: openRouterTokens,
               provider: openRouterProviderPreferences(),
             } : (maxOutputTokens ? { max_tokens: maxOutputTokens } : {})),
+            ...(selected.reasoningEffort ? { reasoning_effort: selected.reasoningEffort } : (selected.provider === "gateway" ? { reasoning_effort: "low" } : {})),
             temperature: selected.temperature,
             messages,
           };
@@ -204,11 +210,14 @@ export async function fetchAiJsonContent(
           if (process.env.OPENROUTER_APP_URL) headers["HTTP-Referer"] = process.env.OPENROUTER_APP_URL;
           headers["X-Title"] = process.env.OPENROUTER_APP_NAME || "EduPlan AI";
         }
+        const gatewayBaseUrl = (selected.gatewayBaseUrl || process.env.NINEROUTER_API_BASE_URL || "http://158.178.235.87:20128/v1").replace(/\/+$/, "");
         const endpoint = selected.provider === "openrouter"
           ? "https://openrouter.ai/api/v1/chat/completions"
-          : useResponsesApi
-            ? "https://api.openai.com/v1/responses"
-            : "https://api.openai.com/v1/chat/completions";
+          : selected.provider === "gateway"
+            ? `${gatewayBaseUrl}/chat/completions`
+            : useResponsesApi
+              ? "https://api.openai.com/v1/responses"
+              : "https://api.openai.com/v1/chat/completions";
         beginGenerationAiCall();
         const response = await fetch(endpoint, {
           method: "POST",

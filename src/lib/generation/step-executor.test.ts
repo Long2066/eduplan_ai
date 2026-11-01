@@ -84,6 +84,8 @@ vi.mock("@/lib/generation/persistence", () => persistenceMocks);
 vi.mock("@/lib/generation/lifecycle", () => lifecycleMocks);
 vi.mock("@/lib/model-strategy", () => ({
   getPlanModelStrategy: () => ({ plan: "free", blueprint: {}, detail: {}, repair: {} }),
+  getLiveAiGatewaySettings: vi.fn(async () => ({ enabled: false })),
+  getCachedAiGatewaySettings: vi.fn(() => ({ enabled: false })),
 }));
 vi.mock("@/lib/subscription-policy", () => usageMocks);
 

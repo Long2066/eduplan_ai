@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { adminError, requireAdmin, writeAuditLog } from "@/lib/admin-auth";
 import { getFirebaseDb } from "@/lib/firebase-admin";
 import { toIso } from "@/lib/serializers";
+import { normalizeAiGatewaySettings, type AiGatewaySettings } from "@shared/ai-gateway-catalog";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,7 @@ export async function GET() {
           ...fallbackSystemSettings.featureFlags,
           ...(data.featureFlags || {}),
         },
+        aiGateway: normalizeAiGatewaySettings(data.aiGateway),
         updatedAt: toIso(data.updatedAt),
       },
     });
@@ -45,6 +47,7 @@ export async function PATCH(request: Request) {
       defaultFreeLimit?: number;
       paidTrialDailyCredits?: number;
       featureFlags?: Record<string, boolean>;
+      aiGateway?: Partial<AiGatewaySettings>;
     };
     const system = {
       defaultFreeLimit: Math.min(1000, Math.max(0, Number(body.defaultFreeLimit ?? fallbackSystemSettings.defaultFreeLimit))),
@@ -54,6 +57,7 @@ export async function PATCH(request: Request) {
         lessonHistory: Boolean(body.featureFlags?.lessonHistory),
         exportFiles: Boolean(body.featureFlags?.exportFiles),
       },
+      aiGateway: normalizeAiGatewaySettings(body.aiGateway),
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: admin.uid,
     };
@@ -62,6 +66,13 @@ export async function PATCH(request: Request) {
       defaultFreeLimit: system.defaultFreeLimit,
       paidTrialDailyCredits: system.paidTrialDailyCredits,
       featureFlags: system.featureFlags,
+      aiGateway: {
+        enabled: system.aiGateway.enabled,
+        baseUrl: system.aiGateway.baseUrl,
+        routingMode: system.aiGateway.routingMode,
+        freeModel: system.aiGateway.freeModel,
+        plusModel: system.aiGateway.plusModel,
+      },
     });
     return NextResponse.json({ system });
   } catch (error) {

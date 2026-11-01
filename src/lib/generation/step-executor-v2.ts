@@ -31,7 +31,7 @@ import {
   LessonTitleResolutionError,
 } from "@/lib/lesson-title";
 import { commitUsage, releaseUsage } from "@/lib/subscription-policy";
-import { getPlanModelStrategy } from "@/lib/model-strategy";
+import { getPlanModelStrategy, getLiveAiGatewaySettings } from "@/lib/model-strategy";
 import {
   STAGED_PHASES,
   type StagedAssessmentArtifact,
@@ -348,6 +348,7 @@ export async function advanceStagedGenerationJobV2(
   submittedAsset?: UploadedAsset,
   depth = 0,
 ): Promise<GenerationJob> {
+  await getLiveAiGatewaySettings().catch(() => undefined);
   const initialJob = await getGenerationJobForUser(jobId, uid);
   if (!initialJob) {
     throw new GenerationJobRequestError("Không tìm thấy yêu cầu tạo giáo án.", "GENERATION_JOB_NOT_FOUND", 404);

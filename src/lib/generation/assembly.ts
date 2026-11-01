@@ -27,7 +27,7 @@ export type StagedAssemblyArtifact = {
   periodCount: number;
   repairApplied: boolean;
   models: string[];
-  providers: Array<"openai" | "openrouter">;
+  providers: Array<"openai" | "openrouter" | "gateway">;
   fallbackUsed: boolean;
   lesson: LessonPlan;
 };

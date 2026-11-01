@@ -635,7 +635,7 @@ export async function assembleStagedSections(
   const providers = uniqueValues(
     allSectionArtifacts
       .map((art) => art.provider)
-      .filter((p): p is "openai" | "openrouter" => Boolean(p)),
+      .filter((p): p is "openai" | "openrouter" | "gateway" => Boolean(p)),
   );
 
   const fallbackUsed = allSectionArtifacts.some((art) => art.fallbackUsed);

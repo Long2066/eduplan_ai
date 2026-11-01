@@ -38,7 +38,7 @@ export type StagedBlueprintArtifact = {
   subjectKind: ReturnType<typeof generationSubjectKind>;
   mode: "chunked" | "direct-generation";
   model: string | null;
-  provider: "openai" | "openrouter" | null;
+  provider: "openai" | "openrouter" | "gateway" | null;
   fallbackUsed: boolean;
   promptSource: "ocr" | "ocr-and-cache" | "input-only";
   sourceTruth?: SourceTruth;
