@@ -4,6 +4,8 @@ import {
   DEFAULT_AI_GATEWAY_SETTINGS,
   GATEWAY_OCR_MODELS,
   GATEWAY_TEXT_MODELS,
+  OPENAI_OCR_MODELS,
+  OPENAI_TEXT_MODELS,
   type AiGatewaySettings,
   type AiRoutingMode,
 } from "@shared/ai-gateway-catalog";
@@ -446,7 +448,7 @@ export default function AdminPage() {
           body: JSON.stringify({
             type: "openai",
             apiKey: system.aiGateway.openaiApiKey,
-            model: system.aiGateway.openaiModel || "gpt-5.4-mini",
+            model: system.aiGateway.openaiFreeModel || system.aiGateway.openaiPlusModel || system.aiGateway.openaiModel || "gpt-5.4-mini",
           }),
         }
       );
@@ -1546,7 +1548,7 @@ export default function AdminPage() {
                 <p className="muted">Cổng gọi trực tiếp OpenAI API. Sử dụng làm kênh chính hoặc làm phao cứu sinh tự động khi Gateway lỗi.</p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginTop: 10 }}>
+              <div style={{ marginTop: 10 }}>
                 <label>
                   <span className="label">OpenAI API Key chính thức</span>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -1568,17 +1570,76 @@ export default function AdminPage() {
                   </div>
                   <span className="muted">Nếu để trống, hệ thống tự động sử dụng biến môi trường OPENAI_API_KEY.</span>
                 </label>
+              </div>
 
-                <label>
-                  <span className="label">Model OpenAI mặc định</span>
-                  <input
-                    className="input"
-                    placeholder="gpt-5.4-mini"
-                    value={system.aiGateway.openaiModel || "gpt-5.4-mini"}
-                    onChange={(e) => updateAiGateway({ openaiModel: e.target.value })}
-                  />
-                  <span className="muted">Model dùng cho kênh OpenAI chính thức (mặc định gpt-5.4-mini).</span>
-                </label>
+              {/* Free Plan Models for OpenAI */}
+              <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 10, background: "rgba(240,253,244,0.45)", border: "1px solid rgba(187,247,208,0.5)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14 }}>✦</span>
+                  <strong style={{ fontSize: 13, color: "#166534" }}>Phân bổ Model OpenAI cho Gói Miễn phí (Free Plan)</strong>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
+                  <label>
+                    <span className="label">Model Soạn thảo (Text)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.openaiFreeModel || "gpt-5.4-mini"}
+                      onChange={(e) => updateAiGateway({ openaiFreeModel: e.target.value })}
+                    >
+                      {OPENAI_TEXT_MODELS.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span className="label">Model OCR quét ảnh SGK (Vision)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.openaiFreeOcrModel || "gpt-5.4-mini"}
+                      onChange={(e) => updateAiGateway({ openaiFreeOcrModel: e.target.value })}
+                    >
+                      {OPENAI_OCR_MODELS.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              {/* Plus Plan Models for OpenAI */}
+              <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 10, background: "rgba(254,243,199,0.35)", border: "1px solid rgba(251,191,36,0.3)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 14 }}>✦</span>
+                  <strong style={{ fontSize: 13, color: "#92400e" }}>Phân bổ Model OpenAI cho Gói Trả phí (Plus / VIP Plan)</strong>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12 }}>
+                  <label>
+                    <span className="label">Model Soạn thảo (Text)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.openaiPlusModel || "gpt-5.6-terra"}
+                      onChange={(e) => updateAiGateway({ openaiPlusModel: e.target.value })}
+                    >
+                      {OPENAI_TEXT_MODELS.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span className="label">Model OCR quét ảnh SGK (Vision)</span>
+                    <select
+                      className="select"
+                      value={system.aiGateway.openaiPlusOcrModel || "gpt-image-1.5"}
+                      onChange={(e) => updateAiGateway({ openaiPlusOcrModel: e.target.value })}
+                    >
+                      {OPENAI_OCR_MODELS.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
 
               {/* Test OpenAI Action */}

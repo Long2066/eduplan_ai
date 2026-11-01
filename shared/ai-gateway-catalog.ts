@@ -21,6 +21,10 @@ export type AiGatewaySettings = {
   plusOcrModel: string;
   openaiApiKey?: string;
   openaiModel?: string;
+  openaiFreeModel?: string;
+  openaiFreeOcrModel?: string;
+  openaiPlusModel?: string;
+  openaiPlusOcrModel?: string;
 };
 
 export const GATEWAY_TEXT_MODELS: GatewayModelItem[] = [
@@ -60,6 +64,32 @@ export const GATEWAY_OCR_MODELS: GatewayModelItem[] = [
   { id: "gpt-5.4-mini", name: "GPT 5.4 Mini (Multimodal)", provider: "OPENAI", category: "ocr" },
 ];
 
+export const OPENAI_TEXT_MODELS: GatewayModelItem[] = [
+  { id: "gpt-5.4-mini", name: "GPT 5.4 Mini (Khuyên dùng gói Miễn phí)", provider: "OPENAI", category: "text" },
+  { id: "gpt-4.1-mini", name: "GPT 4.1 Mini (Ổn định, tiết kiệm)", provider: "OPENAI", category: "text" },
+  { id: "gpt-4o-mini", name: "GPT 4o Mini (Phổ biến)", provider: "OPENAI", category: "text" },
+  { id: "gpt-5.6-terra", name: "GPT 5.6 Terra (Chuẩn EduPlan VIP)", provider: "OPENAI", category: "text" },
+  { id: "gpt-5.6-sol", name: "GPT 5.6 Sol", provider: "OPENAI", category: "text" },
+  { id: "gpt-5.6-luna", name: "GPT 5.6 Luna", provider: "OPENAI", category: "text" },
+  { id: "gpt-6.1-terra", name: "GPT 6.1 Terra", provider: "OPENAI", category: "text" },
+  { id: "gpt-6.1-sol", name: "GPT 6.1 Sol", provider: "OPENAI", category: "text" },
+  { id: "gpt-6-astra", name: "GPT 6.0 Astra", provider: "OPENAI", category: "text" },
+  { id: "gpt-6-sol", name: "GPT 6.0 Sol", provider: "OPENAI", category: "text" },
+  { id: "gpt-6-luna", name: "GPT 6.0 Luna", provider: "OPENAI", category: "text" },
+  { id: "codex-auto-review", name: "Codex Auto Review", provider: "OPENAI", category: "text" },
+  { id: "gpt-4.1", name: "GPT 4.1 (Chi tiết cao)", provider: "OPENAI", category: "text" },
+  { id: "gpt-4o", name: "GPT 4o (Đa năng mạnh mẽ)", provider: "OPENAI", category: "text" },
+];
+
+export const OPENAI_OCR_MODELS: GatewayModelItem[] = [
+  { id: "gpt-5.4-mini", name: "GPT 5.4 Mini (Multimodal)", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-image-1.5", name: "GPT Image 1.5 (Chuyên quét ảnh SGK)", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-5.6-terra", name: "GPT 5.6 Terra (Multimodal cao cấp)", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-4.1-mini", name: "GPT 4.1 Mini (Vision)", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-4o-mini", name: "GPT 4o Mini (Vision)", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-4o", name: "GPT 4o (Vision độ nét cao)", provider: "OPENAI", category: "ocr" },
+];
+
 export const DEFAULT_AI_GATEWAY_SETTINGS: AiGatewaySettings = {
   enabled: false,
   baseUrl: "",
@@ -71,6 +101,10 @@ export const DEFAULT_AI_GATEWAY_SETTINGS: AiGatewaySettings = {
   plusOcrModel: "gpt-image-1.5",
   openaiApiKey: "",
   openaiModel: "gpt-5.4-mini",
+  openaiFreeModel: "gpt-5.4-mini",
+  openaiFreeOcrModel: "gpt-5.4-mini",
+  openaiPlusModel: "gpt-5.6-terra",
+  openaiPlusOcrModel: "gpt-image-1.5",
 };
 
 export function normalizeAiGatewaySettings(raw: unknown): AiGatewaySettings {
@@ -90,5 +124,9 @@ export function normalizeAiGatewaySettings(raw: unknown): AiGatewaySettings {
     plusOcrModel: typeof data.plusOcrModel === "string" && data.plusOcrModel.trim() ? data.plusOcrModel.trim() : DEFAULT_AI_GATEWAY_SETTINGS.plusOcrModel,
     openaiApiKey: typeof data.openaiApiKey === "string" ? data.openaiApiKey.trim() : "",
     openaiModel: typeof data.openaiModel === "string" && data.openaiModel.trim() ? data.openaiModel.trim() : DEFAULT_AI_GATEWAY_SETTINGS.openaiModel,
+    openaiFreeModel: typeof data.openaiFreeModel === "string" && data.openaiFreeModel.trim() ? data.openaiFreeModel.trim() : DEFAULT_AI_GATEWAY_SETTINGS.openaiFreeModel,
+    openaiFreeOcrModel: typeof data.openaiFreeOcrModel === "string" && data.openaiFreeOcrModel.trim() ? data.openaiFreeOcrModel.trim() : DEFAULT_AI_GATEWAY_SETTINGS.openaiFreeOcrModel,
+    openaiPlusModel: typeof data.openaiPlusModel === "string" && data.openaiPlusModel.trim() ? data.openaiPlusModel.trim() : DEFAULT_AI_GATEWAY_SETTINGS.openaiPlusModel,
+    openaiPlusOcrModel: typeof data.openaiPlusOcrModel === "string" && data.openaiPlusOcrModel.trim() ? data.openaiPlusOcrModel.trim() : DEFAULT_AI_GATEWAY_SETTINGS.openaiPlusOcrModel,
   };
 }

@@ -121,8 +121,9 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
 
   if (!isGatewayOnly && (apiKey || gateway.openaiApiKey)) {
     const directKey = gateway.openaiApiKey || apiKey;
+    const directModel = gateway.openaiPlusOcrModel || gateway.openaiFreeOcrModel || OPENAI_OCR_MODEL;
     candidates.push({
-      model: OPENAI_OCR_MODEL,
+      model: directModel,
       provider: "openai",
       endpoint: "https://api.openai.com/v1/chat/completions",
       apiKey: directKey,

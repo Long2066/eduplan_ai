@@ -71,7 +71,13 @@ export async function PATCH(request: Request) {
         baseUrl: system.aiGateway.baseUrl,
         routingMode: system.aiGateway.routingMode,
         freeModel: system.aiGateway.freeModel,
+        freeOcrModel: system.aiGateway.freeOcrModel,
         plusModel: system.aiGateway.plusModel,
+        plusOcrModel: system.aiGateway.plusOcrModel,
+        openaiFreeModel: system.aiGateway.openaiFreeModel,
+        openaiFreeOcrModel: system.aiGateway.openaiFreeOcrModel,
+        openaiPlusModel: system.aiGateway.openaiPlusModel,
+        openaiPlusOcrModel: system.aiGateway.openaiPlusOcrModel,
       },
     });
     return NextResponse.json({ system });

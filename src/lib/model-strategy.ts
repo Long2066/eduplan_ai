@@ -114,7 +114,7 @@ export function getPlanModelStrategy(planValue: unknown, options?: { gateway?: A
     const isGatewayOnly = gateway.routingMode === "gateway_only";
     const gatewayBaseUrl = gateway.baseUrl.replace(/\/+$/, "");
     const gatewayApiKey = gateway.apiKey;
-    const defaultOpenAiFallback = gateway.openaiModel || (plan === "free" ? "gpt-5.4-mini" : "gpt-5.6-terra");
+    const defaultOpenAiFallback = plan === "free" ? (gateway.openaiFreeModel || gateway.openaiModel || "gpt-5.4-mini") : (gateway.openaiPlusModel || "gpt-5.6-terra");
 
     if (plan === "free") {
       const freeModel = gateway.freeModel || "gemini-3.5-flash-lite";
@@ -171,7 +171,7 @@ export function getPlanModelStrategy(planValue: unknown, options?: { gateway?: A
         provider: "gateway",
         model: plusModel,
         fallbackProvider: isGatewayOnly ? undefined : "openai",
-        fallbackModel: isGatewayOnly ? undefined : "gpt-5.6-terra",
+        fallbackModel: isGatewayOnly ? undefined : (gateway.openaiPlusModel || "gpt-5.6-terra"),
         temperature: 0.35,
         reasoningEffort: "low",
         timeoutMs: 90_000,
@@ -184,7 +184,7 @@ export function getPlanModelStrategy(planValue: unknown, options?: { gateway?: A
         provider: "gateway",
         model: plusModel,
         fallbackProvider: isGatewayOnly ? undefined : "openai",
-        fallbackModel: isGatewayOnly ? undefined : "gpt-5.6-terra",
+        fallbackModel: isGatewayOnly ? undefined : (gateway.openaiPlusModel || "gpt-5.6-terra"),
         temperature: 0.6,
         reasoningEffort: "low",
         timeoutMs: 90_000,
@@ -210,7 +210,7 @@ export function getPlanModelStrategy(planValue: unknown, options?: { gateway?: A
 
   // Pure OpenAI mode (default / fallback)
   if (plan === "free") {
-    const model = (gateway.openaiModel || process.env.FREE_OPENAI_MODEL || "gpt-5.4-mini").trim();
+    const model = (process.env.FREE_OPENAI_MODEL || gateway.openaiFreeModel || gateway.openaiModel || "gpt-5.4-mini").trim();
     const fallbackModel = (process.env.FREE_OPENAI_FALLBACK_MODEL || process.env.OPENAI_FALLBACK_MODEL || "").trim() || undefined;
     const safeFallbackModel = fallbackModel && fallbackModel !== model ? fallbackModel : undefined;
     const generationEffort = reasoningEffort(process.env.FREE_OPENAI_REASONING_EFFORT, "low");
@@ -241,7 +241,7 @@ export function getPlanModelStrategy(planValue: unknown, options?: { gateway?: A
     };
   }
 
-  const model = (process.env.PLUS_MODEL || "gpt-5.6-terra").trim();
+  const model = (process.env.PLUS_MODEL || gateway.openaiPlusModel || "gpt-5.6-terra").trim();
   const blueprintModel = (process.env.PLUS_BLUEPRINT_MODEL || model).trim();
   const detailModel = (process.env.PLUS_DETAIL_MODEL || model).trim();
   const repairModel = (process.env.PLUS_REPAIR_MODEL || model).trim();
