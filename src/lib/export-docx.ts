@@ -171,10 +171,15 @@ function singleVisualParagraphs(vis: LessonActivityVisual, isInline = false): Pa
 
   try {
     const imageType = detectDocxImageType(mimeType, bytes);
-    const maxWidth = isInline ? 320 : 280;
-    const targetWidth = Math.min(vis.widthPx || maxWidth, maxWidth);
+    const maxWidth = isInline ? 300 : 260;
+    const maxTargetHeight = isInline ? 200 : 180;
+    let targetWidth = Math.min(vis.widthPx || maxWidth, maxWidth);
     const aspect = (vis.heightPx && vis.widthPx) ? vis.heightPx / vis.widthPx : 0.65;
-    const targetHeight = Math.round(targetWidth * aspect);
+    let targetHeight = Math.round(targetWidth * aspect);
+    if (targetHeight > maxTargetHeight) {
+      targetHeight = maxTargetHeight;
+      targetWidth = Math.round(targetHeight / aspect);
+    }
 
     const paragraphs: Paragraph[] = [];
 

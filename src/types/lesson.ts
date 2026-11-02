@@ -22,6 +22,18 @@ export type LessonInput = {
   uploadedAssets: UploadedAsset[];
 };
 
+export type DetectedVisualBox = {
+  type: "illustration" | "handwriting_sample" | "math_model" | "diagram" | "visual_other";
+  label: string;
+  box: {
+    ymin: number;
+    xmin: number;
+    ymax: number;
+    xmax: number;
+  };
+  confidence?: number;
+};
+
 export type UploadedAsset = {
   id: string;
   name: string;
@@ -32,6 +44,7 @@ export type UploadedAsset = {
   mimeType?: string;
   taphuanBookKey?: string;
   taphuanPage?: number;
+  detectedVisuals?: DetectedVisualBox[];
 };
 
 export type LessonActivityOrganization = "individual" | "pair" | "group" | "whole_class";

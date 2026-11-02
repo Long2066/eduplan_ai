@@ -112,7 +112,7 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
     expect(updated[0].teacherVisuals?.[0].caption).toContain("Mẫu chữ viết chuẩn ô li SGK");
   });
 
-  it("attaches Grade 2-5 regions for reading and exercise activities", async () => {
+  it("attaches Grade 2-5 regions for illustrations and handwriting", async () => {
     const testSvg = Buffer.from(
       '<svg width="600" height="800"><rect width="600" height="800" fill="#eff6ff"/></svg>',
     );
@@ -126,28 +126,115 @@ describe("SGK image auto-crop and embed in Teacher column", () => {
 
     const activities: LessonActivity[] = [
       {
-        id: "act_read",
-        phase: "Khám phá",
-        title: "Đọc văn bản: Chiếc áo len",
-        objective: "Đọc đúng văn bản",
-        durationMinutes: 20,
-        teacherActions: ["GV đọc mẫu"],
-        studentActions: ["HS luyện đọc"],
+        id: "act_warmup_vis",
+        phase: "Khởi động",
+        title: "Khởi động: Quan sát tranh minh họa bài đọc",
+        objective: "Khơi gợi hứng thú",
+        durationMinutes: 5,
+        teacherActions: ["GV chiếu tranh minh họa"],
+        studentActions: ["HS quan sát"],
       },
       {
-        id: "act_exercises",
+        id: "act_speaking_vis",
         phase: "Luyện tập",
-        title: "Tìm hiểu bài và trả lời câu hỏi",
-        objective: "Hiểu nội dung",
+        title: "Nói và nghe: Kể chuyện theo tranh",
+        objective: "Rèn kĩ năng nói",
         durationMinutes: 15,
-        teacherActions: ["GV nêu câu hỏi 1"],
+        teacherActions: ["GV hướng dẫn HS kể chuyện theo tranh"],
         studentActions: ["HS thảo luận"],
       },
     ];
 
     const updated = await attachSgkCropsToActivities(activities, assets, { grade: 3 });
-    expect(updated[0].teacherVisuals?.[0].caption).toContain("Văn bản SGK");
-    expect(updated[1].teacherVisuals?.[0].caption).toContain("câu hỏi / bài tập SGK");
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("Tranh minh họa SGK");
+    expect(updated[1].teacherVisuals?.[0].caption).toContain("Tranh chủ đề luyện nói SGK");
+  });
+
+  it("strictly excludes pure reading and pure exercise activities from image cropping (Phương án A)", async () => {
+    const testSvg = Buffer.from('<svg width="600" height="800"><rect fill="#fff"/></svg>');
+    const testBuffer = await sharp(testSvg).png().toBuffer();
+    const dataUrl = `data:image/png;base64,${testBuffer.toString("base64")}`;
+
+    const assets: UploadedAsset[] = [
+      { id: "asset_p1", name: "SGK_L3_T1.png", type: "image", dataUrl },
+    ];
+
+    const activities: LessonActivity[] = [
+      {
+        id: "act_pure_read",
+        phase: "Khám phá",
+        title: "Luyện đọc đoạn văn bản: Chiếc áo len",
+        objective: "Đọc đúng và diễn cảm",
+        durationMinutes: 20,
+        teacherActions: ["GV đọc mẫu bài đọc", "GV cho HS luyện đọc từng đoạn"],
+        studentActions: ["HS luyện đọc nối tiếp câu", "HS luyện đọc theo nhóm"],
+      },
+      {
+        id: "act_pure_exercise",
+        phase: "Luyện tập",
+        title: "Tìm hiểu bài và trả lời câu hỏi 1, 2, 3",
+        objective: "Hiểu nội dung bài đọc",
+        durationMinutes: 15,
+        teacherActions: ["GV nêu câu hỏi 1 trong SGK", "GV nhận xét"],
+        studentActions: ["HS suy nghĩ trả lời câu hỏi"],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, { grade: 3 });
+    expect(updated[0].teacherVisuals).toBeUndefined();
+    expect(updated[1].teacherVisuals).toBeUndefined();
+  });
+
+  it("prioritizes AI-detected visual bounding boxes when available (Phương án B)", async () => {
+    const testSvg = Buffer.from('<svg width="800" height="1000"><rect fill="#fff"/></svg>');
+    const buf = await sharp(testSvg).png().toBuffer();
+    const dataUrl = `data:image/png;base64,${buf.toString("base64")}`;
+
+    const assets: UploadedAsset[] = [
+      {
+        id: "ai_asset_1",
+        name: "SGK_L1_T50.png",
+        type: "image",
+        dataUrl,
+        detectedVisuals: [
+          {
+            type: "illustration",
+            label: "Tranh đàn gà trong sân vườn",
+            box: { ymin: 120, xmin: 80, ymax: 380, xmax: 650 },
+          },
+          {
+            type: "handwriting_sample",
+            label: "Mẫu chữ ô li chữ g và từ gà con",
+            box: { ymin: 780, xmin: 100, ymax: 920, xmax: 900 },
+          },
+        ],
+      },
+    ];
+
+    const activities: LessonActivity[] = [
+      {
+        id: "act_warmup_ai",
+        phase: "Khởi động",
+        title: "Khởi động: Nhận biết qua tranh đàn gà",
+        objective: "Nhận biết âm g",
+        durationMinutes: 5,
+        teacherActions: ["GV chiếu tranh đàn gà lên tivi"],
+        studentActions: ["HS quan sát"],
+      },
+      {
+        id: "act_write_ai",
+        phase: "Luyện tập",
+        title: "Tập viết chữ g và từ gà con",
+        objective: "Viết đúng ô li",
+        durationMinutes: 15,
+        teacherActions: ["GV chiếu mẫu chữ viết chữ g"],
+        studentActions: ["HS viết bảng con"],
+      },
+    ];
+
+    const updated = await attachSgkCropsToActivities(activities, assets, { grade: 1 });
+    expect(updated[0].teacherVisuals?.[0].caption).toContain("Tranh đàn gà trong sân vườn");
+    expect(updated[1].teacherVisuals?.[0].caption).toContain("Mẫu chữ ô li chữ g và từ gà con");
   });
 
   it("maps periodNumber to corresponding page asset in multi-page lessons", async () => {
