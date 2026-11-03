@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { adminError, requireAdmin } from "@/lib/admin-auth";
+import { getFirebaseDb } from "@/lib/firebase-admin";
+import { normalizeAiGatewaySettings } from "@shared/ai-gateway-catalog";
+import { confirmsBlueImage, makeTestPayload, readableReply, type TestMode } from "./payload";
 
 export const runtime = "nodejs";
 
@@ -9,84 +12,68 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       type?: "gateway" | "openai";
       baseUrl?: string;
-      apiKey?: string;
       model?: string;
+      mode?: TestMode;
     };
-
     const type = body.type || "gateway";
-    let endpoint = "";
-    let apiKey = (body.apiKey || "").trim();
-    const model = (body.model || (type === "gateway" ? "gemini-3.5-flash-lite" : "gpt-5.4-mini")).trim();
+    const mode = body.mode || "text";
+    if ((type !== "gateway" && type !== "openai") || (mode !== "text" && mode !== "vision")) {
+      return NextResponse.json({ ok: false, error: "Loại kiểm tra không hợp lệ." }, { status: 400 });
+    }
+    const model = (body.model || "").trim();
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,99}$/.test(model)) {
+      return NextResponse.json({ ok: false, error: "Mã model không hợp lệ." }, { status: 400 });
+    }
 
+    // Only call the saved, admin-configured Gateway. Never use a caller-supplied outbound URL or key.
+    const settings = normalizeAiGatewaySettings((await getFirebaseDb().collection("app_settings").doc("system").get()).data()?.aiGateway);
+    const savedBaseUrl = settings.baseUrl.replace(/\/+$/, "");
+    if (type === "gateway" && (!savedBaseUrl || !settings.apiKey || body.baseUrl?.trim().replace(/\/+$/, "") !== savedBaseUrl)) {
+      return NextResponse.json({ ok: false, error: "Hãy lưu URL và API Key Gateway trước khi kiểm tra." }, { status: 400 });
+    }
+    const endpoint = type === "gateway" ? `${savedBaseUrl}/chat/completions` : "https://api.openai.com/v1/chat/completions";
+    const apiKey = type === "gateway" ? settings.apiKey : settings.openaiApiKey;
+    if (!apiKey) {
+      return NextResponse.json({ ok: false, error: "Hãy lưu API Key tương ứng trước khi kiểm tra." }, { status: 400 });
+    }
     if (type === "gateway") {
-      const baseUrl = (body.baseUrl || "").trim().replace(/\/+$/, "");
-      if (!baseUrl) {
-        return NextResponse.json({ ok: false, error: "Vui lòng nhập Link Gateway (Base URL)." }, { status: 400 });
+      let url: URL;
+      try { url = new URL(savedBaseUrl); } catch {
+        return NextResponse.json({ ok: false, error: "URL Gateway không hợp lệ." }, { status: 400 });
       }
-      endpoint = `${baseUrl}/chat/completions`;
-      if (!apiKey) {
-        apiKey = process.env.NINEROUTER_API_KEY || "sk-30291fde1e5baa54-rmony8-33298b25";
-      }
-    } else {
-      endpoint = "https://api.openai.com/v1/chat/completions";
-      if (!apiKey) {
-        apiKey = process.env.OPENAI_API_KEY || "";
-      }
-      if (!apiKey) {
-        return NextResponse.json({ ok: false, error: "Vui lòng nhập OpenAI API Key để kiểm tra." }, { status: 400 });
+      if (url.protocol !== "https:" || url.username || url.password || !url.hostname.includes(".") || /^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|::|\[)/i.test(url.hostname)) {
+        return NextResponse.json({ ok: false, error: "Gateway phải dùng HTTPS trên tên miền công khai." }, { status: 400 });
       }
     }
 
     const start = Date.now();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
-
     try {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          reasoning_effort: "low",
-          messages: [{ role: "user", content: "Ping EduPlan AI. Vui lòng trả lời 1 từ: OK" }],
-        }),
-        signal: controller.signal,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(makeTestPayload(model, mode, type === "gateway")),
+        signal: AbortSignal.timeout(25000),
+        cache: "no-store",
+        redirect: "error",
       });
-
-      clearTimeout(timeout);
-      const elapsedMs = Date.now() - start;
-
+      const latencyMs = Date.now() - start;
       if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        return NextResponse.json({
-          ok: false,
-          error: `HTTP ${response.status}: ${errText.slice(0, 150) || response.statusText}`,
-          latencyMs: elapsedMs,
-        });
+        // Do not relay arbitrary upstream bodies: they might echo credentials or private data.
+        let code = "upstream_error";
+        try {
+          const data = await response.json() as { error?: { code?: string; type?: string } };
+          const candidate = data.error?.code || data.error?.type;
+          if (candidate && /^[a-zA-Z0-9_.-]{1,64}$/.test(candidate)) code = candidate;
+        } catch { /* Non-JSON provider error. */ }
+        return NextResponse.json({ ok: false, model, mode, httpStatus: response.status, code, error: `Gateway/API trả HTTP ${response.status} (${code}).`, latencyMs });
       }
-
-      const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      const reply = data.choices?.[0]?.message?.content || "OK";
-
-      return NextResponse.json({
-        ok: true,
-        latencyMs: elapsedMs,
-        model,
-        reply: reply.slice(0, 50),
-      });
-    } catch (fetchErr: unknown) {
-      clearTimeout(timeout);
-      const elapsedMs = Date.now() - start;
-      const isTimeout = fetchErr instanceof Error && fetchErr.name === "AbortError";
-      return NextResponse.json({
-        ok: false,
-        error: isTimeout ? "Kết nối quá hạn sau 12 giây (Timeout)." : (fetchErr instanceof Error ? fetchErr.message : "Không thể kết nối đến máy chủ."),
-        latencyMs: elapsedMs,
-      });
+      const data = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
+      const reply = readableReply(data.choices?.[0]?.message?.content);
+      if (!reply) return NextResponse.json({ ok: false, model, mode, error: "HTTP 200 nhưng không có câu trả lời dạng văn bản.", httpStatus: 200, latencyMs });
+      if (mode === "vision" && !confirmsBlueImage(reply)) return NextResponse.json({ ok: false, model, mode, httpStatus: 200, latencyMs, error: "Model phản hồi nhưng chưa nhận diện đúng màu xanh trong ảnh thử." });
+      return NextResponse.json({ ok: true, model, mode, latencyMs, httpStatus: 200, reply: reply.slice(0, 80) });
+    } catch (error) {
+      return NextResponse.json({ ok: false, model, mode, latencyMs: Date.now() - start, error: error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError") ? "Quá thời gian chờ 25 giây." : "Không kết nối được hoặc phản hồi API không hợp lệ." });
     }
   } catch (error) {
     const { message, status } = adminError(error, "Lỗi kiểm tra kết nối.");

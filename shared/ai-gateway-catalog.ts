@@ -6,7 +6,7 @@ export type GatewayModelItem = {
   id: string;
   name: string;
   provider: GatewayModelProvider;
-  category: "text" | "ocr";
+  category: "text" | "ocr" | "multimodal";
   description?: string;
 };
 
@@ -27,42 +27,45 @@ export type AiGatewaySettings = {
   openaiPlusOcrModel?: string;
 };
 
-export const GATEWAY_TEXT_MODELS: GatewayModelItem[] = [
-  // Antigravity Models (from CLIProxy / Antigravity Gateway)
+// ==========================================
+// TOÀN BỘ MODEL CỦA GATEWAY (CLIProxy / Antigravity + OpenAI Hub)
+// Danh sách lựa chọn; khả năng và tình trạng thực tế phải được kiểm tra trên Gateway.
+// ==========================================
+export const ALL_GATEWAY_MODELS: GatewayModelItem[] = [
+  // --- NHÓM ANTIGRAVITY (Google Gemini, Claude, GPT-OSS) ---
   { id: "claude-opus-5-5-high", name: "Claude Opus 5.5 (High)", provider: "ANTIGRAVITY", category: "text" },
   { id: "claude-sonnet-5-5-high", name: "Claude Sonnet 5.5 (High)", provider: "ANTIGRAVITY", category: "text" },
   { id: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)", provider: "ANTIGRAVITY", category: "text" },
   { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Thinking)", provider: "ANTIGRAVITY", category: "text" },
-  { id: "gemini-4-argon-high", name: "Gemini 4 Argon", provider: "ANTIGRAVITY", category: "text" },
-  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)", provider: "ANTIGRAVITY", category: "text" },
-  { id: "gemini-3-flash", name: "Gemini 3 Flash", provider: "ANTIGRAVITY", category: "text" },
+  { id: "gemini-4-argon-high", name: "Gemini 4 Argon", provider: "ANTIGRAVITY", category: "multimodal" },
+  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash High", provider: "ANTIGRAVITY", category: "multimodal" },
+  { id: "gemini-3-flash", name: "Gemini 3 Flash", provider: "ANTIGRAVITY", category: "multimodal" },
+  { id: "gemini-3.1-flash-image", name: "Gemini 3.1 Flash Image", provider: "ANTIGRAVITY", category: "ocr" },
   { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)", provider: "ANTIGRAVITY", category: "text" },
-  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite (Siêu tốc)", provider: "ANTIGRAVITY", category: "text" },
-  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite (Siêu tốc)", provider: "ANTIGRAVITY", category: "text" },
+  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite (Siêu tốc)", provider: "ANTIGRAVITY", category: "multimodal" },
+  { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash Lite", provider: "ANTIGRAVITY", category: "multimodal" },
 
-  // OpenAI Models (from CLIProxy / OpenAI Hub)
+  // --- NHÓM OPENAI HUB (GPT-6, GPT-5.6, GPT-Image series) ---
+  { id: "gpt-6-luna", name: "GPT 6.0 Luna", provider: "OPENAI", category: "text" },
   { id: "gpt-6.1-terra", name: "GPT 6.1 Terra", provider: "OPENAI", category: "text" },
   { id: "gpt-6.1-sol", name: "GPT 6.1 Sol", provider: "OPENAI", category: "text" },
   { id: "gpt-6-astra", name: "GPT 6.0 Astra", provider: "OPENAI", category: "text" },
   { id: "gpt-6-sol", name: "GPT 6.0 Sol", provider: "OPENAI", category: "text" },
-  { id: "gpt-6-luna", name: "GPT 6.0 Luna", provider: "OPENAI", category: "text" },
-  { id: "gpt-5.6-terra", name: "GPT 5.6 Terra (Chuẩn EduPlan)", provider: "OPENAI", category: "text" },
+  { id: "gpt-5.6-terra", name: "GPT 5.6 Terra", provider: "OPENAI", category: "multimodal" },
   { id: "gpt-5.6-sol", name: "GPT 5.6 Sol", provider: "OPENAI", category: "text" },
   { id: "gpt-5.6-luna", name: "GPT 5.6 Luna", provider: "OPENAI", category: "text" },
   { id: "codex-auto-review", name: "Codex Auto Review", provider: "OPENAI", category: "text" },
   { id: "gpt-5.4-mini", name: "GPT 5.4 Mini", provider: "OPENAI", category: "text" },
+  { id: "gpt-image-1.5", name: "GPT Image 1.5", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-image-2", name: "GPT Image 2", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-image-2.5-flare", name: "GPT Image 2.5 Flare", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-image-2.5-sunburst", name: "GPT Image 2.5 Sunburst", provider: "OPENAI", category: "ocr" },
+  { id: "gpt-image-2.5", name: "GPT Image 2.5", provider: "OPENAI", category: "ocr" },
 ];
 
-export const GATEWAY_OCR_MODELS: GatewayModelItem[] = [
-  // Antigravity Vision
-  { id: "gemini-3.1-flash-image", name: "Gemini 3.1 Flash Image (Chuyên quét ảnh)", provider: "ANTIGRAVITY", category: "ocr" },
-  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash High (De xuat OCR)", provider: "ANTIGRAVITY", category: "ocr" },
-  { id: "gemini-3-flash", name: "Gemini 3 Flash (Nhanh, on dinh)", provider: "ANTIGRAVITY", category: "ocr" },
-
-  // OpenAI Vision
-  { id: "gpt-image-1.5", name: "GPT Image 1.5 (Chuyên quét ảnh)", provider: "OPENAI", category: "ocr" },
-  { id: "gpt-5.6-terra", name: "GPT 5.6 Terra (Multimodal)", provider: "OPENAI", category: "ocr" },
-];
+// Tương thích ngược:
+export const GATEWAY_TEXT_MODELS = ALL_GATEWAY_MODELS;
+export const GATEWAY_OCR_MODELS = ALL_GATEWAY_MODELS;
 
 export const OPENAI_TEXT_MODELS: GatewayModelItem[] = [
   { id: "gpt-5.4-mini", name: "GPT 5.4 Mini (Khuyên dùng gói Miễn phí)", provider: "OPENAI", category: "text" },

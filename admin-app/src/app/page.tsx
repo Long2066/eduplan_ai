@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
 import { SecurityView } from "@/components/security-view";
+import { GatewayModelTester } from "@/components/gateway-model-tester";
 import { getFirebaseClientAuth, googleAuthProvider } from "@/lib/firebase-client";
 import type { SecurityDashboardData } from "@/lib/security";
 import type { SecurityEventReviewStatus } from "@shared/security-contract";
@@ -374,10 +375,6 @@ export default function AdminPage() {
   });
   const [showGatewayKey, setShowGatewayKey] = useState(false);
   const [showOpenAiKey, setShowOpenAiKey] = useState(false);
-  const [gatewayTestStatus, setGatewayTestStatus] = useState<{
-    busy: boolean;
-    result?: { ok: boolean; message: string; latencyMs?: number };
-  }>({ busy: false });
   const [openaiTestStatus, setOpenaiTestStatus] = useState<{
     busy: boolean;
     result?: { ok: boolean; message: string; latencyMs?: number };
@@ -391,51 +388,6 @@ export default function AdminPage() {
         ...patch,
       },
     }));
-  }
-
-  async function testGatewayConnection() {
-    setGatewayTestStatus({ busy: true });
-    try {
-      const res = await api<{ ok: boolean; error?: string; latencyMs?: number; model?: string; reply?: string }>(
-        "/api/admin/settings/test-connection",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            type: "gateway",
-            baseUrl: system.aiGateway.baseUrl,
-            apiKey: system.aiGateway.apiKey,
-            model: system.aiGateway.freeModel || "gemini-3.5-flash-lite",
-          }),
-        }
-      );
-      if (res.ok) {
-        setGatewayTestStatus({
-          busy: false,
-          result: {
-            ok: true,
-            message: `Kết nối thành công (${res.latencyMs}ms) · Model: ${res.model}`,
-            latencyMs: res.latencyMs,
-          },
-        });
-      } else {
-        setGatewayTestStatus({
-          busy: false,
-          result: {
-            ok: false,
-            message: res.error || "Kết nối Gateway thất bại.",
-            latencyMs: res.latencyMs,
-          },
-        });
-      }
-    } catch (e: unknown) {
-      setGatewayTestStatus({
-        busy: false,
-        result: {
-          ok: false,
-          message: e instanceof Error ? e.message : "Lỗi kiểm tra kết nối Gateway.",
-        },
-      });
-    }
   }
 
   async function testOpenAiConnection() {
@@ -1513,32 +1465,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Test Gateway Action */}
-              <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-                <button
-                  type="button"
-                  className="button secondary"
-                  style={{ minHeight: 38 }}
-                  disabled={gatewayTestStatus.busy || !system.aiGateway.baseUrl}
-                  onClick={testGatewayConnection}
-                >
-                  {gatewayTestStatus.busy ? "Đang kiểm tra Gateway..." : "⚡ Kiểm tra kết nối Gateway (Ping)"}
-                </button>
-                {gatewayTestStatus.result ? (
-                  <span
-                    className="status-pill"
-                    style={{
-                      background: gatewayTestStatus.result.ok ? "rgba(236,253,245,0.9)" : "rgba(254,242,242,0.9)",
-                      color: gatewayTestStatus.result.ok ? "#047857" : "#b91c1c",
-                      borderColor: gatewayTestStatus.result.ok ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {gatewayTestStatus.result.message}
-                  </span>
-                ) : null}
-              </div>
+              <GatewayModelTester baseUrl={system.aiGateway.baseUrl} apiKey={system.aiGateway.apiKey} />
             </div>
 
             {/* Card 3: OpenAI Direct Configuration */}
