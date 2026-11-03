@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify(makeTestPayload(model, mode, type === "gateway")),
+        body: JSON.stringify(makeTestPayload(model, mode)),
         signal: AbortSignal.timeout(25000),
         cache: "no-store",
         redirect: "error",
@@ -60,12 +60,14 @@ export async function POST(request: Request) {
       if (!response.ok) {
         // Do not relay arbitrary upstream bodies: they might echo credentials or private data.
         let code = "upstream_error";
+        let parameter = "";
         try {
-          const data = await response.json() as { error?: { code?: string; type?: string } };
+          const data = await response.json() as { error?: { code?: string; type?: string; param?: string } };
           const candidate = data.error?.code || data.error?.type;
           if (candidate && /^[a-zA-Z0-9_.-]{1,64}$/.test(candidate)) code = candidate;
+          if (data.error?.param && /^[a-zA-Z0-9_.-]{1,64}$/.test(data.error.param)) parameter = data.error.param;
         } catch { /* Non-JSON provider error. */ }
-        return NextResponse.json({ ok: false, model, mode, httpStatus: response.status, code, error: `Gateway/API trả HTTP ${response.status} (${code}).`, latencyMs });
+        return NextResponse.json({ ok: false, model, mode, httpStatus: response.status, code, parameter, error: `Gateway/API trả HTTP ${response.status} (${code}${parameter ? `: ${parameter}` : ""}).`, latencyMs });
       }
       const data = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
       const reply = readableReply(data.choices?.[0]?.message?.content);

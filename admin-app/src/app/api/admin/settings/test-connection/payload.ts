@@ -3,12 +3,10 @@
 export const TEST_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAK0lEQVR4nGPgj3pIU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWRA0RCwAY7yhM5oDNRwAAAABJRU5ErkJggg==";
 export type TestMode = "text" | "vision";
 
-export function makeTestPayload(model: string, mode: TestMode, gateway: boolean) {
+export function makeTestPayload(model: string, mode: TestMode) {
   return {
     model,
     stream: false,
-    ...(gateway ? { reasoning_effort: "low" } : {}),
-    max_tokens: 128,
     messages: [{
       role: "user",
       content: mode === "vision" ? [
