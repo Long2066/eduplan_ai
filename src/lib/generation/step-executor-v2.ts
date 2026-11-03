@@ -670,7 +670,7 @@ async function executeOcrStepV2(ctx: ExecutionContext): Promise<void> {
       pagePayload = existing.payload;
     } else {
       const asset = assertExpectedOcrAsset(orderedAssets[position], submittedAsset, sequence, total);
-      const result = await runOpenAiOcrAsset(asset, position, total);
+      const result = await runOpenAiOcrAsset(asset, position, total, (job.quotaReservation?.plan === "plus" ? "plus" : "free"));
       pagePayload = {
         index: sequence,
         assetId: asset.id,

@@ -87,7 +87,7 @@ function imageLabel(asset: UploadedAsset, index: number) {
   return asset.name || `ảnh ${index + 1}`;
 }
 
-async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batchLabel: string) {
+async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batchLabel: string, plan: "free" | "plus" = "free") {
   const imageDataUrls = assets.flatMap((asset) => asset.dataUrl && parseDataUrl(asset.dataUrl) ? [asset.dataUrl] : []);
   if (!imageDataUrls.length) return { text: "", model: OPENAI_OCR_MODEL, fallbackUsed: false };
 
@@ -108,7 +108,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
 
   if (useGateway) {
     const gatewayBaseUrl = gateway.baseUrl.replace(/\/+$/, "");
-    const gatewayOcrModel = gateway.freeOcrModel || "gemini-3.1-flash-image";
+    const gatewayOcrModel = (plan === "plus" ? (gateway.plusOcrModel || gateway.freeOcrModel) : gateway.freeOcrModel) || "gemini-3.8-flash-high";
     candidates.push({
       model: gatewayOcrModel,
       provider: "gateway",
@@ -250,7 +250,7 @@ async function ocrImagesWithOpenAi(assets: UploadedAsset[], apiKey: string, batc
           outputTokens: 0,
           totalTokens: 0,
         });
-        lastMessage = normalizeOpenAiError(await response.text(), response.status, Boolean(policy?.singleAttempt));
+        lastMessage = normalizeOpenAiError(await response.text(), response.status, Boolean(policy?.singleAttempt), candidate.provider);
         if ((response.status === 429 || response.status >= 500) && attempt < maxRetries) {
           await waitForAiRetry(700 * (attempt + 1));
           continue;
@@ -301,6 +301,7 @@ export async function runOpenAiOcrAsset(
   asset: UploadedAsset,
   index: number,
   totalAssets: number,
+  plan: "free" | "plus" = "free",
 ): Promise<OpenAiOcrAssetResult> {
   const sourceHash = hashUploadedAsset(asset);
   if (process.env.LESSON_SOURCE_CACHE_ENABLED !== "false" && sourceHash) {
@@ -324,6 +325,7 @@ export async function runOpenAiOcrAsset(
     [asset],
     apiKey,
     `ảnh ${index + 1}/${totalAssets}: ${imageLabel(asset, index)}`,
+    plan,
   );
   try {
     await saveCachedOcrText(asset, result.text, result.model);
@@ -336,7 +338,7 @@ export async function runOpenAiOcrAsset(
   return { text: result.text, sourceHash, cacheHit: false, model: result.model };
 }
 
-export async function runOpenAiOcr(input: LessonInput): Promise<OpenAiOcrResult> {
+export async function runOpenAiOcr(input: LessonInput, plan: "free" | "plus" = "free"): Promise<OpenAiOcrResult> {
   const assets = sortGenerationOcrAssets(
     input.uploadedAssets.filter((asset) => asset.dataUrl && parseDataUrl(asset.dataUrl)),
   );
@@ -348,7 +350,7 @@ export async function runOpenAiOcr(input: LessonInput): Promise<OpenAiOcrResult>
     const cachedOrGeneratedParts = new Array<string>(assets.length).fill("");
     let cacheHitCount = 0;
     for (const [index, asset] of assets.entries()) {
-      const result = await runOpenAiOcrAsset(asset, index, assets.length);
+      const result = await runOpenAiOcrAsset(asset, index, assets.length, plan);
       cachedOrGeneratedParts[index] = result.text;
       if (result.cacheHit) cacheHitCount += 1;
     }

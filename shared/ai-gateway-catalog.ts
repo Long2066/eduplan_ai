@@ -56,12 +56,12 @@ export const GATEWAY_TEXT_MODELS: GatewayModelItem[] = [
 export const GATEWAY_OCR_MODELS: GatewayModelItem[] = [
   // Antigravity Vision
   { id: "gemini-3.1-flash-image", name: "Gemini 3.1 Flash Image (Chuyên quét ảnh)", provider: "ANTIGRAVITY", category: "ocr" },
-  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (Multimodal)", provider: "ANTIGRAVITY", category: "ocr" },
+  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash High (De xuat OCR)", provider: "ANTIGRAVITY", category: "ocr" },
+  { id: "gemini-3-flash", name: "Gemini 3 Flash (Nhanh, on dinh)", provider: "ANTIGRAVITY", category: "ocr" },
 
   // OpenAI Vision
   { id: "gpt-image-1.5", name: "GPT Image 1.5 (Chuyên quét ảnh)", provider: "OPENAI", category: "ocr" },
   { id: "gpt-5.6-terra", name: "GPT 5.6 Terra (Multimodal)", provider: "OPENAI", category: "ocr" },
-  { id: "gpt-5.4-mini", name: "GPT 5.4 Mini (Multimodal)", provider: "OPENAI", category: "ocr" },
 ];
 
 export const OPENAI_TEXT_MODELS: GatewayModelItem[] = [
@@ -96,9 +96,9 @@ export const DEFAULT_AI_GATEWAY_SETTINGS: AiGatewaySettings = {
   apiKey: "",
   routingMode: "hybrid",
   freeModel: "gemini-3.5-flash-lite",
-  freeOcrModel: "gemini-3.1-flash-image",
+  freeOcrModel: "gemini-3.8-flash-high",
   plusModel: "gpt-5.6-terra",
-  plusOcrModel: "gpt-image-1.5",
+  plusOcrModel: "gemini-3.8-flash-high",
   openaiApiKey: "",
   openaiModel: "gpt-5.4-mini",
   openaiFreeModel: "gpt-5.4-mini",

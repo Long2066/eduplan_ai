@@ -224,7 +224,8 @@ async function executeOcrStep(job: GenerationJob, owner: string, submittedAsset?
     );
     if (!existing) {
       const asset = assertExpectedOcrAsset(orderedAssets[position], submittedAsset, sequence, total);
-      const result = await runOpenAiOcrAsset(asset, position, total);
+      const plan = job.quotaReservation?.plan === "plus" ? "plus" : "free";
+      const result = await runOpenAiOcrAsset(asset, position, total, plan);
       await writeGenerationJobArtifact(job.id, { kind: "ocr-page", sequence }, {
         index: sequence,
         assetId: asset.id,

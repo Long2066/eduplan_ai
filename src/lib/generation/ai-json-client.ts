@@ -83,24 +83,25 @@ export function aiResponseCompletionError(data: unknown, useResponsesApi: boolea
   return null;
 }
 
-export function normalizeOpenAiError(raw: string, status?: number, singleAttempt = false) {
+export function normalizeOpenAiError(raw: string, status?: number, singleAttempt = false, provider?: string) {
+  const providerName = provider === "gateway" ? "AI Gateway" : "OpenAI";
   console.error("[EduPlan AI] OpenAI API error response:", { status, raw });
   if (status && status >= 500) {
     return singleAttempt
-      ? "OpenAI đang lỗi tạm thời hoặc quá tải (5xx/Cloudflare). Vui lòng thử lại ở yêu cầu kế tiếp."
-      : "OpenAI đang lỗi tạm thời hoặc quá tải (5xx/Cloudflare). App đã thử lại tự động; vui lòng bấm tạo lại sau ít phút nếu lỗi còn xảy ra.";
+      ? `${providerName} đang lỗi tạm thời hoặc quá tải (5xx). Vui lòng thử lại ở yêu cầu kế tiếp.`
+      : `${providerName} đang lỗi tạm thời hoặc quá tải (5xx). App đã thử lại tự động; vui lòng bấm tạo lại sau ít phút nếu lỗi còn xảy ra.`;
   }
   if (/rate.?limit|429/i.test(raw)) {
-    return "OpenAI đang bị giới hạn tốc độ/quota. Hãy chờ một lát rồi thử lại hoặc kiểm tra billing/quota của OpenAI key.";
+    return `${providerName} đang bị giới hạn tốc độ/quota. Hãy chờ một lát rồi thử lại${provider === "gateway" ? " hoặc đổi model OCR trong Admin." : " hoặc kiểm tra billing/quota của OpenAI key."}`;
   }
   if (/invalid_api_key|incorrect api key|401|Unauthorized/i.test(raw)) {
-    return "OpenAI API key trong .env.local không hợp lệ hoặc không có quyền truy cập model hiện tại.";
+    return `${providerName} API key không hợp lệ hoặc không có quyền truy cập model hiện tại.`;
   }
   if (/insufficient_quota/i.test(raw)) {
-    return "OpenAI key đã hết quota hoặc chưa bật billing. Hãy kiểm tra tài khoản OpenAI.";
+    return `${providerName} key đã hết quota hoặc chưa bật billing. Hãy kiểm tra tài khoản ${providerName}.`;
   }
   if (/<html|<!DOCTYPE html|cloudflare/i.test(raw)) {
-    return "OpenAI trả về trang lỗi HTML từ Cloudflare. Đây thường là lỗi dịch vụ tạm thời, không phải lỗi nội dung giáo án.";
+    return "AI Gateway/OpenAI trả về trang lỗi HTML. Đây thường là lỗi dịch vụ tạm thời, không phải lỗi nội dung giáo án.";
   }
   return raw || `OpenAI failed with ${status || "unknown status"}`;
 }
@@ -328,7 +329,7 @@ export async function fetchAiJsonContent(
           outputTokens: 0,
           totalTokens: 0,
         });
-        lastMessage = normalizeOpenAiError(text, response.status, Boolean(policy?.singleAttempt));
+        lastMessage = normalizeOpenAiError(text, response.status, Boolean(policy?.singleAttempt), selected.provider);
         const retryable = selected.provider === "openrouter"
           ? isOpenRouterTransientStatus(response.status)
           : response.status === 429 || response.status >= 500;
