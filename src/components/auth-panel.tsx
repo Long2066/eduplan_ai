@@ -721,101 +721,172 @@ function FeaturesOverviewModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
 }
 
 function PricingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-900/10 flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">EduPlan AI</span>
-            <h2 className="text-xl font-black text-slate-900 mt-0.5">Bảng Giá &amp; Gói Sử Dụng</h2>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-[#f8fafc] shadow-2xl ring-1 ring-slate-900/10 flex flex-col animate-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pricing-modal-title"
+      >
+        {/* Header */}
+        <header className="flex items-center justify-between border-b border-slate-200/80 px-5 py-4 sm:px-6 sm:py-4 bg-white">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md shadow-blue-600/25">
+              <BookLogoIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600">EduPlan Membership</span>
+              <h2 id="pricing-modal-title" className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+                Bảng Giá &amp; Gói Sử Dụng
+              </h2>
+            </div>
           </div>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-200/70 hover:text-slate-700 transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
             onClick={onClose}
             aria-label="Đóng"
           >
             <span className="text-2xl leading-none">&times;</span>
           </button>
-        </div>
-        <div className="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Gói Miễn Phí */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
-            <div>
-              <span className="inline-block rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Gói Miễn Phí</span>
-              <h3 className="mt-3 text-2xl font-black text-slate-900">0đ</h3>
-              <p className="mt-1 text-xs text-slate-500">Trải nghiệm tạo giáo án mỗi ngày</p>
-              <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-emerald-600" />
-                  <span>1 lượt tạo giáo án miễn phí mỗi ngày</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-emerald-600" />
-                  <span>Chuẩn Công văn 2345 tiểu học</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-emerald-600" />
-                  <span>Xuất file Word (.docx)</span>
-                </li>
-              </ul>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <span className="text-xs font-semibold text-slate-500 block text-center">Tự động kích hoạt khi đăng nhập</span>
+        </header>
+
+        {/* Modal Body: Khớp 100% với tab Quản lý Gói bên trong app */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Top Hero Banner */}
+          <div className="plans-hero">
+            <span className="plans-hero-kicker">EduPlan AI Membership</span>
+            <h2 className="text-xl sm:text-2xl font-black text-white mt-1 mb-2">
+              Nâng cấp chất lượng giáo án với AI mạnh hơn
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
+              Cùng một cấu trúc giáo án chuẩn, model AI cao cấp giúp nội dung mạch lạc hơn, chuyên sâu hơn và ổn định hơn, đặc biệt với bài nhiều tiết hoặc yêu cầu phức tạp.
+            </p>
+            <div className="plans-quality-line">
+              <b>Miễn phí — Nhanh, đủ dùng</b>
+              <i>·</i>
+              <b>Trả phí — Mạch lạc, chuyên sâu và ổn định</b>
             </div>
           </div>
 
-          {/* Gói Plus */}
-          <div className="relative rounded-2xl border-2 border-blue-600 bg-gradient-to-b from-blue-50/50 to-white p-5 shadow-md flex flex-col justify-between">
-            <span className="absolute -top-3 right-4 rounded-full bg-blue-600 px-3 py-0.5 text-[11px] font-bold text-white shadow-sm">
-              PHỔ BIẾN NHẤT
-            </span>
-            <div>
-              <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">Gói Plus Chuyên Sâu</span>
-              <h3 className="mt-3 text-2xl font-black text-blue-700">Nâng Cấp</h3>
-              <p className="mt-1 text-xs text-slate-500">Dành cho giáo viên soạn bài chuyên nghiệp</p>
-              <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-blue-600" />
-                  <span>Soạn không giới hạn số lượng bài dạy</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-blue-600" />
-                  <span>Ưu tiên AI thế hệ mới tốc độ cao</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-blue-600" />
-                  <span>Tự động crop tranh ảnh SGK vào bài dạy</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckmarkIcon className="h-4 w-4 text-blue-600" />
-                  <span>Hỗ trợ chuyên gia kỹ thuật 24/7 qua Zalo</span>
-                </li>
+          {/* 2 Plan Cards: Miễn phí & Trả phí */}
+          <div className="plan-grid pricing-modal-grid grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Card 1: Miễn phí */}
+            <article className="plan-card plan-free">
+              <div className="plan-card-glow" />
+              <div className="plan-card-top">
+                <span className="plan-gem">◇</span>
+                <span className="plan-badge badge-free">MIỄN PHÍ</span>
+                <span className="plan-state active">MẶC ĐỊNH KHI ĐĂNG NHẬP</span>
+              </div>
+              <h3 className="plan-name">Miễn phí</h3>
+              <div className="plan-price">
+                <strong>0đ</strong>
+                <span>· Không giới hạn thời gian</span>
+              </div>
+              <p className="plan-description">
+                Phù hợp để trải nghiệm EduPlan AI và soạn nhanh các giáo án cơ bản.
+              </p>
+              <p className="plan-reason">3 lượt tạo miễn phí mỗi ngày (tự động reset lúc 00:00)</p>
+              <ul>
+                <li>✓ <span>Sử dụng AI tiêu chuẩn.</span></li>
+                <li>✓ <span>3 lượt tạo giáo án miễn phí mỗi ngày.</span></li>
+                <li>✓ <span>Tự động reset lúc 00:00 theo giờ Việt Nam.</span></li>
+                <li>✓ <span>Đầy đủ cấu trúc KHBD và bộ kiểm tra sư phạm.</span></li>
+                <li>✓ <span>Lưu lịch sử và xuất giáo án Word.</span></li>
+                <li>✓ <span>Phù hợp để trải nghiệm và soạn các bài học cơ bản.</span></li>
               </ul>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <a
-                href={ZALO_SUPPORT_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 transition-all shadow-sm"
+              <p className="plan-hint">
+                Cần nội dung chuyên sâu hơn, bám sát nhu cầu thực tế hơn? Gói Giáo viên sắp ra mắt đang được trải nghiệm 1 lượt tạo mỗi ngày.
+              </p>
+              <button
+                type="button"
+                className="plan-action selected mt-auto cursor-pointer"
+                onClick={onClose}
               >
-                <span>Liên hệ hỗ trợ gói Plus</span>
-                <span>&rarr;</span>
-              </a>
+                Tiếp tục miễn phí — Đăng nhập ngay
+              </button>
+            </article>
+
+            {/* Card 2: Trả phí – Chất lượng cao */}
+            <article className="plan-card plan-plus">
+              <div className="plan-card-glow" />
+              <div className="plan-card-shine" aria-hidden="true" />
+              <div className="plan-card-top">
+                <span className="plan-gem">✦</span>
+                <span className="plan-badge badge-plus">TRẢ PHÍ (THỬ NGHIỆM)</span>
+                <span className="plan-state">COMING SOON</span>
+              </div>
+              <h3 className="plan-name">Trả phí – Chất lượng cao</h3>
+              <div className="plan-price plan-price-coming-soon">
+                <strong>Coming soon</strong>
+              </div>
+              <p className="plan-description">
+                Phù hợp với giáo viên muốn có giáo án rõ ràng, tự nhiên, bám sát yêu cầu bài dạy. Giáo án chỉn chu hơn và chất lượng hơn.
+              </p>
+              <p className="plan-reason">Nâng cấp để mở khóa model AI cao cấp</p>
+              <ul>
+                <li>✓ <span>Sử dụng model AI cao cấp để soạn KHBD.</span></li>
+                <li>✓ <span>Nội dung mạch lạc – ổn định – chất lượng hơn rõ rệt.</span></li>
+                <li>✓ <span>Bám sát mục tiêu, hoạt động và đánh giá.</span></li>
+                <li>✓ <span>Diễn đạt tự nhiên, giúp giảm thời gian chỉnh sửa.</span></li>
+                <li>✓ <span>Quyền sử dụng trong 30 ngày.</span></li>
+                <li>✓ <span>Soạn tối đa 5 giáo án với 50 tín dụng, có thể mua thêm tín dụng (nếu có).</span></li>
+                <li>✓ <span>Đầy đủ công cụ lưu và xuất giáo án.</span></li>
+              </ul>
+              <button
+                type="button"
+                className="plan-action coming-soon mt-auto"
+                disabled
+              >
+                Coming soon
+              </button>
+            </article>
+          </div>
+
+          {/* Ghi chú sư phạm khớp 100% bên trong */}
+          <p className="plans-note">
+            Hai gói sử dụng cùng cấu trúc giáo án và bộ kiểm tra sư phạm. Gói Trả phí dùng model AI cao cấp hơn để tăng độ sâu, tính mạch lạc và ổn định. Chất lượng kết quả còn phụ thuộc vào nội dung SGK và thông tin bạn cung cấp.
+          </p>
+
+          {/* Hộp mua thêm tín dụng khớp 100% bên trong */}
+          <div className="payment-zone payment-zone-single">
+            <div className="payment-config payment-coming-soon">
+              <p className="account-section-label">Mua thêm tín dụng</p>
+              <strong>Coming soon</strong>
+              <p>Tính năng mua tín dụng sẽ được mở trong phiên bản chính thức. Tín dụng do Admin cấp vẫn sử dụng bình thường.</p>
             </div>
           </div>
         </div>
-        <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/80 flex justify-end">
+
+        {/* Footer */}
+        <footer className="border-t border-slate-200/80 px-6 py-3.5 bg-white flex justify-end">
           <button
             type="button"
-            className="inline-flex min-h-[44px] items-center justify-center px-5 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-200/60 active:scale-[0.98] transition-all"
+            className="inline-flex min-h-[44px] items-center justify-center px-5 py-2 rounded-xl text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] transition-all"
             onClick={onClose}
           >
             Đóng
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );
