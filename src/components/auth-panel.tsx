@@ -324,7 +324,7 @@ function BooksWatermark() {
 function HeroTechIllustration() {
   return (
     <div
-      className="relative mx-auto w-full max-w-[440px] select-none pointer-events-none"
+      className="auth-hero-svg-wrap relative mx-auto w-full max-w-[440px] select-none pointer-events-none"
       style={{ aspectRatio: "440 / 320" }}
       aria-hidden="true"
     >
@@ -593,11 +593,11 @@ function FeatureChipsRow() {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+    <div className="auth-bento-grid grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
       {items.map((item, index) => (
         <div
           key={index}
-          className="group relative flex min-w-0 flex-col justify-between rounded-2xl border border-white/30 bg-gradient-to-b from-white/[0.16] to-white/[0.06] px-3 py-2.5 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_10px_24px_rgba(3,20,75,0.25)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/[0.2]"
+          className="auth-bento-card group relative flex min-w-0 flex-col justify-between rounded-2xl border border-white/30 bg-gradient-to-b from-white/[0.16] to-white/[0.06] px-3 py-2.5 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_10px_24px_rgba(3,20,75,0.25)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/[0.2]"
         >
           {/* Top row: Crisp white outline icon on left + Bold title on right */}
           <div className="flex items-center gap-2.5">
@@ -605,14 +605,14 @@ function FeatureChipsRow() {
               {item.icon}
             </span>
             <div className="min-w-0">
-              <h4 className="text-[12px] font-bold leading-tight text-white sm:text-[12.5px]">
+              <h4 className="auth-bento-title text-[12px] font-bold leading-tight text-white sm:text-[12.5px]">
                 {item.titleTop}
                 {item.titleBottom ? <span className="block">{item.titleBottom}</span> : null}
               </h4>
             </div>
           </div>
           {/* Subtitle below */}
-          <p className="mt-1.5 text-[10.5px] font-medium leading-snug text-blue-100/90">
+          <p className="auth-bento-subtitle mt-1.5 text-[10.5px] font-medium leading-snug text-blue-100/90">
             {item.subtitle}
           </p>
         </div>
@@ -1200,7 +1200,7 @@ export function AuthPanel({
       : "Đăng ký tài khoản để bắt đầu sử dụng EduPlan AI";
 
   return (
-    <div className="relative flex flex-1 w-full max-w-full overflow-x-hidden flex-col items-center justify-start px-3 py-3 sm:px-6 sm:py-5 lg:px-8 selection:bg-blue-600 selection:text-white">
+    <div className="auth-panel-root relative flex flex-1 min-h-0 w-full max-w-full overflow-x-hidden lg:overflow-hidden flex-col items-center justify-start lg:justify-between px-3 py-3 sm:px-6 sm:py-5 lg:py-2.5 lg:px-8 selection:bg-blue-600 selection:text-white">
       {/* Policy Modal */}
       {policyTitle ? (
         <PolicyModal
@@ -1219,7 +1219,7 @@ export function AuthPanel({
       <BooksWatermark />
 
       {/* ── 1. FLOATING TOP NAVBAR ── */}
-      <header className="mb-2.5 sm:mb-3.5 flex w-full max-w-[1200px] min-w-0 overflow-hidden flex-col gap-1.5 rounded-2xl border border-blue-100/90 bg-white/95 px-3 py-2 sm:px-6 sm:py-2.5 shadow-[0_8px_30px_rgba(37,99,235,0.06)] backdrop-blur-md">
+      <header className="auth-top-navbar shrink-0 mb-2.5 sm:mb-3.5 lg:mb-2 flex w-full max-w-[1200px] min-w-0 overflow-hidden flex-col gap-1.5 rounded-2xl border border-blue-100/90 bg-white/95 px-3 py-2 sm:px-6 sm:py-2.5 shadow-[0_8px_30px_rgba(37,99,235,0.06)] backdrop-blur-md">
         <div className="flex w-full items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3">
@@ -1322,14 +1322,14 @@ export function AuthPanel({
       </header>
 
       {/* ── 2. MAIN SPLIT CARD SHELL ── */}
-      <div className="auth-hero-shell relative flex w-full max-w-[1200px] flex-col lg:flex-row overflow-hidden rounded-[26px] p-2 sm:p-2.5 lg:p-3 shadow-[0_24px_70px_-12px_rgba(6,32,112,0.38)] ring-1 ring-white/55 my-auto">
+      <div className="auth-hero-shell relative flex w-full max-w-[1200px] lg:flex-1 lg:min-h-0 lg:max-h-[700px] flex-col lg:flex-row overflow-hidden rounded-[26px] p-2 sm:p-2.5 lg:p-2.5 shadow-[0_24px_70px_-12px_rgba(6,32,112,0.38)] ring-1 ring-white/55 my-auto">
         {/* Soft Background Halftone & Dot Waves */}
         <div className="auth-hero-dot-wave pointer-events-none absolute inset-0 z-0" />
         <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full bg-sky-400/25 blur-3xl" />
         <div className="pointer-events-none absolute left-1/3 top-1/2 h-80 w-80 -translate-y-1/2 rounded-full bg-blue-400/20 blur-3xl" />
 
         {/* ── LEFT HERO PANEL ── */}
-        <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between p-4 sm:p-5 lg:p-6 text-white">
+        <div className="auth-left-panel relative z-10 flex min-w-0 flex-1 flex-col justify-between p-4 sm:p-5 lg:p-5 text-white">
           <div>
             {/* Top Brand Tag */}
             <div className="flex items-center gap-2.5">
@@ -1340,7 +1340,7 @@ export function AuthPanel({
             </div>
 
             {/* Headline */}
-            <h1 className="mt-2.5 sm:mt-3 text-2xl sm:text-3xl lg:text-[33px] xl:text-[35px] font-black leading-[1.16] tracking-tight text-white">
+            <h1 className="auth-hero-headline mt-2 sm:mt-2.5 text-2xl sm:text-3xl lg:text-[32px] xl:text-[35px] font-black leading-[1.16] tracking-tight text-white">
               Trợ lý soạn giáo án<br />
               thông minh cho giáo viên<br />
               <span className="italic font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-sky-100 to-white">
@@ -1349,14 +1349,14 @@ export function AuthPanel({
             </h1>
 
             {/* Subtitle description */}
-            <p className="mt-2 max-w-[340px] text-xs sm:text-[13px] leading-relaxed text-blue-100/90 font-medium">
+            <p className="auth-hero-subtitle mt-2 max-w-[340px] text-xs sm:text-[13px] leading-relaxed text-blue-100/90 font-medium">
               Soạn giáo án chuẩn Công văn 2345 &amp; GDPT 2018, tiết kiệm thời gian, xuất Word nhanh chóng, hỗ trợ chọn SGK và lập kế hoạch bài dạy chuyên nghiệp.
             </p>
 
             {/* Middle Row: 4 Checklist items + 3D Scene */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-[285px_1fr] xl:grid-cols-[305px_1fr] items-center gap-3 lg:gap-4">
+            <div className="auth-hero-mid mt-3 sm:mt-4 grid grid-cols-1 md:grid-cols-[285px_1fr] xl:grid-cols-[305px_1fr] items-center gap-3 lg:gap-4">
               {/* 4 Checklist Bullets */}
-              <ul className="space-y-2.5">
+              <ul className="auth-checklist space-y-2 sm:space-y-2.5">
                 {[
                   "Chọn trực tiếp SGK số từ NXB Giáo dục",
                   "Tự động gợi ý mục tiêu, hoạt động, học liệu",
@@ -1367,7 +1367,7 @@ export function AuthPanel({
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#70baff]/35 text-white ring-1 ring-white/50 shadow-xs">
                       <CheckmarkIcon className="h-3 w-3" />
                     </span>
-                    <span className="text-xs sm:text-[12.5px] font-semibold text-white/95 leading-snug md:whitespace-nowrap">
+                    <span className="auth-checklist-text text-xs sm:text-[12.5px] font-semibold text-white/95 leading-snug md:whitespace-nowrap">
                       {item}
                     </span>
                   </li>
@@ -1382,13 +1382,13 @@ export function AuthPanel({
           </div>
 
           {/* Bottom Row: 4 Bento Feature Chips */}
-          <div className="mt-4 pt-3 border-t border-white/15">
+          <div className="auth-bento-wrap mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-white/15">
             <FeatureChipsRow />
           </div>
         </div>
 
         {/* ── RIGHT LOGIN CARD PANEL ── */}
-        <div className="relative z-20 flex min-w-0 w-full flex-col justify-center rounded-[22px] bg-white p-5 sm:p-6 lg:w-[420px] xl:w-[440px] shadow-[0_16px_40px_rgba(2,12,45,0.18)]">
+        <div className="auth-login-card relative z-20 flex min-w-0 w-full flex-col justify-center rounded-[22px] bg-white p-5 sm:p-6 lg:w-[420px] xl:w-[440px] shadow-[0_16px_40px_rgba(2,12,45,0.18)]">
           {/* Shaded 3D Pale-Blue Watermark at top-right of login card */}
           <svg aria-hidden="true" className="pointer-events-none absolute right-3 top-3 h-[85px] w-[95px] text-blue-200/50" viewBox="0 0 100 85" fill="none">
             <defs>
@@ -1418,7 +1418,7 @@ export function AuthPanel({
           </svg>
 
           {/* Header */}
-          <div className="relative mb-5 text-left">
+          <div className="auth-card-header relative mb-5 text-left">
             <h2 className="text-2xl sm:text-[26px] font-black tracking-tight text-slate-900 leading-tight">
               {title}
             </h2>
@@ -1428,10 +1428,10 @@ export function AuthPanel({
           </div>
 
           {/* Method Tabs Switcher (Email / Số điện thoại) */}
-          <div className="mb-5 grid grid-cols-2 rounded-xl bg-slate-100 p-1 border border-slate-200/60 text-xs sm:text-sm font-bold">
+          <div className="auth-method-tabs mb-5 grid grid-cols-2 rounded-xl bg-slate-100 p-1 border border-slate-200/60 text-xs sm:text-sm font-bold">
             <button
               type="button"
-              className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg transition-all active:scale-[0.98] ${
+              className={`auth-tab-btn flex min-h-[44px] items-center justify-center gap-2 rounded-lg transition-all active:scale-[0.98] ${
                 authMethod === "email"
                   ? "bg-white text-blue-700 shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
@@ -1447,7 +1447,7 @@ export function AuthPanel({
             </button>
             <button
               type="button"
-              className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg transition-all active:scale-[0.98] ${
+              className={`auth-tab-btn flex min-h-[44px] items-center justify-center gap-2 rounded-lg transition-all active:scale-[0.98] ${
                 authMethod === "phone"
                   ? "bg-white text-blue-700 shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
@@ -1465,7 +1465,7 @@ export function AuthPanel({
 
           {/* Form Fields: EMAIL FLOW */}
           {authMethod === "email" ? (
-            <form onSubmit={handleEmailAuth} className="space-y-4">
+            <form onSubmit={handleEmailAuth} className="auth-form space-y-4">
               {mode === "register" ? (
                 <label className="block text-left">
                   <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -1586,7 +1586,7 @@ export function AuthPanel({
               {/* Divider HOẶC */}
               {mode !== "reset" ? (
                 <>
-                  <div className="relative my-2 flex items-center justify-center">
+                  <div className="auth-divider relative my-2 flex items-center justify-center">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-slate-200" />
                     </div>
@@ -1598,7 +1598,7 @@ export function AuthPanel({
                   {/* Google Button */}
                   <button
                     type="button"
-                    className="inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.985] shadow-2xs transition-all disabled:opacity-50"
+                    className="auth-google-btn inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.985] shadow-2xs transition-all disabled:opacity-50"
                     disabled={isSubmitting}
                     onClick={handleGoogleLogin}
                   >
@@ -1610,7 +1610,7 @@ export function AuthPanel({
             </form>
           ) : mode === "login" ? (
             /* PHONE LOGIN FLOW */
-            <form onSubmit={handlePhoneLogin} className="space-y-4">
+            <form onSubmit={handlePhoneLogin} className="auth-form space-y-4">
               <label className="block text-left">
                 <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Số điện thoại
@@ -1676,7 +1676,7 @@ export function AuthPanel({
                 <span className="text-base">&rarr;</span>
               </button>
 
-              <div className="relative my-2 flex items-center justify-center">
+              <div className="auth-divider relative my-2 flex items-center justify-center">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200" />
                 </div>
@@ -1687,7 +1687,7 @@ export function AuthPanel({
 
               <button
                 type="button"
-                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.985] shadow-2xs transition-all disabled:opacity-50"
+                className="auth-google-btn inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.985] shadow-2xs transition-all disabled:opacity-50"
                 disabled={isSubmitting}
                 onClick={handleGoogleLogin}
               >
@@ -1697,7 +1697,7 @@ export function AuthPanel({
             </form>
           ) : mode === "register" ? (
             /* PHONE REGISTER FLOW */
-            <form onSubmit={handlePhoneRegister} className="space-y-4">
+            <form onSubmit={handlePhoneRegister} className="auth-form space-y-4">
               <label className="block text-left">
                 <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Họ tên
@@ -1825,7 +1825,7 @@ export function AuthPanel({
             </form>
           ) : (
             /* PHONE RESET PASSWORD FLOW */
-            <form onSubmit={handlePhoneResetPassword} className="space-y-4">
+            <form onSubmit={handlePhoneResetPassword} className="auth-form space-y-4">
               <label className="block text-left">
                 <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Họ và tên tài khoản
@@ -1913,7 +1913,7 @@ export function AuthPanel({
           )}
 
           {/* Links Row: Đăng ký | Quên mật khẩu? */}
-          <div className="mt-5 flex items-center justify-center gap-3 text-xs sm:text-[13px]">
+          <div className="auth-links-row mt-5 flex items-center justify-center gap-3 text-xs sm:text-[13px]">
             {mode !== "login" ? (
               <button
                 type="button"
@@ -1947,7 +1947,7 @@ export function AuthPanel({
           </div>
 
           {/* Legal statement footer */}
-          <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
+          <p className="auth-legal-note mt-4 text-center text-[11px] leading-relaxed text-slate-400">
             Khi sử dụng EduPlan AI, bạn đồng ý với{" "}
             <button
               className="font-bold text-blue-600 hover:underline"
