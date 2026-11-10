@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
   getRedirectResult,
@@ -878,23 +878,23 @@ export function AuthPanel({
       .catch(() => undefined);
   }, []);
 
+  const onSessionReadyRef = useRef(onSessionReady);
+  onSessionReadyRef.current = onSessionReady;
+
   useEffect(() => {
     if (!clientReady) return;
 
-    let active = true;
-    setIsSubmitting(true);
-    completeGoogleRedirectOnce(onSessionReady)
-      .catch((authError) => {
-        if (active) setError(friendlyAuthError(authError));
+    // Check redirect completion silently without pre-emptively locking the login button
+    completeGoogleRedirectOnce(onSessionReadyRef.current)
+      .then((hasUser) => {
+        if (hasUser) {
+          setMessage("Đăng nhập Google thành công!");
+        }
       })
-      .finally(() => {
-        if (active) setIsSubmitting(false);
+      .catch((authError) => {
+        setError(friendlyAuthError(authError));
       });
-
-    return () => {
-      active = false;
-    };
-  }, [clientReady, onSessionReady]);
+  }, [clientReady]);
 
   async function finishSession(user: User) {
     await completeFirebaseAuthSession({ user, onSessionReady });
@@ -1191,7 +1191,7 @@ export function AuthPanel({
       : "Đăng ký tài khoản để bắt đầu sử dụng EduPlan AI";
 
   return (
-    <div className="relative flex flex-1 w-full flex-col items-center justify-start px-3 py-3 sm:px-6 sm:py-5 lg:px-8 selection:bg-blue-600 selection:text-white">
+    <div className="relative flex flex-1 w-full max-w-full overflow-x-hidden flex-col items-center justify-start px-3 py-3 sm:px-6 sm:py-5 lg:px-8 selection:bg-blue-600 selection:text-white">
       {/* Policy Modal */}
       {policyTitle ? (
         <PolicyModal
@@ -1266,17 +1266,17 @@ export function AuthPanel({
               href={ZALO_SUPPORT_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-blue-200 bg-blue-50/60 px-3.5 py-1.5 text-xs sm:text-[13px] font-bold text-blue-700 hover:bg-blue-100/70 hover:border-blue-300 transition-all active:scale-[0.98] shadow-2xs"
+              className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 sm:gap-2 rounded-full border border-blue-200 bg-blue-50/60 px-2.5 sm:px-3.5 py-1.5 text-[11.5px] sm:text-[13px] font-bold text-blue-700 hover:bg-blue-100/70 hover:border-blue-300 transition-all active:scale-[0.98] shadow-2xs whitespace-nowrap"
               title="Tham gia nhóm Zalo hỗ trợ kỹ thuật"
             >
-              <UsersIcon className="h-4 w-4 text-blue-600" />
+              <UsersIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 shrink-0" />
               <span>Nhóm Zalo hỗ trợ</span>
             </a>
           </div>
         </div>
 
         {/* Mobile quick-action sub-row on screens < lg */}
-        <nav className="flex lg:hidden items-center justify-around border-t border-slate-100 pt-1 text-xs font-semibold text-slate-600">
+        <nav className="flex lg:hidden flex-wrap items-center justify-center gap-x-3 border-t border-slate-100 pt-1 text-xs font-semibold text-slate-600">
           <button
             type="button"
             className="min-h-[44px] flex items-center px-2 hover:text-blue-600 transition-colors"
@@ -1319,7 +1319,7 @@ export function AuthPanel({
         <div className="pointer-events-none absolute left-1/3 top-1/2 h-80 w-80 -translate-y-1/2 rounded-full bg-blue-400/20 blur-3xl" />
 
         {/* ── LEFT HERO PANEL ── */}
-        <div className="relative z-10 flex flex-1 flex-col justify-between p-4 sm:p-6 lg:p-7 text-white">
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between p-4 sm:p-6 lg:p-7 text-white">
           <div>
             {/* Top Brand Tag */}
             <div className="flex items-center gap-2.5">
@@ -1357,7 +1357,7 @@ export function AuthPanel({
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#70baff]/35 text-white ring-1 ring-white/50 shadow-xs">
                       <CheckmarkIcon className="h-3 w-3" />
                     </span>
-                    <span className="text-xs sm:text-[12.5px] font-semibold text-white/95 leading-snug whitespace-nowrap">
+                    <span className="text-xs sm:text-[12.5px] font-semibold text-white/95 leading-snug md:whitespace-nowrap">
                       {item}
                     </span>
                   </li>
