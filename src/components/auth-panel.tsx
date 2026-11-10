@@ -1489,7 +1489,7 @@ export function AuthPanel({
           </svg>
 
           {/* Header */}
-          <div className="auth-card-header relative mb-5 text-left">
+          <div className="auth-card-header relative z-10 mb-5 text-center">
             <h2 className="text-2xl sm:text-[26px] font-black tracking-tight text-slate-900 leading-tight">
               {title}
             </h2>
