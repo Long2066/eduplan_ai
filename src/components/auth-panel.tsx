@@ -319,236 +319,227 @@ function BooksWatermark() {
   );
 }
 
-/* ───────────────────────── 3D TECH SCENE ILLUSTRATION ───────────────────────── */
+/* ───────────────────────── 3D TECH SCENE ILLUSTRATION (HTML/CSS 3D LAYERED) ───────────────────────── */
 
 function HeroTechIllustration() {
   return (
-    <div className="relative mx-auto flex w-full items-center justify-center select-none" aria-hidden="true">
-      <svg className="w-full h-auto overflow-visible" viewBox="0 0 540 380" fill="none">
+    <div
+      className="relative mx-auto w-full max-w-[400px] h-[305px] lg:h-[330px] select-none pointer-events-none"
+      aria-hidden="true"
+    >
+      {/* 1. BACKGROUND RADIATING CIRCUIT TRACES */}
+      <svg
+        className="absolute inset-0 w-full h-full overflow-visible"
+        viewBox="0 0 400 330"
+        fill="none"
+      >
         <defs>
-          {/* Radial pedestal glow */}
-          <radialGradient id="pedestalGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.85" />
-            <stop offset="45%" stopColor="#0284c7" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#0369a1" stopOpacity="0" />
-          </radialGradient>
-
-          {/* Neon Ring Gradient */}
-          <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="50%" stopColor="#67e8f9" />
-            <stop offset="100%" stopColor="#3b82f6" />
-          </linearGradient>
-
-          {/* Laptop gradients */}
-          <linearGradient id="laptopDeck" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f8fafc" />
-            <stop offset="40%" stopColor="#e2e8f0" />
-            <stop offset="100%" stopColor="#cbd5e1" />
-          </linearGradient>
-          <linearGradient id="laptopDeckSide" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#64748b" />
-            <stop offset="50%" stopColor="#94a3b8" />
-            <stop offset="100%" stopColor="#475569" />
-          </linearGradient>
-
-          <linearGradient id="screenBezel" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#0f172a" />
-            <stop offset="100%" stopColor="#1e293b" />
-          </linearGradient>
-
-          {/* Book colors */}
-          <linearGradient id="bookCoverBlue1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#1d4ed8" />
-            <stop offset="100%" stopColor="#1e3a8a" />
-          </linearGradient>
-          <linearGradient id="bookCoverBlue2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="100%" stopColor="#1d4ed8" />
-          </linearGradient>
-          <linearGradient id="bookCoverBlue3" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#3b82f6" />
-            <stop offset="100%" stopColor="#2563eb" />
-          </linearGradient>
-
-          {/* AI Chip Gradient */}
-          <linearGradient id="aiChipBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="50%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#c084fc" />
-          </linearGradient>
-          <linearGradient id="aiChipBody" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#0f172a" />
-            <stop offset="100%" stopColor="#1e1b4b" />
-          </linearGradient>
-
-          {/* Filters */}
-          <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="5" result="blur" />
+          <filter id="circuitGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
-
-        {/* ── 1. CIRCUIT TRACES RADIATING FROM AI CHIP ── */}
-        <g stroke="#38bdf8" strokeWidth="1.6" opacity="0.85" fill="none">
-          <path d="M260 68 L260 25 L180 25 L180 55" />
-          <path d="M290 70 L355 70 L395 35 L450 35" />
-          <path d="M290 85 L365 85 L405 120 L440 120" />
-          <path d="M230 75 L150 75 L120 110 L90 110" />
-          <path d="M230 90 L170 90 L150 148 L105 148" />
-
-          {/* Solder nodes */}
-          <circle cx="180" cy="55" r="3.5" fill="#38bdf8" />
-          <circle cx="450" cy="35" r="3.5" fill="#38bdf8" />
-          <circle cx="440" cy="120" r="3.5" fill="#38bdf8" />
-          <circle cx="90" cy="110" r="3.5" fill="#38bdf8" />
-          <circle cx="105" cy="148" r="3.5" fill="#38bdf8" />
-          <circle cx="355" cy="70" r="2.5" fill="#67e8f9" />
-          <circle cx="170" cy="90" r="2.5" fill="#67e8f9" />
+        <g stroke="#38bdf8" strokeWidth="1.5" opacity="0.78" filter="url(#circuitGlow)">
+          {/* Upward & Top-Left branches */}
+          <path d="M210 48 L210 14 L145 14 L145 38" />
+          <path d="M180 42 L115 42 L85 68 L52 68" />
+          <path d="M175 62 L135 62 L115 96" />
+          {/* Right branches */}
+          <path d="M242 40 L295 40 L325 18 L368 18" />
+          <path d="M248 58 L310 58 L338 82 L372 82" />
+          <path d="M245 72 L285 72 L305 112" />
+          {/* Lower branches */}
+          <path d="M185 78 L155 108 L130 108" />
+          <path d="M225 78 L255 108 L280 108" />
         </g>
-
-        {/* ── 2. AI PROCESSOR CHIP (TOP CENTER) ── */}
-        <g transform="translate(260, 48)">
-          <rect x="-32" y="-32" width="64" height="64" rx="18" fill="url(#aiChipBody)" stroke="url(#aiChipBorder)" strokeWidth="3" filter="url(#softGlow)" />
-          {/* Connector Pins */}
-          <path d="M-16 -32 L-16 -37 M0 -32 L0 -37 M16 -32 L16 -37" stroke="#38bdf8" strokeWidth="2" />
-          <path d="M-16 32 L-16 37 M0 32 L0 37 M16 32 L16 37" stroke="#38bdf8" strokeWidth="2" />
-          <path d="M-32 -16 L-37 -16 M-32 0 L-37 0 M-32 16 L-37 16" stroke="#38bdf8" strokeWidth="2" />
-          <path d="M32 -16 L37 -16 M32 0 L37 0 M32 16 L37 16" stroke="#38bdf8" strokeWidth="2" />
-          {/* AI Bold Text */}
-          <text x="0" y="9" fill="#ffffff" fontSize="26" fontWeight="900" textAnchor="middle" letterSpacing="1.2">
-            AI
-          </text>
-        </g>
-
-        {/* ── 3. FLOATING GLASS TILES ── */}
-        {/* Upper-left Tile: Open Book */}
-        <g transform="translate(195, 125)">
-          <rect x="-22" y="-22" width="44" height="44" rx="13" fill="rgba(255, 255, 255, 0.16)" stroke="rgba(255, 255, 255, 0.45)" strokeWidth="1.5" />
-          <path d="M-11 -5 C-7 -7 -3 -7 0 -5 C3 -7 7 -7 11 -5 L11 7 C7 5 3 5 0 7 C-3 5 -7 5 -11 7 Z" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-
-        {/* Lower-left Tile: Small Open Book */}
-        <g transform="translate(165, 248)">
-          <rect x="-18" y="-18" width="36" height="36" rx="11" fill="rgba(255, 255, 255, 0.14)" stroke="rgba(255, 255, 255, 0.35)" strokeWidth="1.3" />
-          <path d="M-9 -4 C-6 -6 -2 -6 0 -4 C2 -6 6 -6 9 -4 L9 6 C6 4 2 4 0 6 C-2 4 -6 4 -9 6 Z" fill="none" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-
-        {/* Upper-right Tile: 3-Bar Chart */}
-        <g transform="translate(415, 138)">
-          <rect x="-22" y="-22" width="44" height="44" rx="13" fill="rgba(255, 255, 255, 0.16)" stroke="rgba(255, 255, 255, 0.45)" strokeWidth="1.5" />
-          <path d="M-10 8 L-10 1 M-3 8 L-3 -4 M4 8 L4 -9" stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round" />
-        </g>
-
-        {/* ── 4. CYAN HOLOGRAPHIC PEDESTAL ── */}
-        <g transform="translate(235, 298)">
-          <ellipse cx="0" cy="0" rx="155" ry="34" fill="url(#pedestalGlow)" />
-          <ellipse cx="0" cy="0" rx="138" ry="28" fill="none" stroke="url(#neonCyan)" strokeWidth="2.8" opacity="0.95" filter="url(#softGlow)" />
-          <ellipse cx="0" cy="0" rx="112" ry="20" fill="none" stroke="#bae6fd" strokeWidth="1.2" opacity="0.6" strokeDasharray="6 4" />
-        </g>
-
-        {/* ── 5. ISOMETRIC LAPTOP ── */}
-        {/* Laptop Keyboard Base */}
-        <g>
-          {/* Chassis Front Lip */}
-          <polygon points="120,272 220,318 355,272 355,266 220,312 120,266" fill="url(#laptopDeckSide)" />
-          {/* Chassis Top Deck */}
-          <polygon points="120,266 220,312 355,266 255,224" fill="url(#laptopDeck)" />
-          {/* Keyboard Recessed Area */}
-          <polygon points="152,252 224,284 315,254 250,228" fill="#475569" opacity="0.55" />
-          {/* Key row indicator lines */}
-          <path d="M165 248 L232 278 M180 242 L245 272 M195 236 L258 265 M210 231 L270 259" stroke="#94a3b8" strokeWidth="1.2" opacity="0.6" />
-          {/* Trackpad */}
-          <polygon points="198,290 240,305 254,298 214,284" fill="#94a3b8" opacity="0.75" />
-        </g>
-
-        {/* Laptop Screen & Floating Document Sheet */}
-        <g>
-          {/* Screen Outer Lid (Bezel) */}
-          <polygon points="160,248 274,232 292,112 180,126" fill="url(#screenBezel)" stroke="#334155" strokeWidth="2" />
-          {/* Screen Glass Interior */}
-          <polygon points="166,243 268,229 285,119 184,131" fill="#0f172a" />
-
-          {/* Floating Document Sheet ("Giáo án AI") */}
-          <g filter="url(#softGlow)">
-            {/* Sheet body */}
-            <polygon points="170,238 270,224 287,116 188,129" fill="#ffffff" />
-
-            {/* Document Header Text "Giáo án" */}
-            <text x="197" y="150" fill="#1e3a8a" fontSize="12.5" fontWeight="900" transform="rotate(-7, 197, 150)">
-              Giáo án
-            </text>
-
-            {/* "AI" Pill Badge */}
-            <g transform="translate(263, 134) rotate(-7)">
-              <rect x="-10" y="-8.5" width="22" height="14" rx="7" fill="url(#bookCoverBlue2)" />
-              <text x="1" y="2" fill="#ffffff" fontSize="9" fontWeight="900" textAnchor="middle">
-                AI
-              </text>
-            </g>
-
-            {/* 3 Checkmark lines */}
-            {/* Row 1 */}
-            <circle cx="200" cy="166" r="4.5" fill="#22c55e" />
-            <path d="M198 166 L199.5 167.5 L202 164.5" stroke="#ffffff" strokeWidth="1.3" strokeLinecap="round" />
-            <polygon points="208,163 258,156 258,160 208,167" fill="#cbd5e1" rx="2" />
-
-            {/* Row 2 */}
-            <circle cx="197" cy="183" r="4.5" fill="#22c55e" />
-            <path d="M195 183 L196.5 184.5 L199 181.5" stroke="#ffffff" strokeWidth="1.3" strokeLinecap="round" />
-            <polygon points="205,180 250,173 250,177 205,184" fill="#cbd5e1" rx="2" />
-
-            {/* Row 3 */}
-            <circle cx="194" cy="200" r="4.5" fill="#22c55e" />
-            <path d="M192 200 L193.5 201.5 L196 198.5" stroke="#ffffff" strokeWidth="1.3" strokeLinecap="round" />
-            <polygon points="202,197 244,191 244,195 202,201" fill="#cbd5e1" rx="2" />
-          </g>
-
-          {/* Microsoft Word [W] Overlapping Badge */}
-          <g transform="translate(268, 202) rotate(-7)">
-            <rect x="-17" y="-19" width="36" height="40" rx="9" fill="#ffffff" stroke="#93c5fd" strokeWidth="1.5" filter="url(#softGlow)" />
-            <rect x="-13" y="-15" width="28" height="30" rx="7" fill="#1d4ed8" />
-            <text x="1" y="6" fill="#ffffff" fontSize="17" fontWeight="900" textAnchor="middle" fontFamily="sans-serif">
-              W
-            </text>
-          </g>
-        </g>
-
-        {/* ── 6. STACK OF 3 BLUE BOOKS + GRADUATION CAP ── */}
-        <g transform="translate(405, 235)">
-          {/* Book 1 (Bottom Book) */}
-          <polygon points="-46,30 38,7 60,22 -24,45" fill="url(#bookCoverBlue1)" />
-          <polygon points="-46,30 -24,45 -24,54 -46,39" fill="#1e3a8a" />
-          <polygon points="-24,54 60,31 60,22 -24,45" fill="#f8fafc" />
-
-          {/* Book 2 (Middle Book) */}
-          <polygon points="-50,14 34,-9 56,6 -28,29" fill="url(#bookCoverBlue2)" />
-          <polygon points="-50,14 -28,29 -28,38 -50,23" fill="#1d4ed8" />
-          <polygon points="-28,38 56,15 56,6 -28,29" fill="#f8fafc" />
-
-          {/* Book 3 (Top Book) */}
-          <polygon points="-46,-2 38,-25 60,-10 -24,13" fill="url(#bookCoverBlue3)" />
-          <polygon points="-46,-2 -24,13 -24,22 -46,7" fill="#2563eb" />
-          <polygon points="-24,22 60,0 60,-10 -24,13" fill="#f8fafc" />
-
-          {/* Graduation Cap (Mortarboard) */}
-          <g transform="translate(6, -26)">
-            {/* Skull Cap Base */}
-            <path d="M-16 11 C-16 24 26 24 26 11 Z" fill="#0f172a" />
-            {/* Top Diamond */}
-            <polygon points="6,-15 45,4 6,21 -33,4" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
-            {/* Center Gold Button */}
-            <circle cx="6" cy="4" r="3" fill="#facc15" />
-            {/* Gold Tassel */}
-            <path d="M6 4 C20 6 32 15 34 30 L34 40" fill="none" stroke="#facc15" strokeWidth="2" strokeLinecap="round" />
-            {/* Tassel tip */}
-            <circle cx="34" cy="42" r="3" fill="#eab308" />
-          </g>
+        {/* Glowing Photon Dots */}
+        <g fill="#7dd3fc" filter="url(#circuitGlow)">
+          <circle cx="145" cy="38" r="3" />
+          <circle cx="52" cy="68" r="3" />
+          <circle cx="115" cy="96" r="2.5" />
+          <circle cx="368" cy="18" r="3" />
+          <circle cx="372" cy="82" r="3" />
+          <circle cx="305" cy="112" r="2.5" />
+          <circle cx="295" cy="40" r="2.2" fill="#ffffff" />
+          <circle cx="115" cy="42" r="2.2" fill="#ffffff" />
         </g>
       </svg>
+
+      {/* 2. TOP GLOWING AI PROCESSOR CHIP */}
+      <div className="animate-float-3d-chip absolute top-[8px] left-[162px] z-20">
+        <div className="relative h-[64px] w-[64px] rounded-[17px] bg-gradient-to-br from-cyan-300 via-sky-400 to-indigo-400 p-[2.5px] shadow-[0_0_30px_rgba(56,189,248,0.75)]">
+          {/* Chip Pins */}
+          <div className="absolute -top-1.5 left-2.5 right-2.5 flex justify-between px-1">
+            <span className="h-1.5 w-1 rounded-t-full bg-cyan-300" />
+            <span className="h-1.5 w-1 rounded-t-full bg-cyan-300" />
+            <span className="h-1.5 w-1 rounded-t-full bg-cyan-300" />
+          </div>
+          <div className="absolute -bottom-1.5 left-2.5 right-2.5 flex justify-between px-1">
+            <span className="h-1.5 w-1 rounded-b-full bg-cyan-300" />
+            <span className="h-1.5 w-1 rounded-b-full bg-cyan-300" />
+            <span className="h-1.5 w-1 rounded-b-full bg-cyan-300" />
+          </div>
+          <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-gradient-to-br from-[#1644b8] via-[#2563eb] to-[#4f46e5] shadow-inner">
+            <span className="text-[22px] font-black tracking-wide text-white drop-shadow-[0_0_10px_rgba(186,230,253,0.95)]">
+              AI
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. FLOATING GLASS WIDGET TILES */}
+      {/* Upper-Left Tile: Open Book */}
+      <div className="animate-float-tile-left absolute top-[62px] left-[32px] z-20 flex h-[44px] w-[50px] items-center justify-center rounded-2xl border border-white/45 bg-gradient-to-br from-white/25 to-white/5 shadow-[0_12px_28px_rgba(4,24,80,0.3)] backdrop-blur-md">
+        <BookOpenOutlineIcon className="h-5 w-5 text-white drop-shadow" />
+      </div>
+
+      {/* Lower-Left Tile: Small Open Book */}
+      <div className="animate-float-tile-small absolute bottom-[82px] left-[4px] z-20 flex h-[36px] w-[40px] items-center justify-center rounded-xl border border-white/35 bg-gradient-to-br from-white/20 to-white/5 shadow-lg backdrop-blur-md">
+        <BookOpenOutlineIcon className="h-4 w-4 text-white/95" />
+      </div>
+
+      {/* Upper-Right Tile: 3-Bar Chart */}
+      <div className="animate-float-tile-right absolute top-[74px] right-[16px] z-20 flex h-[44px] w-[50px] items-center justify-center rounded-2xl border border-white/45 bg-gradient-to-br from-white/25 to-white/5 shadow-[0_12px_28px_rgba(4,24,80,0.3)] backdrop-blur-md">
+        <div className="flex items-end gap-1.5">
+          <span className="h-2 w-1.5 rounded-t-sm bg-sky-200" />
+          <span className="h-3.5 w-1.5 rounded-t-sm bg-cyan-200" />
+          <span className="h-5 w-1.5 rounded-t-sm bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+        </div>
+      </div>
+
+      {/* 4. CYAN HOLOGRAPHIC NEON PEDESTAL */}
+      <div className="animate-neon-aura absolute bottom-[10px] left-[135px] z-0">
+        <div className="h-[56px] w-[245px] rounded-[100%] bg-cyan-400/40 blur-xl" />
+        <div className="absolute inset-0 m-auto h-[48px] w-[235px] rounded-[100%] border-2 border-cyan-300/95 shadow-[0_0_24px_rgba(34,211,238,0.95),inset_0_0_16px_rgba(56,189,248,0.6)]" />
+        <div className="absolute inset-0 m-auto h-[32px] w-[185px] rounded-[100%] border border-sky-100/75" />
+      </div>
+
+      {/* 5. 3D ISOMETRIC LAPTOP & POP-OUT FLOATING DOCUMENT */}
+      <div className="absolute bottom-[24px] left-[32px] z-10 h-[195px] w-[225px]">
+        {/* Laptop Keyboard Base Deck */}
+        <div
+          className="absolute bottom-0 left-[6px] h-[112px] w-[190px] rounded-xl border border-white/80 bg-gradient-to-br from-white via-slate-200 to-slate-400 p-2 shadow-[0_10px_0_#475569,0_22px_40px_rgba(2,14,55,0.65)]"
+          style={{ transform: "perspective(650px) rotateX(64deg) rotateZ(-16deg)" }}
+        >
+          {/* Keyboard dark well */}
+          <div className="grid grid-cols-10 gap-1 rounded-md bg-slate-700/80 p-1.5 shadow-inner">
+            {Array.from({ length: 30 }).map((_, idx) => (
+              <span key={idx} className="h-2 rounded-[2px] bg-slate-200/90 shadow-2xs" />
+            ))}
+          </div>
+          {/* Trackpad */}
+          <div className="mx-auto mt-1.5 h-6 w-14 rounded border border-slate-400/50 bg-slate-300/80 shadow-inner" />
+        </div>
+
+        {/* Laptop Screen Bezel Frame */}
+        <div
+          className="absolute bottom-[64px] left-[26px] h-[126px] w-[178px] rounded-xl bg-gradient-to-b from-slate-800 to-slate-950 p-1.5 shadow-[0_16px_38px_rgba(2,12,45,0.6)] ring-2 ring-slate-200/75"
+          style={{ transform: "perspective(900px) rotateY(-12deg) rotateX(4deg)" }}
+        >
+          <div className="h-full w-full rounded-lg bg-gradient-to-br from-sky-400/35 via-blue-500/25 to-indigo-900/70" />
+        </div>
+
+        {/* POP-OUT 3D FLOATING "Giáo án [AI]" DOCUMENT CARD */}
+        <div className="animate-float-3d-card absolute bottom-[72px] left-[36px] z-20 w-[156px] rounded-xl bg-white/95 p-2.5 shadow-[0_20px_45px_rgba(4,24,80,0.45),0_0_24px_rgba(125,211,252,0.45)] ring-1 ring-white">
+          <div className="mb-2 flex items-center justify-between gap-1">
+            <span className="text-[13.5px] font-black tracking-tight text-blue-950">Giáo án</span>
+            <span className="rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500 px-2 py-0.5 text-[9px] font-black text-white shadow-sm">
+              AI
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            {[
+              { w: "w-full" },
+              { w: "w-[86%]" },
+              { w: "w-[74%]" },
+            ].map((row, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xs">
+                  <CheckmarkIcon className="h-2 w-2" />
+                </span>
+                <span className={`h-2 ${row.w} rounded-full bg-slate-200/90`} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 h-1.5 w-2/3 rounded-full bg-blue-100" />
+        </div>
+
+        {/* FLOATING WORD [W] BADGE CARD */}
+        <div className="animate-float-3d-badge absolute bottom-[46px] left-[154px] z-30 flex h-[52px] w-[46px] flex-col justify-between rounded-xl bg-white p-1.5 shadow-[0_14px_30px_rgba(3,18,65,0.5)] ring-1 ring-blue-100">
+          <div className="space-y-1">
+            <span className="block h-1 w-4/5 rounded-full bg-slate-200" />
+            <span className="block h-1 w-3/5 rounded-full bg-slate-200" />
+          </div>
+          <div className="flex h-7 w-7 items-center justify-center self-end rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-[14px] font-black text-white shadow-md shadow-blue-700/40">
+            W
+          </div>
+        </div>
+      </div>
+
+      {/* 6. 3D STACK OF BLUE BOOKS & GRADUATION CAP */}
+      <div className="absolute right-[4px] bottom-[22px] z-20 h-[126px] w-[122px]">
+        <svg className="h-full w-full overflow-visible drop-shadow-[0_14px_24px_rgba(2,14,55,0.55)]" viewBox="0 0 140 145" fill="none">
+          <defs>
+            <linearGradient id="bk1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#1e40af" />
+              <stop offset="100%" stopColor="#172554" />
+            </linearGradient>
+            <linearGradient id="bk2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#2563eb" />
+              <stop offset="100%" stopColor="#1e40af" />
+            </linearGradient>
+            <linearGradient id="bk3" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#60a5fa" />
+              <stop offset="100%" stopColor="#2563eb" />
+            </linearGradient>
+            <linearGradient id="capDark" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1e3a8a" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+          </defs>
+
+          {/* Bottom Book */}
+          <g transform="translate(0, 32)">
+            <path d="M18 76 L92 52 L120 68 L44 92 Q30 96 18 86 Z" fill="url(#bk1)" />
+            <path d="M44 92 L120 68 L120 80 L44 104 Q28 106 18 96 L18 86 Q30 96 44 92 Z" fill="#1e3a8a" />
+            <path d="M46 93 L118 70 L118 79 L46 102 Z" fill="#f8fafc" />
+            <path d="M48 96 L115 74 M48 99 L115 77" stroke="#cbd5e1" strokeWidth="1" />
+          </g>
+
+          {/* Middle Book */}
+          <g transform="translate(-4, 15)">
+            <path d="M18 74 L92 50 L120 66 L44 90 Q30 94 18 84 Z" fill="url(#bk2)" />
+            <path d="M44 90 L120 66 L120 78 L44 102 Q28 104 18 94 L18 84 Q30 94 44 90 Z" fill="#1d4ed8" />
+            <path d="M46 91 L118 68 L118 77 L46 100 Z" fill="#f8fafc" />
+            <path d="M48 94 L115 72 M48 97 L115 75" stroke="#cbd5e1" strokeWidth="1" />
+          </g>
+
+          {/* Top Book */}
+          <g transform="translate(0, -2)">
+            <path d="M18 72 L92 48 L120 64 L44 88 Q30 92 18 82 Z" fill="url(#bk3)" />
+            <path d="M44 88 L120 64 L120 76 L44 100 Q28 102 18 92 L18 82 Q30 92 44 88 Z" fill="#2563eb" />
+            <path d="M46 89 L118 66 L118 75 L46 98 Z" fill="#f8fafc" />
+            <path d="M48 92 L115 70 M48 95 L115 73" stroke="#cbd5e1" strokeWidth="1" />
+          </g>
+
+          {/* Graduation Cap (Mortarboard) */}
+          <g transform="translate(68, 34)">
+            {/* Crown Skull Base */}
+            <path d="M-24 14 C-24 28 24 28 24 14 L20 2 L-20 2 Z" fill="url(#capDark)" />
+            {/* Diamond Cap Board */}
+            <polygon points="0,-18 46,2 0,20 -46,2" fill="url(#capDark)" stroke="#60a5fa" strokeWidth="1.2" strokeOpacity="0.6" />
+            {/* Gold Center Button */}
+            <circle cx="0" cy="1" r="3.2" fill="#facc15" />
+            {/* Gold Cord & Hanging Tassel */}
+            <path d="M0 1 C16 4 30 12 32 30 L32 42" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+            <path d="M29 42 L35 42 L36 52 L28 52 Z" fill="#eab308" />
+          </g>
+        </svg>
+      </div>
     </div>
   );
 }
@@ -558,25 +549,25 @@ function HeroTechIllustration() {
 function FeatureChipsRow() {
   const items = [
     {
-      icon: <BookOpenOutlineIcon className="h-5 w-5 text-white shrink-0" />,
+      icon: <BookOpenOutlineIcon className="h-6 w-6 text-white shrink-0" />,
       titleTop: "Kho SGK NXB",
       titleBottom: "Giáo dục",
       subtitle: "Chọn trực tiếp, tiện lợi",
     },
     {
-      icon: <ShieldCheckOutlineIcon className="h-5 w-5 text-white shrink-0" />,
+      icon: <ShieldCheckOutlineIcon className="h-6 w-6 text-white shrink-0" />,
       titleTop: "Chuẩn CV 2345",
       titleBottom: "& GDPT 2018",
       subtitle: "Đảm bảo đúng quy định",
     },
     {
-      icon: <DocumentTextOutlineIcon className="h-5 w-5 text-white shrink-0" />,
+      icon: <DocumentTextOutlineIcon className="h-6 w-6 text-white shrink-0" />,
       titleTop: "Xuất Word (.docx)",
       titleBottom: "",
       subtitle: "Giáo án chuyên nghiệp, dễ chỉnh sửa",
     },
     {
-      icon: <LightningBoltOutlineIcon className="h-5 w-5 text-white shrink-0" />,
+      icon: <LightningBoltOutlineIcon className="h-6 w-6 text-white shrink-0" />,
       titleTop: "Tiết kiệm",
       titleBottom: "thời gian",
       subtitle: "Tăng hiệu quả công việc",
@@ -584,15 +575,15 @@ function FeatureChipsRow() {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
       {items.map((item, index) => (
         <div
           key={index}
-          className="group relative flex min-w-0 flex-col justify-between rounded-xl border border-white/20 bg-white/[0.12] p-2.5 text-white shadow-[0_8px_20px_rgba(3,20,75,0.22)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/35 hover:bg-white/[0.18]"
+          className="group relative flex min-w-0 flex-col justify-between rounded-2xl border border-white/30 bg-gradient-to-b from-white/[0.16] to-white/[0.06] px-3 py-2.5 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_10px_24px_rgba(3,20,75,0.25)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/[0.2]"
         >
-          {/* Top row: Icon on the left + Bold title on the right */}
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/20 transition-transform group-hover:scale-105">
+          {/* Top row: Crisp white outline icon on left + Bold title on right */}
+          <div className="flex items-center gap-2.5">
+            <span className="shrink-0 transition-transform group-hover:scale-105">
               {item.icon}
             </span>
             <div className="min-w-0">
@@ -603,7 +594,7 @@ function FeatureChipsRow() {
             </div>
           </div>
           {/* Subtitle below */}
-          <p className="mt-1.5 text-[10.5px] font-medium leading-snug text-blue-100/85">
+          <p className="mt-1.5 text-[10.5px] font-medium leading-snug text-blue-100/90">
             {item.subtitle}
           </p>
         </div>
@@ -1210,7 +1201,7 @@ export function AuthPanel({
       <BooksWatermark />
 
       {/* ── 1. FLOATING TOP NAVBAR ── */}
-      <header className="mb-4 sm:mb-6 flex w-full max-w-[1200px] min-w-0 overflow-hidden flex-col gap-1.5 rounded-2xl border border-blue-100/90 bg-white/95 px-3 py-2 sm:px-6 sm:py-2.5 shadow-[0_8px_30px_rgba(37,99,235,0.06)] backdrop-blur-md">
+      <header className="mb-2.5 sm:mb-3.5 flex w-full max-w-[1200px] min-w-0 overflow-hidden flex-col gap-1.5 rounded-2xl border border-blue-100/90 bg-white/95 px-3 py-2 sm:px-6 sm:py-2.5 shadow-[0_8px_30px_rgba(37,99,235,0.06)] backdrop-blur-md">
         <div className="flex w-full items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3">
@@ -1313,13 +1304,14 @@ export function AuthPanel({
       </header>
 
       {/* ── 2. MAIN SPLIT CARD SHELL ── */}
-      <div className="relative flex w-full max-w-[1200px] flex-col lg:flex-row overflow-hidden rounded-[26px] bg-gradient-to-br from-[#0b48d2] via-[#083cb5] to-[#7dbaff] p-2 sm:p-2.5 lg:p-3.5 shadow-[0_24px_70px_-12px_rgba(6,32,112,0.35)] ring-1 ring-white/50 my-auto">
-        {/* Soft Background Radial Light & Halftone */}
+      <div className="auth-hero-shell relative flex w-full max-w-[1200px] flex-col lg:flex-row overflow-hidden rounded-[26px] p-2 sm:p-2.5 lg:p-3 shadow-[0_24px_70px_-12px_rgba(6,32,112,0.38)] ring-1 ring-white/55 my-auto">
+        {/* Soft Background Halftone & Dot Waves */}
+        <div className="auth-hero-dot-wave pointer-events-none absolute inset-0 z-0" />
         <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full bg-sky-400/25 blur-3xl" />
         <div className="pointer-events-none absolute left-1/3 top-1/2 h-80 w-80 -translate-y-1/2 rounded-full bg-blue-400/20 blur-3xl" />
 
         {/* ── LEFT HERO PANEL ── */}
-        <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between p-4 sm:p-6 lg:p-7 text-white">
+        <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between p-4 sm:p-5 lg:p-6 text-white">
           <div>
             {/* Top Brand Tag */}
             <div className="flex items-center gap-2.5">
@@ -1330,7 +1322,7 @@ export function AuthPanel({
             </div>
 
             {/* Headline */}
-            <h1 className="mt-4 text-2xl sm:text-3xl lg:text-[34px] xl:text-[36px] font-black leading-[1.18] tracking-tight text-white">
+            <h1 className="mt-2.5 sm:mt-3 text-2xl sm:text-3xl lg:text-[33px] xl:text-[35px] font-black leading-[1.16] tracking-tight text-white">
               Trợ lý soạn giáo án<br />
               thông minh cho giáo viên<br />
               <span className="italic font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-sky-100 to-white">
@@ -1339,14 +1331,14 @@ export function AuthPanel({
             </h1>
 
             {/* Subtitle description */}
-            <p className="mt-2.5 max-w-lg text-xs sm:text-[13.5px] leading-relaxed text-blue-100/90 font-medium">
+            <p className="mt-2 max-w-[340px] text-xs sm:text-[13px] leading-relaxed text-blue-100/90 font-medium">
               Soạn giáo án chuẩn Công văn 2345 &amp; GDPT 2018, tiết kiệm thời gian, xuất Word nhanh chóng, hỗ trợ chọn SGK và lập kế hoạch bài dạy chuyên nghiệp.
             </p>
 
             {/* Middle Row: 4 Checklist items + 3D Scene */}
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-[290px_1fr] xl:grid-cols-[315px_1fr] items-center gap-3 lg:gap-4">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-[285px_1fr] xl:grid-cols-[305px_1fr] items-center gap-3 lg:gap-4">
               {/* 4 Checklist Bullets */}
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {[
                   "Chọn trực tiếp SGK số từ NXB Giáo dục",
                   "Tự động gợi ý mục tiêu, hoạt động, học liệu",
@@ -1372,18 +1364,39 @@ export function AuthPanel({
           </div>
 
           {/* Bottom Row: 4 Bento Feature Chips */}
-          <div className="mt-5 pt-3.5 border-t border-white/15">
+          <div className="mt-4 pt-3 border-t border-white/15">
             <FeatureChipsRow />
           </div>
         </div>
 
         {/* ── RIGHT LOGIN CARD PANEL ── */}
-        <div className="relative z-20 flex min-w-0 w-full flex-col justify-center rounded-[22px] bg-white p-5 sm:p-8 lg:w-[440px] xl:w-[460px] shadow-[0_16px_40px_rgba(2,12,45,0.18)]">
-          {/* Subtle Watermark at top-right of login card */}
-          <svg aria-hidden="true" className="pointer-events-none absolute right-4 top-4 h-24 w-28 text-blue-100/70" viewBox="0 0 100 80" fill="none" stroke="currentColor" strokeWidth="1.2">
-            <path d="M15 50 C25 45 40 45 50 50 C60 45 75 45 85 50 L85 25 C75 20 60 20 50 25 C40 20 25 20 15 25 Z" fill="currentColor" fillOpacity="0.3" />
-            <polygon points="50,10 75,20 50,30 25,20" fill="currentColor" fillOpacity="0.5" />
-            <path d="M35 25 C35 34 65 34 65 25" />
+        <div className="relative z-20 flex min-w-0 w-full flex-col justify-center rounded-[22px] bg-white p-5 sm:p-6 lg:w-[420px] xl:w-[440px] shadow-[0_16px_40px_rgba(2,12,45,0.18)]">
+          {/* Shaded 3D Pale-Blue Watermark at top-right of login card */}
+          <svg aria-hidden="true" className="pointer-events-none absolute right-3 top-3 h-[85px] w-[95px] text-blue-200/50" viewBox="0 0 100 85" fill="none">
+            <defs>
+              <linearGradient id="wmBookL" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#bfdbfe" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="#dbeafe" stopOpacity="0.3" />
+              </linearGradient>
+              <linearGradient id="wmBookR" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#bfdbfe" stopOpacity="0.35" />
+              </linearGradient>
+              <linearGradient id="wmCap" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.45" />
+              </linearGradient>
+            </defs>
+            {/* Open Book Left & Right Pages */}
+            <path d="M12 55 Q30 45 50 52 L50 30 Q30 22 12 30 Z" fill="url(#wmBookL)" />
+            <path d="M88 55 Q70 45 50 52 L50 30 Q70 22 88 30 Z" fill="url(#wmBookR)" />
+            <path d="M12 55 L50 52 L88 55 L88 58 L50 55 L12 58 Z" fill="#93c5fd" opacity="0.5" />
+            {/* Mortarboard Graduation Cap Hovering Above */}
+            <path d="M60 22 C60 29 84 29 84 22 Z" fill="#60a5fa" opacity="0.6" />
+            <polygon points="72,7 94,17 72,25 50,17" fill="url(#wmCap)" stroke="#93c5fd" strokeWidth="0.8" />
+            <circle cx="72" cy="16" r="1.5" fill="#facc15" />
+            <path d="M72 16 C80 18 86 22 87 29" stroke="#facc15" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <circle cx="87" cy="30" r="1.5" fill="#eab308" />
           </svg>
 
           {/* Header */}
