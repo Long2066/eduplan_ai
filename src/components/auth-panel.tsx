@@ -270,7 +270,7 @@ function LightningBoltOutlineIcon({ className = "h-5 w-5" }: { className?: strin
 
 function SchoolBuildingWatermark() {
   return (
-    <svg aria-hidden="true" className="pointer-events-none absolute -left-10 top-1/2 -translate-y-1/2 h-[380px] w-[280px] text-blue-300/40" viewBox="0 0 240 300" fill="none" stroke="currentColor" strokeWidth="1.3">
+    <svg aria-hidden="true" className="pointer-events-none absolute -left-10 top-1/2 -translate-y-1/2 h-[380px] w-[280px] text-blue-300/40 hidden md:block" viewBox="0 0 240 300" fill="none" stroke="currentColor" strokeWidth="1.3">
       <line x1="120" y1="18" x2="120" y2="45" />
       <path d="M120 20 C128 20, 134 26, 142 22 L142 34 C134 38, 128 32, 120 34 Z" fill="currentColor" opacity="0.3" />
       <path d="M102 65 C102 48 138 48 138 65 Z" />
@@ -303,7 +303,7 @@ function SchoolBuildingWatermark() {
 
 function BooksWatermark() {
   return (
-    <svg aria-hidden="true" className="pointer-events-none absolute -right-6 bottom-4 h-[280px] w-[280px] text-blue-300/40" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="1.3">
+    <svg aria-hidden="true" className="pointer-events-none absolute -right-6 bottom-4 h-[280px] w-[280px] text-blue-300/40 hidden md:block" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="1.3">
       <path d="M40 140 L150 115 L170 135 L60 160 Z" />
       <path d="M40 140 L40 152 L60 172 L60 160" />
       <path d="M60 172 L170 147 L170 135" />
@@ -588,7 +588,7 @@ function FeatureChipsRow() {
       {items.map((item, index) => (
         <div
           key={index}
-          className="group relative flex flex-col justify-between rounded-xl border border-white/20 bg-white/[0.12] p-2.5 text-white shadow-[0_8px_20px_rgba(3,20,75,0.22)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/35 hover:bg-white/[0.18]"
+          className="group relative flex min-w-0 flex-col justify-between rounded-xl border border-white/20 bg-white/[0.12] p-2.5 text-white shadow-[0_8px_20px_rgba(3,20,75,0.22)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/35 hover:bg-white/[0.18]"
         >
           {/* Top row: Icon on the left + Bold title on the right */}
           <div className="flex items-center gap-2">
@@ -1210,7 +1210,7 @@ export function AuthPanel({
       <BooksWatermark />
 
       {/* ── 1. FLOATING TOP NAVBAR ── */}
-      <header className="mb-4 sm:mb-6 flex w-full max-w-[1200px] flex-col gap-1.5 rounded-2xl border border-blue-100/90 bg-white/95 px-4 py-2 sm:px-6 sm:py-2.5 shadow-[0_8px_30px_rgba(37,99,235,0.06)] backdrop-blur-md">
+      <header className="mb-4 sm:mb-6 flex w-full max-w-[1200px] min-w-0 overflow-hidden flex-col gap-1.5 rounded-2xl border border-blue-100/90 bg-white/95 px-3 py-2 sm:px-6 sm:py-2.5 shadow-[0_8px_30px_rgba(37,99,235,0.06)] backdrop-blur-md">
         <div className="flex w-full items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3">
@@ -1378,7 +1378,7 @@ export function AuthPanel({
         </div>
 
         {/* ── RIGHT LOGIN CARD PANEL ── */}
-        <div className="relative z-20 flex w-full flex-col justify-center rounded-[22px] bg-white p-6 sm:p-8 lg:w-[440px] xl:w-[460px] shadow-[0_16px_40px_rgba(2,12,45,0.18)]">
+        <div className="relative z-20 flex min-w-0 w-full flex-col justify-center rounded-[22px] bg-white p-5 sm:p-8 lg:w-[440px] xl:w-[460px] shadow-[0_16px_40px_rgba(2,12,45,0.18)]">
           {/* Subtle Watermark at top-right of login card */}
           <svg aria-hidden="true" className="pointer-events-none absolute right-4 top-4 h-24 w-28 text-blue-100/70" viewBox="0 0 100 80" fill="none" stroke="currentColor" strokeWidth="1.2">
             <path d="M15 50 C25 45 40 45 50 50 C60 45 75 45 85 50 L85 25 C75 20 60 20 50 25 C40 20 25 20 15 25 Z" fill="currentColor" fillOpacity="0.3" />
