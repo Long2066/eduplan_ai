@@ -319,227 +319,245 @@ function BooksWatermark() {
   );
 }
 
-/* ───────────────────────── 3D TECH SCENE ILLUSTRATION (HTML/CSS 3D LAYERED) ───────────────────────── */
+/* ───────────────────────── 3D ISOMETRIC SVG SCENE (CGI-STYLE) ───────────────────────── */
 
 function HeroTechIllustration() {
   return (
     <div
-      className="relative mx-auto w-full max-w-[400px] h-[305px] lg:h-[330px] select-none pointer-events-none"
+      className="relative mx-auto w-full max-w-[440px] select-none pointer-events-none"
+      style={{ aspectRatio: "440 / 320" }}
       aria-hidden="true"
     >
-      {/* 1. BACKGROUND RADIATING CIRCUIT TRACES */}
-      <svg
-        className="absolute inset-0 w-full h-full overflow-visible"
-        viewBox="0 0 400 330"
-        fill="none"
-      >
+      <svg viewBox="0 0 440 320" fill="none" className="h-full w-full overflow-visible">
         <defs>
-          <filter id="circuitGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <linearGradient id="lpTop" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f1f5f9" />
+            <stop offset="100%" stopColor="#c8d4e3" />
+          </linearGradient>
+          <linearGradient id="lpFront" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#c8d4e3" />
+            <stop offset="100%" stopColor="#94a3b8" />
+          </linearGradient>
+          <linearGradient id="lpRight" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#b8c8db" />
+            <stop offset="100%" stopColor="#8599b2" />
+          </linearGradient>
+          <linearGradient id="lidBack" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#2d3f56" />
+            <stop offset="100%" stopColor="#1a2535" />
+          </linearGradient>
+          <linearGradient id="screenBg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0d2d6b" />
+            <stop offset="50%" stopColor="#1246a8" />
+            <stop offset="100%" stopColor="#0a1e45" />
+          </linearGradient>
+          <linearGradient id="bkTop1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#2563eb" />
+            <stop offset="100%" stopColor="#1d4ed8" />
+          </linearGradient>
+          <linearGradient id="bkTop2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#2563eb" />
+          </linearGradient>
+          <linearGradient id="bkTop3" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#60a5fa" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+          <linearGradient id="capBoard" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e3a8a" />
+            <stop offset="100%" stopColor="#0f172a" />
+          </linearGradient>
+          <linearGradient id="chipBody" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#312e81" />
+            <stop offset="100%" stopColor="#1e1b4b" />
+          </linearGradient>
+          <linearGradient id="chipBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="50%" stopColor="#818cf8" />
+            <stop offset="100%" stopColor="#c084fc" />
+          </linearGradient>
+          <linearGradient id="docBadge" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8b5cf6" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+          <linearGradient id="wordBadge" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1d4ed8" />
+          </linearGradient>
+          <linearGradient id="glassTile" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.06" />
+          </linearGradient>
+          <radialGradient id="pedBloom" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.7" />
+            <stop offset="45%" stopColor="#06b6d4" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="pedRing" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#38bdf8" />
+            <stop offset="50%" stopColor="#67e8f9" />
+            <stop offset="100%" stopColor="#38bdf8" />
+          </linearGradient>
+          <filter id="glowF" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.8" result="b" />
             <feMerge>
-              <feMergeNode in="blur" />
+              <feMergeNode in="b" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <filter id="chipGlowF" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="cardShadowF" x="-15%" y="-15%" width="130%" height="145%">
+            <feDropShadow dx="0" dy="10" stdDeviation="11" floodColor="#040e30" floodOpacity="0.5" />
+          </filter>
         </defs>
-        <g stroke="#38bdf8" strokeWidth="1.5" opacity="0.78" filter="url(#circuitGlow)">
-          {/* Upward & Top-Left branches */}
-          <path d="M210 48 L210 14 L145 14 L145 38" />
-          <path d="M180 42 L115 42 L85 68 L52 68" />
-          <path d="M175 62 L135 62 L115 96" />
-          {/* Right branches */}
-          <path d="M242 40 L295 40 L325 18 L368 18" />
-          <path d="M248 58 L310 58 L338 82 L372 82" />
-          <path d="M245 72 L285 72 L305 112" />
-          {/* Lower branches */}
-          <path d="M185 78 L155 108 L130 108" />
-          <path d="M225 78 L255 108 L280 108" />
+
+        {/* 1. Circuit traces */}
+        <g stroke="#38bdf8" strokeWidth="1.4" opacity="0.75" filter="url(#glowF)">
+          <path d="M198 55 L198 20 L138 20 L138 46" />
+          <path d="M182 60 L120 60 L92 86 L60 86" />
+          <path d="M176 76 L128 76 L110 108" />
+          <path d="M236 48 L298 48 L332 20 L378 20" />
+          <path d="M242 66 L316 66 L348 94 L388 94" />
+          <path d="M238 80 L282 80 L306 118" />
         </g>
-        {/* Glowing Photon Dots */}
-        <g fill="#7dd3fc" filter="url(#circuitGlow)">
-          <circle cx="145" cy="38" r="3" />
-          <circle cx="52" cy="68" r="3" />
-          <circle cx="115" cy="96" r="2.5" />
-          <circle cx="368" cy="18" r="3" />
-          <circle cx="372" cy="82" r="3" />
-          <circle cx="305" cy="112" r="2.5" />
-          <circle cx="295" cy="40" r="2.2" fill="#ffffff" />
-          <circle cx="115" cy="42" r="2.2" fill="#ffffff" />
+        <g fill="#7dd3fc" filter="url(#glowF)">
+          <circle cx="138" cy="46" r="3.2" />
+          <circle cx="60" cy="86" r="3.2" />
+          <circle cx="110" cy="108" r="2.6" />
+          <circle cx="378" cy="20" r="3.2" />
+          <circle cx="388" cy="94" r="3.2" />
+          <circle cx="306" cy="118" r="2.6" />
+          <circle cx="298" cy="48" r="2.2" fill="#ffffff" />
+          <circle cx="120" cy="60" r="2.2" fill="#ffffff" />
+        </g>
+
+        {/* 2. Neon pedestal */}
+        <g className="animate-neon-aura-svg">
+          <ellipse cx="230" cy="296" rx="150" ry="26" fill="url(#pedBloom)" />
+          <ellipse cx="230" cy="296" rx="134" ry="20" fill="none" stroke="url(#pedRing)" strokeWidth="2.5" filter="url(#glowF)" />
+          <ellipse cx="230" cy="296" rx="108" ry="14" fill="none" stroke="#bae6fd" strokeWidth="1" strokeDasharray="5 4" opacity="0.65" />
+        </g>
+
+        {/* 3. Laptop base (isometric: top / front / right faces) */}
+        <polygon points="82,232 214,196 310,230 178,266" fill="url(#lpTop)" />
+        <polygon points="100,228 210,198 298,226 188,258" fill="#64748b" opacity="0.55" />
+        <line x1="110" y1="224" x2="216" y2="198" stroke="#94a3b8" strokeWidth="1" opacity="0.55" />
+        <line x1="122" y1="232" x2="226" y2="206" stroke="#94a3b8" strokeWidth="1" opacity="0.55" />
+        <line x1="134" y1="240" x2="236" y2="215" stroke="#94a3b8" strokeWidth="1" opacity="0.55" />
+        <polygon points="150,250 192,238 210,248 168,260" fill="#94a3b8" opacity="0.7" />
+        <polygon points="82,232 178,266 178,278 82,244" fill="url(#lpFront)" />
+        <polygon points="178,266 310,230 310,242 178,278" fill="url(#lpRight)" />
+
+        {/* Laptop lid */}
+        <polygon points="98,230 104,106 268,96 274,220" fill="url(#lidBack)" stroke="#2d3f5a" strokeWidth="1.5" />
+        <polygon points="104,226 110,112 262,102 268,216" fill="#121c2c" />
+        <polygon points="112,222 117,120 255,110 260,212" fill="url(#screenBg)" />
+        <line x1="117" y1="120" x2="255" y2="110" stroke="#93c5fd" strokeWidth="1" opacity="0.4" />
+
+        {/* 4. Floating document card */}
+        <g className="animate-float-svg-card" filter="url(#cardShadowF)">
+          <rect x="118" y="128" width="140" height="96" rx="10" fill="#ffffff" />
+          <rect x="118" y="128" width="140" height="24" rx="10" fill="#eff6ff" />
+          <rect x="118" y="140" width="140" height="12" fill="#eff6ff" />
+          <text x="130" y="145" fontSize="11" fontWeight="900" fill="#1e3a8a">Giáo án</text>
+          <rect x="226" y="134" width="24" height="13" rx="6.5" fill="url(#docBadge)" />
+          <text x="238" y="144" fontSize="8" fontWeight="900" fill="#ffffff" textAnchor="middle">AI</text>
+          <circle cx="132" cy="166" r="6" fill="#22c55e" />
+          <polyline points="129,166 131.5,169 136,163" stroke="#ffffff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="142" y="162" width="84" height="7" rx="3.5" fill="#e2e8f0" />
+          <circle cx="132" cy="183" r="6" fill="#22c55e" />
+          <polyline points="129,183 131.5,186 136,180" stroke="#ffffff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="142" y="179" width="68" height="7" rx="3.5" fill="#e2e8f0" />
+          <circle cx="132" cy="200" r="6" fill="#22c55e" />
+          <polyline points="129,200 131.5,203 136,197" stroke="#ffffff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="142" y="196" width="78" height="7" rx="3.5" fill="#e2e8f0" />
+          <rect x="130" y="212" width="58" height="5" rx="2.5" fill="#bfdbfe" />
+        </g>
+
+        {/* 5. Word badge */}
+        <g className="animate-float-svg-badge" filter="url(#cardShadowF)">
+          <rect x="258" y="186" width="46" height="52" rx="10" fill="#ffffff" />
+          <rect x="266" y="194" width="30" height="4" rx="2" fill="#e2e8f0" />
+          <rect x="266" y="201" width="20" height="4" rx="2" fill="#e2e8f0" />
+          <rect x="268" y="210" width="28" height="20" rx="6" fill="url(#wordBadge)" />
+          <text x="282" y="225" fontSize="14" fontWeight="900" fill="#ffffff" textAnchor="middle">W</text>
+        </g>
+
+        {/* 6. AI chip */}
+        <g className="animate-float-svg-chip" filter="url(#chipGlowF)">
+          <rect x="192" y="22" width="62" height="62" rx="16" fill="url(#chipBody)" stroke="url(#chipBorder)" strokeWidth="2.5" />
+          <g stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round">
+            <line x1="206" y1="22" x2="206" y2="16" />
+            <line x1="223" y1="22" x2="223" y2="16" />
+            <line x1="240" y1="22" x2="240" y2="16" />
+            <line x1="206" y1="84" x2="206" y2="90" />
+            <line x1="223" y1="84" x2="223" y2="90" />
+            <line x1="240" y1="84" x2="240" y2="90" />
+            <line x1="192" y1="38" x2="186" y2="38" />
+            <line x1="192" y1="53" x2="186" y2="53" />
+            <line x1="192" y1="68" x2="186" y2="68" />
+            <line x1="254" y1="38" x2="260" y2="38" />
+            <line x1="254" y1="53" x2="260" y2="53" />
+            <line x1="254" y1="68" x2="260" y2="68" />
+          </g>
+          <rect x="204" y="34" width="38" height="38" rx="6" fill="none" stroke="#38bdf8" strokeWidth="0.6" opacity="0.5" />
+          <text x="223" y="60" fontSize="22" fontWeight="900" fill="#ffffff" textAnchor="middle" letterSpacing="1">AI</text>
+        </g>
+
+        {/* 7. Glass tiles */}
+        <g className="animate-float-svg-tile-a">
+          <rect x="52" y="92" width="46" height="44" rx="12" fill="url(#glassTile)" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.3" />
+          <path d="M65 106 C67.5 104 70 104 75 106 C80 104 82.5 104 85 106 L85 118 C82.5 116 80 116 75 118 C70 116 67.5 116 65 118 Z" fill="none" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+        <g className="animate-float-svg-tile-b">
+          <rect x="346" y="98" width="46" height="44" rx="12" fill="url(#glassTile)" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.3" />
+          <g stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round">
+            <line x1="358" y1="130" x2="358" y2="120" />
+            <line x1="369" y1="130" x2="369" y2="113" />
+            <line x1="380" y1="130" x2="380" y2="106" />
+          </g>
+        </g>
+        <g className="animate-float-svg-tile-c">
+          <rect x="34" y="186" width="38" height="36" rx="10" fill="url(#glassTile)" stroke="#ffffff" strokeOpacity="0.38" strokeWidth="1.1" />
+          <path d="M45 198 C47 196.5 49 196.5 53 198 C57 196.5 59 196.5 61 198 L61 208 C59 206.5 57 206.5 53 208 C49 206.5 47 206.5 45 208 Z" fill="none" stroke="#ffffff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+
+        {/* 8. Books + graduation cap */}
+        <polygon points="318,266 370,244 402,264 350,286" fill="url(#bkTop1)" />
+        <polygon points="318,266 350,286 350,298 318,278" fill="#172554" />
+        <polygon points="350,286 402,264 402,276 350,298" fill="#1e3a8a" />
+        <polygon points="352,287 400,265 400,274 352,296" fill="#f8fafc" />
+        <line x1="354" y1="289" x2="398" y2="268" stroke="#cbd5e1" strokeWidth="0.9" />
+
+        <polygon points="314,250 366,228 398,248 346,270" fill="url(#bkTop2)" />
+        <polygon points="314,250 346,270 346,282 314,262" fill="#1e3a8a" />
+        <polygon points="346,270 398,248 398,260 346,282" fill="#1d4ed8" />
+        <polygon points="348,271 396,250 396,259 348,280" fill="#f8fafc" />
+        <line x1="350" y1="273" x2="394" y2="252" stroke="#cbd5e1" strokeWidth="0.9" />
+
+        <polygon points="318,236 370,214 402,234 350,256" fill="url(#bkTop3)" />
+        <polygon points="318,236 350,256 350,268 318,248" fill="#1d4ed8" />
+        <polygon points="350,256 402,234 402,246 350,268" fill="#2563eb" />
+        <polygon points="352,257 400,236 400,245 352,266" fill="#f8fafc" />
+        <line x1="354" y1="259" x2="398" y2="238" stroke="#cbd5e1" strokeWidth="0.9" />
+
+        <path d="M342 222 C342 234 378 234 378 222 L374 212 L346 212 Z" fill="url(#capBoard)" />
+        <polygon points="360,196 404,212 360,228 316,212" fill="url(#capBoard)" stroke="#60a5fa" strokeWidth="1.2" strokeOpacity="0.55" />
+        <circle cx="360" cy="212" r="4" fill="#facc15" />
+        <path d="M360 212 C374 214 384 222 386 236 L386 250" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        <rect x="380" y="250" width="12" height="10" rx="2" fill="#eab308" />
+        <g stroke="#eab308" strokeWidth="1.5" strokeLinecap="round">
+          <line x1="382" y1="260" x2="382" y2="268" />
+          <line x1="386" y1="260" x2="386" y2="268" />
+          <line x1="390" y1="260" x2="390" y2="268" />
         </g>
       </svg>
-
-      {/* 2. TOP GLOWING AI PROCESSOR CHIP */}
-      <div className="animate-float-3d-chip absolute top-[8px] left-[162px] z-20">
-        <div className="relative h-[64px] w-[64px] rounded-[17px] bg-gradient-to-br from-cyan-300 via-sky-400 to-indigo-400 p-[2.5px] shadow-[0_0_30px_rgba(56,189,248,0.75)]">
-          {/* Chip Pins */}
-          <div className="absolute -top-1.5 left-2.5 right-2.5 flex justify-between px-1">
-            <span className="h-1.5 w-1 rounded-t-full bg-cyan-300" />
-            <span className="h-1.5 w-1 rounded-t-full bg-cyan-300" />
-            <span className="h-1.5 w-1 rounded-t-full bg-cyan-300" />
-          </div>
-          <div className="absolute -bottom-1.5 left-2.5 right-2.5 flex justify-between px-1">
-            <span className="h-1.5 w-1 rounded-b-full bg-cyan-300" />
-            <span className="h-1.5 w-1 rounded-b-full bg-cyan-300" />
-            <span className="h-1.5 w-1 rounded-b-full bg-cyan-300" />
-          </div>
-          <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-gradient-to-br from-[#1644b8] via-[#2563eb] to-[#4f46e5] shadow-inner">
-            <span className="text-[22px] font-black tracking-wide text-white drop-shadow-[0_0_10px_rgba(186,230,253,0.95)]">
-              AI
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. FLOATING GLASS WIDGET TILES */}
-      {/* Upper-Left Tile: Open Book */}
-      <div className="animate-float-tile-left absolute top-[62px] left-[32px] z-20 flex h-[44px] w-[50px] items-center justify-center rounded-2xl border border-white/45 bg-gradient-to-br from-white/25 to-white/5 shadow-[0_12px_28px_rgba(4,24,80,0.3)] backdrop-blur-md">
-        <BookOpenOutlineIcon className="h-5 w-5 text-white drop-shadow" />
-      </div>
-
-      {/* Lower-Left Tile: Small Open Book */}
-      <div className="animate-float-tile-small absolute bottom-[82px] left-[4px] z-20 flex h-[36px] w-[40px] items-center justify-center rounded-xl border border-white/35 bg-gradient-to-br from-white/20 to-white/5 shadow-lg backdrop-blur-md">
-        <BookOpenOutlineIcon className="h-4 w-4 text-white/95" />
-      </div>
-
-      {/* Upper-Right Tile: 3-Bar Chart */}
-      <div className="animate-float-tile-right absolute top-[74px] right-[16px] z-20 flex h-[44px] w-[50px] items-center justify-center rounded-2xl border border-white/45 bg-gradient-to-br from-white/25 to-white/5 shadow-[0_12px_28px_rgba(4,24,80,0.3)] backdrop-blur-md">
-        <div className="flex items-end gap-1.5">
-          <span className="h-2 w-1.5 rounded-t-sm bg-sky-200" />
-          <span className="h-3.5 w-1.5 rounded-t-sm bg-cyan-200" />
-          <span className="h-5 w-1.5 rounded-t-sm bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-        </div>
-      </div>
-
-      {/* 4. CYAN HOLOGRAPHIC NEON PEDESTAL */}
-      <div className="animate-neon-aura absolute bottom-[10px] left-[135px] z-0">
-        <div className="h-[56px] w-[245px] rounded-[100%] bg-cyan-400/40 blur-xl" />
-        <div className="absolute inset-0 m-auto h-[48px] w-[235px] rounded-[100%] border-2 border-cyan-300/95 shadow-[0_0_24px_rgba(34,211,238,0.95),inset_0_0_16px_rgba(56,189,248,0.6)]" />
-        <div className="absolute inset-0 m-auto h-[32px] w-[185px] rounded-[100%] border border-sky-100/75" />
-      </div>
-
-      {/* 5. 3D ISOMETRIC LAPTOP & POP-OUT FLOATING DOCUMENT */}
-      <div className="absolute bottom-[24px] left-[32px] z-10 h-[195px] w-[225px]">
-        {/* Laptop Keyboard Base Deck */}
-        <div
-          className="absolute bottom-0 left-[6px] h-[112px] w-[190px] rounded-xl border border-white/80 bg-gradient-to-br from-white via-slate-200 to-slate-400 p-2 shadow-[0_10px_0_#475569,0_22px_40px_rgba(2,14,55,0.65)]"
-          style={{ transform: "perspective(650px) rotateX(64deg) rotateZ(-16deg)" }}
-        >
-          {/* Keyboard dark well */}
-          <div className="grid grid-cols-10 gap-1 rounded-md bg-slate-700/80 p-1.5 shadow-inner">
-            {Array.from({ length: 30 }).map((_, idx) => (
-              <span key={idx} className="h-2 rounded-[2px] bg-slate-200/90 shadow-2xs" />
-            ))}
-          </div>
-          {/* Trackpad */}
-          <div className="mx-auto mt-1.5 h-6 w-14 rounded border border-slate-400/50 bg-slate-300/80 shadow-inner" />
-        </div>
-
-        {/* Laptop Screen Bezel Frame */}
-        <div
-          className="absolute bottom-[64px] left-[26px] h-[126px] w-[178px] rounded-xl bg-gradient-to-b from-slate-800 to-slate-950 p-1.5 shadow-[0_16px_38px_rgba(2,12,45,0.6)] ring-2 ring-slate-200/75"
-          style={{ transform: "perspective(900px) rotateY(-12deg) rotateX(4deg)" }}
-        >
-          <div className="h-full w-full rounded-lg bg-gradient-to-br from-sky-400/35 via-blue-500/25 to-indigo-900/70" />
-        </div>
-
-        {/* POP-OUT 3D FLOATING "Giáo án [AI]" DOCUMENT CARD */}
-        <div className="animate-float-3d-card absolute bottom-[72px] left-[36px] z-20 w-[156px] rounded-xl bg-white/95 p-2.5 shadow-[0_20px_45px_rgba(4,24,80,0.45),0_0_24px_rgba(125,211,252,0.45)] ring-1 ring-white">
-          <div className="mb-2 flex items-center justify-between gap-1">
-            <span className="text-[13.5px] font-black tracking-tight text-blue-950">Giáo án</span>
-            <span className="rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500 px-2 py-0.5 text-[9px] font-black text-white shadow-sm">
-              AI
-            </span>
-          </div>
-
-          <div className="space-y-1.5">
-            {[
-              { w: "w-full" },
-              { w: "w-[86%]" },
-              { w: "w-[74%]" },
-            ].map((row, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xs">
-                  <CheckmarkIcon className="h-2 w-2" />
-                </span>
-                <span className={`h-2 ${row.w} rounded-full bg-slate-200/90`} />
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 h-1.5 w-2/3 rounded-full bg-blue-100" />
-        </div>
-
-        {/* FLOATING WORD [W] BADGE CARD */}
-        <div className="animate-float-3d-badge absolute bottom-[46px] left-[154px] z-30 flex h-[52px] w-[46px] flex-col justify-between rounded-xl bg-white p-1.5 shadow-[0_14px_30px_rgba(3,18,65,0.5)] ring-1 ring-blue-100">
-          <div className="space-y-1">
-            <span className="block h-1 w-4/5 rounded-full bg-slate-200" />
-            <span className="block h-1 w-3/5 rounded-full bg-slate-200" />
-          </div>
-          <div className="flex h-7 w-7 items-center justify-center self-end rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-[14px] font-black text-white shadow-md shadow-blue-700/40">
-            W
-          </div>
-        </div>
-      </div>
-
-      {/* 6. 3D STACK OF BLUE BOOKS & GRADUATION CAP */}
-      <div className="absolute right-[4px] bottom-[22px] z-20 h-[126px] w-[122px]">
-        <svg className="h-full w-full overflow-visible drop-shadow-[0_14px_24px_rgba(2,14,55,0.55)]" viewBox="0 0 140 145" fill="none">
-          <defs>
-            <linearGradient id="bk1" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#1e40af" />
-              <stop offset="100%" stopColor="#172554" />
-            </linearGradient>
-            <linearGradient id="bk2" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#2563eb" />
-              <stop offset="100%" stopColor="#1e40af" />
-            </linearGradient>
-            <linearGradient id="bk3" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#60a5fa" />
-              <stop offset="100%" stopColor="#2563eb" />
-            </linearGradient>
-            <linearGradient id="capDark" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#1e3a8a" />
-              <stop offset="100%" stopColor="#0f172a" />
-            </linearGradient>
-          </defs>
-
-          {/* Bottom Book */}
-          <g transform="translate(0, 32)">
-            <path d="M18 76 L92 52 L120 68 L44 92 Q30 96 18 86 Z" fill="url(#bk1)" />
-            <path d="M44 92 L120 68 L120 80 L44 104 Q28 106 18 96 L18 86 Q30 96 44 92 Z" fill="#1e3a8a" />
-            <path d="M46 93 L118 70 L118 79 L46 102 Z" fill="#f8fafc" />
-            <path d="M48 96 L115 74 M48 99 L115 77" stroke="#cbd5e1" strokeWidth="1" />
-          </g>
-
-          {/* Middle Book */}
-          <g transform="translate(-4, 15)">
-            <path d="M18 74 L92 50 L120 66 L44 90 Q30 94 18 84 Z" fill="url(#bk2)" />
-            <path d="M44 90 L120 66 L120 78 L44 102 Q28 104 18 94 L18 84 Q30 94 44 90 Z" fill="#1d4ed8" />
-            <path d="M46 91 L118 68 L118 77 L46 100 Z" fill="#f8fafc" />
-            <path d="M48 94 L115 72 M48 97 L115 75" stroke="#cbd5e1" strokeWidth="1" />
-          </g>
-
-          {/* Top Book */}
-          <g transform="translate(0, -2)">
-            <path d="M18 72 L92 48 L120 64 L44 88 Q30 92 18 82 Z" fill="url(#bk3)" />
-            <path d="M44 88 L120 64 L120 76 L44 100 Q28 102 18 92 L18 82 Q30 92 44 88 Z" fill="#2563eb" />
-            <path d="M46 89 L118 66 L118 75 L46 98 Z" fill="#f8fafc" />
-            <path d="M48 92 L115 70 M48 95 L115 73" stroke="#cbd5e1" strokeWidth="1" />
-          </g>
-
-          {/* Graduation Cap (Mortarboard) */}
-          <g transform="translate(68, 34)">
-            {/* Crown Skull Base */}
-            <path d="M-24 14 C-24 28 24 28 24 14 L20 2 L-20 2 Z" fill="url(#capDark)" />
-            {/* Diamond Cap Board */}
-            <polygon points="0,-18 46,2 0,20 -46,2" fill="url(#capDark)" stroke="#60a5fa" strokeWidth="1.2" strokeOpacity="0.6" />
-            {/* Gold Center Button */}
-            <circle cx="0" cy="1" r="3.2" fill="#facc15" />
-            {/* Gold Cord & Hanging Tassel */}
-            <path d="M0 1 C16 4 30 12 32 30 L32 42" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-            <path d="M29 42 L35 42 L36 52 L28 52 Z" fill="#eab308" />
-          </g>
-        </svg>
-      </div>
     </div>
   );
 }
