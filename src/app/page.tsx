@@ -600,7 +600,7 @@ export default function Home() {
   /* ── Not logged in ── */
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col justify-between">
+      <div className="auth-layout-wrapper flex min-h-screen flex-col justify-between relative overflow-x-hidden bg-[#eef5fe]">
         <AuthPanel
           onSessionReady={loadCurrentUser}
           onOpenGuide={openGuide}
