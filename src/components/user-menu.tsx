@@ -17,7 +17,13 @@ type SubscriptionStatus = { activePlan: PlanId; planStatus: string; cards: PlanC
 export type AppUser = { uid: string; email: string; phoneNumber?: string; displayName: string; photoURL: string; emailVerified: boolean; disabled: boolean; blockedReason: string; blockedReasonDetail: string; role: "user" | "admin"; plan: string; freeLimit: number; usedGenerations: number; remainingGenerations: number; subscription: SubscriptionStatus };
 type LessonHistoryItem = { id: string; title: string; subject: string; grade: string; periods: number; validationStatus?: "passed" | "needs_adjustment"; validationLabel?: string; freeDraft?: boolean; updatedAt: string; expiresAt: string };
 type Payment = { id: string; provider: "payos" | "bank_transfer"; purchaseType: "package" | "topup"; targetPlan: PlanId; amountVnd: number; credits: number; orderCode: number | null; paymentLinkId: string; checkoutUrl: string; qrCode: string; transferContent: string; senderName: string; status: string; safeReason: string; createdAt: string | null; expiresAt: string | null; bank: { bankName: string; accountName: string; accountNumber: string; qrImageUrl: string; configured: boolean } };
-type UserMenuProps = { user: AppUser; onUserChange: () => Promise<void> | void; onOpenLesson: (lesson: LessonPlan, lessonId: string) => void };
+type UserMenuProps = {
+  user: AppUser;
+  onUserChange: () => Promise<void> | void;
+  onOpenLesson: (lesson: LessonPlan, lessonId: string) => void;
+  openTab?: "profile" | "plans" | "history" | null;
+  onOpenTabHandled?: () => void;
+};
 
 const PAYMENT_UI_COMING_SOON = true;
 const planIcon: Record<PlanId, string> = { free: "◇", plus: "✦" };
@@ -27,7 +33,7 @@ function daysLeft(expiresAt: string) { const time = new Date(expiresAt).getTime(
 function statusLabel(state: string) { return state === "active" ? "ĐANG SỬ DỤNG" : state === "trial_available" ? "DÙNG THỬ CÒN LẠI" : state === "expired" ? "HẾT HẠN" : state === "exhausted" ? "ĐÃ HẾT" : state === "purchase_required" ? "SẴN SÀNG NÂNG CẤP" : "CÓ THỂ CHỌN"; }
 function paymentStatusLabel(status: string) { return status === "approved" ? "ĐÃ THANH TOÁN" : status === "pending_review" ? "ĐANG ĐỐI SOÁT" : status === "expired" ? "HẾT HẠN" : status === "rejected" ? "ĐÃ TỪ CHỐI" : status === "provider_failed" ? "LỖI PAYOS" : status === "creating" ? "ĐANG TẠO" : "CHỜ THANH TOÁN"; }
 
-export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
+export function UserMenu({ user, onUserChange, onOpenLesson, openTab, onOpenTabHandled }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"profile" | "plans" | "history">("profile");
   const [displayName, setDisplayName] = useState(user.displayName);
@@ -47,6 +53,17 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
   const [error, setError] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
   const subscriptionRequestRef = useRef(0);
+  const onOpenTabHandledRef = useRef(onOpenTabHandled);
+  onOpenTabHandledRef.current = onOpenTabHandled;
+
+  useEffect(() => {
+    if (!openTab) return;
+    setTab(openTab);
+    setOpen(true);
+    setError("");
+    setMessage("");
+    onOpenTabHandledRef.current?.();
+  }, [openTab]);
 
   useEffect(() => { setDisplayName(user.displayName); setSubscription(user.subscription); }, [user]);
   useEffect(() => { if (!avatar) { setAvatarPreview(""); return; } const url = URL.createObjectURL(avatar); setAvatarPreview(url); return () => URL.revokeObjectURL(url); }, [avatar]);
@@ -220,8 +237,22 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
           {tab === "plans" ? <section>
             <div className="plans-hero"><span className="plans-hero-kicker">EduPlan AI Membership</span><h2>Nâng cấp chất lượng giáo án với AI mạnh hơn</h2><p>Cùng một cấu trúc giáo án chuẩn, model AI cao cấp giúp nội dung mạch lạc hơn, chuyên sâu hơn và ổn định hơn, đặc biệt với bài nhiều tiết hoặc yêu cầu phức tạp.</p><div className="plans-quality-line"><b>Miễn phí — Nhanh, đủ dùng</b><i>·</i><b>Trả phí — Mạch lạc, chuyên sâu và ổn định</b></div></div>
             <div className="plan-summary-strip"><div><span>Gói đang dùng</span><strong>{planLabel(activePlan)}{subscription.planStatus === "trial" ? " · Trải nghiệm" : ""}</strong></div><div><span>{subscription.planStatus === "trial" ? "Tín dụng trải nghiệm hôm nay" : "Tín dụng hiện có"}</span><strong>{subscription.planStatus === "trial" ? subscription.trials.plusRemaining : subscription.credits.total}</strong></div></div>
-            <div className="plan-grid">{subscription.cards.map((card) => <article key={card.id} className={`plan-card plan-${card.id} ${card.active ? 'is-active' : ''}`}>
-              <div className="plan-card-glow" /><div className="plan-card-shine" aria-hidden="true" /><div className="plan-card-top"><span className="plan-gem">{planIcon[card.id]}</span><span className={`plan-badge badge-${card.id}`}>{card.badge}</span><span className={`plan-state ${card.active ? 'active' : ''}`}>{PAYMENT_UI_COMING_SOON && card.id === "plus" && !card.paid && !card.active && card.state !== "trial_available" ? "COMING SOON" : statusLabel(card.state)}</span></div><h3 className="plan-name">{card.title}</h3>{PAYMENT_UI_COMING_SOON && card.id === "plus" ? <div className="plan-price plan-price-coming-soon"><strong>Coming soon</strong></div> : <div className="plan-price">{card.listPriceVnd ? <del>{money(card.listPriceVnd)}</del> : null}<strong>{card.priceVnd ? money(card.priceVnd) : "0đ"}</strong><span>{card.id === "free" ? "· Không giới hạn thời gian" : "/ 30 ngày"}</span></div>}<p className="plan-description">{card.description}</p><p className="plan-reason">{card.reason}</p><ul>{card.benefits.map((item) => <li key={item}>✓ <span>{item}</span></li>)}</ul>{card.hint ? <p className="plan-hint">{card.hint}</p> : null}
+            <div className="plan-grid">{subscription.cards.map((card) => {
+              const plusCost = subscription.cards.find((c) => c.id === "plus")?.generationCost || 10;
+              const trialGenerations = Math.floor(subscription.trials.plusLimit / Math.max(1, plusCost));
+              const displayHint =
+                card.id === "free" && card.hint && card.hint.includes("lượt tạo mỗi ngày")
+                  ? (trialGenerations > 0
+                    ? card.hint.replace(/\d+\s+lượt tạo mỗi ngày/, `${trialGenerations} lượt tạo mỗi ngày`)
+                    : "Cần nội dung chuyên sâu hơn, bám sát nhu cầu thực tế hơn? Gói Giáo viên sắp ra mắt sẽ mở khóa model AI cao cấp.")
+                  : card.hint;
+              return <article key={card.id} className={`plan-card plan-${card.id} ${card.active ? 'is-active' : ''}`}>
+              <div className="plan-card-glow" /><div className="plan-card-shine" aria-hidden="true" /><div className="plan-card-top"><span className="plan-gem">{planIcon[card.id]}</span><span className={`plan-badge badge-${card.id}`}>{card.badge}</span><span className={`plan-state ${card.active ? 'active' : ''}`}>{PAYMENT_UI_COMING_SOON && card.id === "plus" && !card.paid && !card.active && card.state !== "trial_available" ? "COMING SOON" : statusLabel(card.state)}</span></div><h3 className="plan-name">{card.title}</h3>{PAYMENT_UI_COMING_SOON && card.id === "plus" ? <div className="plan-price plan-price-coming-soon"><strong>Coming soon</strong></div> : <div className="plan-price">{card.listPriceVnd ? <del>{money(card.listPriceVnd)}</del> : null}<strong>{card.priceVnd ? money(card.priceVnd) : "0đ"}</strong><span>{card.id === "free" ? "· Không giới hạn thời gian" : "/ 30 ngày"}</span></div>}<p className="plan-description">{card.description}</p><p className="plan-reason">{card.reason}</p><ul>{card.benefits.map((item) => {
+                const dynamicItem = card.id === "free" && item.includes("lượt tạo giáo án miễn phí")
+                  ? `${subscription.free.limit} lượt tạo giáo án miễn phí mỗi ngày.`
+                  : item;
+                return <li key={item}>✓ <span>{dynamicItem}</span></li>;
+              })}</ul>{displayHint ? <p className="plan-hint">{displayHint}</p> : null}
               {card.active
                 ? <button id={`select-plan-${card.id}`} className="plan-action selected" disabled>Gói hiện tại</button>
                 : card.id === "free"
@@ -235,7 +266,7 @@ export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
                     : PAYMENT_UI_COMING_SOON
                       ? <button id={`buy-plan-${card.id}`} className="plan-action coming-soon" disabled>Coming soon</button>
                       : <><button id={`buy-plan-${card.id}`} className={`plan-action buy buy-${card.id}`} disabled={Boolean(busy)} onClick={() => checkout("package", card.id)}>{busy === "checkout" ? "Đang tạo yêu cầu..." : card.cta}</button>{card.state === "trial_available" ? <button id={`select-trial-${card.id}`} className="plan-trial-action" disabled={Boolean(busy)} onClick={() => selectPlan(card.id)}>Dùng lượt trải nghiệm còn lại</button> : null}</>}
-            </article>)}</div>
+            </article>; })}</div>
             <p className="plans-note">Hai gói sử dụng cùng cấu trúc giáo án và bộ kiểm tra sư phạm. Gói Trả phí dùng model AI cao cấp hơn để tăng độ sâu, tính mạch lạc và ổn định. Chất lượng kết quả còn phụ thuộc vào nội dung SGK và thông tin bạn cung cấp.</p>
             <div className="payment-zone payment-zone-single">{PAYMENT_UI_COMING_SOON ? <div className="payment-config payment-coming-soon"><p className="account-section-label">Mua thêm tín dụng</p><strong>Coming soon</strong><p>Tính năng mua tín dụng sẽ được mở trong phiên bản chính thức. Tín dụng do Admin cấp vẫn sử dụng bình thường.</p></div> : <div className={`payment-config ${!canTopup ? 'disabled-zone' : ''}`}><p className="account-section-label">Mua thêm tín dụng</p><div className="flex gap-2"><input id="topup-amount" className="input-field" type="number" min={25000} step={1000} value={topupAmount} disabled={!canTopup} onChange={(e) => setTopupAmount(Number(e.target.value))} /><button id="buy-topup" className="btn-primary shrink-0" disabled={!canTopup || Boolean(busy)} onClick={() => checkout("topup")}>Mua {Math.max(0, topupAmount / 1000)} tín dụng</button></div><p className="mt-2 text-xs text-slate-500">{ownedPaidCard ? `Cộng vào gói ${ownedPaidCard.name}; tín dụng hết hạn cùng gói.` : "Tối thiểu 25.000đ; cần sở hữu gói Trả phí còn hạn."}</p></div>}</div>
             {!PAYMENT_UI_COMING_SOON && payment ? <button type="button" className={`active-payment-strip status-${payment.status}`} onClick={() => setPaymentModalOpen(true)}><span><b>{payment.purchaseType === 'package' ? `Gói ${planLabel(payment.targetPlan)}` : `${payment.credits} tín dụng`}</b><small>{payment.safeReason}</small></span><strong>{paymentStatusLabel(payment.status)} →</strong></button> : null}

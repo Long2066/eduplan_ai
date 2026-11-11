@@ -720,7 +720,21 @@ function FeaturesOverviewModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
   );
 }
 
-function PricingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+type PublicPlanQuota = {
+  freeDailyLimit: number;
+  paidTrialDailyCredits: number;
+  paidTrialGenerationCost: number;
+};
+
+function PricingModal({
+  isOpen,
+  onClose,
+  quota,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  quota: PublicPlanQuota;
+}) {
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -731,6 +745,11 @@ function PricingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const freeLimit = Math.max(0, Number(quota.freeDailyLimit ?? 3));
+  const trialCost = Math.max(1, Number(quota.paidTrialGenerationCost ?? 10));
+  const trialGenerations = Math.floor(Math.max(0, Number(quota.paidTrialDailyCredits ?? 10)) / trialCost);
+  const trialCredits = Math.max(0, Number(quota.paidTrialDailyCredits ?? 10));
 
   return (
     <div
@@ -805,17 +824,19 @@ function PricingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
               <p className="plan-description">
                 Phù hợp để trải nghiệm EduPlan AI và soạn nhanh các giáo án cơ bản.
               </p>
-              <p className="plan-reason">3 lượt tạo miễn phí mỗi ngày (tự động reset lúc 00:00)</p>
+              <p className="plan-reason">{freeLimit} lượt tạo miễn phí mỗi ngày (tự động reset lúc 00:00)</p>
               <ul>
                 <li>✓ <span>Sử dụng AI tiêu chuẩn.</span></li>
-                <li>✓ <span>3 lượt tạo giáo án miễn phí mỗi ngày.</span></li>
+                <li>✓ <span>{freeLimit} lượt tạo giáo án miễn phí mỗi ngày.</span></li>
                 <li>✓ <span>Tự động reset lúc 00:00 theo giờ Việt Nam.</span></li>
                 <li>✓ <span>Đầy đủ cấu trúc KHBD và bộ kiểm tra sư phạm.</span></li>
                 <li>✓ <span>Lưu lịch sử và xuất giáo án Word.</span></li>
                 <li>✓ <span>Phù hợp để trải nghiệm và soạn các bài học cơ bản.</span></li>
               </ul>
               <p className="plan-hint">
-                Cần nội dung chuyên sâu hơn, bám sát nhu cầu thực tế hơn? Gói Giáo viên sắp ra mắt đang được trải nghiệm 1 lượt tạo mỗi ngày.
+                {trialGenerations > 0
+                  ? `Cần nội dung chuyên sâu hơn, bám sát nhu cầu thực tế hơn? Gói Giáo viên sắp ra mắt đang được trải nghiệm ${trialGenerations} lượt tạo mỗi ngày.`
+                  : "Cần nội dung chuyên sâu hơn, bám sát nhu cầu thực tế hơn? Gói Giáo viên sắp ra mắt sẽ cung cấp model AI cao cấp hơn."}
               </p>
               <button
                 type="button"
@@ -842,7 +863,11 @@ function PricingModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
               <p className="plan-description">
                 Phù hợp với giáo viên muốn có giáo án rõ ràng, tự nhiên, bám sát yêu cầu bài dạy. Giáo án chỉn chu hơn và chất lượng hơn.
               </p>
-              <p className="plan-reason">Nâng cấp để mở khóa model AI cao cấp</p>
+              <p className="plan-reason">
+                {trialCredits > 0
+                  ? `Hỗ trợ ${trialCredits} tín dụng trải nghiệm miễn phí mỗi ngày (${trialGenerations} lượt tạo)`
+                  : "Nâng cấp để mở khóa model AI cao cấp"}
+              </p>
               <ul>
                 <li>✓ <span>Sử dụng model AI cao cấp để soạn KHBD.</span></li>
                 <li>✓ <span>Nội dung mạch lạc – ổn định – chất lượng hơn rõ rệt.</span></li>
@@ -938,6 +963,11 @@ export function AuthPanel({
 
   const [isFeaturesOpen, setIsFeaturesOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [planQuota, setPlanQuota] = useState<PublicPlanQuota>({
+    freeDailyLimit: 3,
+    paidTrialDailyCredits: 10,
+    paidTrialGenerationCost: 10,
+  });
 
   const clientReady = hasFirebaseClientConfig();
 
@@ -957,6 +987,24 @@ export function AuthPanel({
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings/plans", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((result: Partial<PublicPlanQuota>) => {
+        if (cancelled) return;
+        if (typeof result.freeDailyLimit === "number" || typeof result.paidTrialDailyCredits === "number") {
+          setPlanQuota((prev) => ({
+            freeDailyLimit: typeof result.freeDailyLimit === "number" ? result.freeDailyLimit : prev.freeDailyLimit,
+            paidTrialDailyCredits: typeof result.paidTrialDailyCredits === "number" ? result.paidTrialDailyCredits : prev.paidTrialDailyCredits,
+            paidTrialGenerationCost: typeof result.paidTrialGenerationCost === "number" ? result.paidTrialGenerationCost : prev.paidTrialGenerationCost,
+          }));
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [isPricingOpen]);
 
   const onSessionReadyRef = useRef(onSessionReady);
   onSessionReadyRef.current = onSessionReady;
@@ -1283,7 +1331,7 @@ export function AuthPanel({
 
       {/* Feature & Pricing Modals */}
       <FeaturesOverviewModal isOpen={isFeaturesOpen} onClose={() => setIsFeaturesOpen(false)} />
-      <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
+      <PricingModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} quota={planQuota} />
 
       {/* Background Watermark Vectors */}
       <SchoolBuildingWatermark />

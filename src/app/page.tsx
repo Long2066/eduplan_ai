@@ -168,6 +168,7 @@ export default function Home() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isIntroVisible, setIsIntroVisible] = useState(false);
   const [isGuideVisible, setIsGuideVisible] = useState(false);
+  const [userMenuTab, setUserMenuTab] = useState<"profile" | "plans" | "history" | null>(null);
   const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
   const [generationJob, setGenerationJob] = useState<ClientGenerationJob | null>(null);
   const [isCancellingGeneration, setIsCancellingGeneration] = useState(false);
@@ -569,7 +570,15 @@ export default function Home() {
     setIsSupportOpen(false);
     setIsIntroVisible(false);
     setIsGuideVisible(false);
+    setUserMenuTab(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openPlans() {
+    setIsSupportOpen(false);
+    setIsIntroVisible(false);
+    setIsGuideVisible(false);
+    setUserMenuTab("plans");
   }
 
   function openIntro() {
@@ -675,8 +684,11 @@ export default function Home() {
             </button>
 
             <nav className="support-nav" aria-label="Thanh điều hướng EduPlan AI">
-              <button type="button" className={`support-nav-item ${!isIntroVisible ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
+              <button type="button" className={`support-nav-item ${!isIntroVisible && userMenuTab !== "plans" ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
                 Trang chủ
+              </button>
+              <button type="button" className={`support-nav-item ${userMenuTab === "plans" ? "support-nav-active" : ""}`} title="Xem và quản lý các gói EduPlan AI" onClick={openPlans}>
+                Quản lý gói
               </button>
               <button type="button" className={`support-nav-item ${isIntroVisible ? "support-nav-active" : ""}`} title="Giới thiệu EduPlan AI" onClick={openIntro}>
                 Giới thiệu
@@ -741,7 +753,13 @@ export default function Home() {
                 </div>
               </div>
 
-              <UserMenu user={user} onUserChange={loadCurrentUser} onOpenLesson={handleOpenLesson} />
+              <UserMenu
+                user={user}
+                onUserChange={loadCurrentUser}
+                onOpenLesson={handleOpenLesson}
+                openTab={userMenuTab}
+                onOpenTabHandled={() => setUserMenuTab(null)}
+              />
             </div>
           </div>
         </header>
