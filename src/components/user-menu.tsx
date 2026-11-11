@@ -21,8 +21,6 @@ type UserMenuProps = {
   user: AppUser;
   onUserChange: () => Promise<void> | void;
   onOpenLesson: (lesson: LessonPlan, lessonId: string) => void;
-  openTab?: "profile" | "plans" | "history" | null;
-  onOpenTabHandled?: () => void;
 };
 
 const PAYMENT_UI_COMING_SOON = true;
@@ -33,7 +31,7 @@ function daysLeft(expiresAt: string) { const time = new Date(expiresAt).getTime(
 function statusLabel(state: string) { return state === "active" ? "ĐANG SỬ DỤNG" : state === "trial_available" ? "DÙNG THỬ CÒN LẠI" : state === "expired" ? "HẾT HẠN" : state === "exhausted" ? "ĐÃ HẾT" : state === "purchase_required" ? "SẴN SÀNG NÂNG CẤP" : "CÓ THỂ CHỌN"; }
 function paymentStatusLabel(status: string) { return status === "approved" ? "ĐÃ THANH TOÁN" : status === "pending_review" ? "ĐANG ĐỐI SOÁT" : status === "expired" ? "HẾT HẠN" : status === "rejected" ? "ĐÃ TỪ CHỐI" : status === "provider_failed" ? "LỖI PAYOS" : status === "creating" ? "ĐANG TẠO" : "CHỜ THANH TOÁN"; }
 
-export function UserMenu({ user, onUserChange, onOpenLesson, openTab, onOpenTabHandled }: UserMenuProps) {
+export function UserMenu({ user, onUserChange, onOpenLesson }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"profile" | "plans" | "history">("profile");
   const [displayName, setDisplayName] = useState(user.displayName);
@@ -53,17 +51,6 @@ export function UserMenu({ user, onUserChange, onOpenLesson, openTab, onOpenTabH
   const [error, setError] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
   const subscriptionRequestRef = useRef(0);
-  const onOpenTabHandledRef = useRef(onOpenTabHandled);
-  onOpenTabHandledRef.current = onOpenTabHandled;
-
-  useEffect(() => {
-    if (!openTab) return;
-    setTab(openTab);
-    setOpen(true);
-    setError("");
-    setMessage("");
-    onOpenTabHandledRef.current?.();
-  }, [openTab]);
 
   useEffect(() => { setDisplayName(user.displayName); setSubscription(user.subscription); }, [user]);
   useEffect(() => { if (!avatar) { setAvatarPreview(""); return; } const url = URL.createObjectURL(avatar); setAvatarPreview(url); return () => URL.revokeObjectURL(url); }, [avatar]);

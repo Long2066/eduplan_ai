@@ -12,6 +12,7 @@ import { PedagogyAuditCard } from "@/components/pedagogy-audit-card";
 import { PreviewToolbar } from "@/components/preview-toolbar";
 import { SiteFooter } from "@/components/site-footer";
 import { type AppUser, UserMenu } from "@/components/user-menu";
+import { PlansModal } from "@/components/plans-modal";
 import { defaultLessonInput, gradeOptions, subjectOptions } from "@/lib/defaults";
 import { exportLessonToDocx } from "@/lib/export-docx";
 import { accountBlockedMessage } from "@/lib/account-block";
@@ -168,7 +169,7 @@ export default function Home() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isIntroVisible, setIsIntroVisible] = useState(false);
   const [isGuideVisible, setIsGuideVisible] = useState(false);
-  const [userMenuTab, setUserMenuTab] = useState<"profile" | "plans" | "history" | null>(null);
+  const [isPlansVisible, setIsPlansVisible] = useState(false);
   const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
   const [generationJob, setGenerationJob] = useState<ClientGenerationJob | null>(null);
   const [isCancellingGeneration, setIsCancellingGeneration] = useState(false);
@@ -570,7 +571,7 @@ export default function Home() {
     setIsSupportOpen(false);
     setIsIntroVisible(false);
     setIsGuideVisible(false);
-    setUserMenuTab(null);
+    setIsPlansVisible(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -578,7 +579,7 @@ export default function Home() {
     setIsSupportOpen(false);
     setIsIntroVisible(false);
     setIsGuideVisible(false);
-    setUserMenuTab("plans");
+    setIsPlansVisible(true);
   }
 
   function openIntro() {
@@ -684,10 +685,10 @@ export default function Home() {
             </button>
 
             <nav className="support-nav" aria-label="Thanh điều hướng EduPlan AI">
-              <button type="button" className={`support-nav-item ${!isIntroVisible && userMenuTab !== "plans" ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
+              <button type="button" className={`support-nav-item ${!isIntroVisible && !isPlansVisible ? "support-nav-active" : ""}`} title="Trang chủ là giao diện soạn giáo án" onClick={goHome}>
                 Trang chủ
               </button>
-              <button type="button" className={`support-nav-item ${userMenuTab === "plans" ? "support-nav-active" : ""}`} title="Xem và quản lý các gói EduPlan AI" onClick={openPlans}>
+              <button type="button" className={`support-nav-item ${isPlansVisible ? "support-nav-active" : ""}`} title="Xem và quản lý các gói EduPlan AI" onClick={openPlans}>
                 Quản lý gói
               </button>
               <button type="button" className={`support-nav-item ${isIntroVisible ? "support-nav-active" : ""}`} title="Giới thiệu EduPlan AI" onClick={openIntro}>
@@ -753,19 +754,14 @@ export default function Home() {
                 </div>
               </div>
 
-              <UserMenu
-                user={user}
-                onUserChange={loadCurrentUser}
-                onOpenLesson={handleOpenLesson}
-                openTab={userMenuTab}
-                onOpenTabHandled={() => setUserMenuTab(null)}
-              />
+              <UserMenu user={user} onUserChange={loadCurrentUser} onOpenLesson={handleOpenLesson} />
             </div>
           </div>
         </header>
 
         <IntroductionModal isOpen={isIntroVisible} onClose={() => setIsIntroVisible(false)} />
         <GuideModal isOpen={isGuideVisible} onClose={() => setIsGuideVisible(false)} />
+        <PlansModal isOpen={isPlansVisible} onClose={() => setIsPlansVisible(false)} user={user} onUserChange={loadCurrentUser} />
 
         {/* Mobile View Switcher (< xl) */}
         <div className="mb-3 flex xl:hidden items-center rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-900/5">
